@@ -1,13 +1,17 @@
-import { Bot } from 'grammy'
-const API_KEY = '6836934004:AAHpDd_rCqfMwQOdzJWW6ljjoLDomELq5w4'
+import { Bot } from "grammy";
+import { pokeShowdown } from "./pokeapi";
 
-const bot = new Bot(API_KEY)
+const API_KEY = "6836934004:AAHpDd_rCqfMwQOdzJWW6ljjoLDomELq5w4";
 
-bot.command('start', res => res.reply('Tu mamá es Lesbiana'))
-bot.on('message', res => {
-  res.reply('Tu mamá sigue siendo Lesbiana')
-  // console.log(res)
-  console.log(res.msg)
-})
+const bot = new Bot(API_KEY);
 
-bot.start()
+bot.command("start", res => res.reply("Tu mamá es Lesbiana"));
+
+bot.on("message", async res => {
+	const message = res.message.text || "pikachu";
+
+	const pokemon: string = await pokeShowdown.pokeRenderer(message);
+	return res.reply(pokemon);
+});
+
+bot.start();
