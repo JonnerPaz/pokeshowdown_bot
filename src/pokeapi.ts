@@ -1,4 +1,9 @@
-const pokeapi = "https://pokeapi.co/api/v2/pokemon";
+import { PokemonClient } from "pokenode-ts";
+
+// const pokeapi = "https://pokeapi.co/api/v2/pokemon";
+
+// Every request will return a promise
+const pokemonClient = new PokemonClient();
 
 interface PokemonSummary {
 	id: number;
@@ -21,23 +26,20 @@ interface PokemonSummary {
 }
 
 class Pokemon {
-	createPokemon(pokemon: PokemonSummary) {
-		// console.log(pokemon);
-		// const newPokemon: PokemonSummary = {
-		// 	id: pokemon.id,
-		// 	// ability: pokemon,
-		// }
-	}
+	async getPokemon(pokeRequest: PokemonClient) {}
+
+	async catchPokemon() {}
 
 	async pokeRenderer(pokemon: string): Promise<any> {
-		// receives and converts raw data from telegram api to pokeapi
-		const request = pokemon.toLowerCase();
-		const query = await fetch(`${pokeapi}/${request}`);
-		const result: any = await query.json();
-
-		return result.sprites.front_default;
-		// sends raw api request to createPokemon method
-		// this.createPokemon(result);
+		try {
+			// receives and converts raw data from telegram api to pokeapi
+			const request = pokemon.toLowerCase();
+			const query = await pokemonClient.getPokemonByName(request);
+			console.log(query.sprites.front_default);
+			return query.sprites.front_default;
+		} catch (err) {
+			console.error(err);
+		}
 	}
 
 	get getPokemonSummary() {

@@ -8,10 +8,18 @@ const bot = new Bot(API_KEY);
 bot.command("start", res => res.reply("Tu mamá es Lesbiana"));
 
 bot.on("message", async res => {
-	const message = res.message.text || "pikachu";
+	try {
+		const message: string = res.message.text ?? "pikachu";
 
-	const pokemon: string = await pokeShowdown.pokeRenderer(message);
-	return res.reply(pokemon);
+		const pokemon: string = await pokeShowdown.pokeRenderer(message);
+		return res.api.sendPhoto(res.chat.id, pokemon);
+		// return res.reply(pokemon);
+	} catch (err) {
+		console.error(err);
+		return `There was a problem: ${err}`;
+	}
 });
+
+// catches pokemon on telegram
 
 bot.start();

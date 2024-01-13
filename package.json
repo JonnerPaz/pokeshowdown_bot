@@ -15,6 +15,9 @@
 	},
 	"dependencies": {
 		"@grammyjs/types": "^3.4.6",
-		"grammy": "^1.20.3"
+		"axios": "^1.6.5",
+		"axios-cache-interceptor": "^1.4.1",
+		"grammy": "^1.20.3",
+		"pokenode-ts": "^1.20.0"
 	}
 }
