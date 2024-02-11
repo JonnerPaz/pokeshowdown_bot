@@ -5,7 +5,8 @@ import { PokemonClient } from "pokenode-ts";
 // Every request will return a promise
 const pokemonClient = new PokemonClient();
 
-class Pokemon {
+export class Pokemon {
+
 	async pokeRenderer(pokemon: string): Promise<any> {
 		try {
 			// receives and converts raw data from telegram api to pokeapi
@@ -19,5 +20,3 @@ class Pokemon {
 		}
 	}
 }
-
-export const PokeBotShowdown = new Pokemon();
