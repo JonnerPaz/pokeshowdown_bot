@@ -6,13 +6,11 @@ interface RegisteredUser {
 }
 
 export class User {
-  private id: number
   private user: string
   private data: RegisteredUser
 
-  constructor(user: string, id: number) {
+  constructor(user: string) {
     this.user = user
-    this.id = id
 
     // creates initial data of a given user
     this.data = {
@@ -23,14 +21,6 @@ export class User {
 
   get getData() {
     return this.data
-  }
-
-  /**
-   *
-   * returns ID
-   * @param get id */
-  get getID() {
-    return this.id
   }
 
   start(bot: Bot) {
