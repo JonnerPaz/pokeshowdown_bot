@@ -33,9 +33,14 @@ Control - It should both connect Pokemon and User class to work correctly
 
 ## Commands 
 
-- pokebotStartBot: Starts the bot
-- pokeBotStopBot: Stops the bot
-- pokeBotGeneratePokemon: generates pokemon in a given time
+- start: Starts the bot
+- stop: Stops PokeBotShowdown
+- register: register a user into the bot
+- deleteaccount: Delete your account from PokeBotShowdown
+- pokemongenerate: Start generating random pokemon
+- help: Show all commands
+
+### Comming Soon
 - pokeBotPokemonSummary: Shows the stats of a given pokemon of the user
 - pokeBotTradePokemon: links a player to start a trading process
 - pokeBotBattleTrainer: Links a player to start a battle against a trainer

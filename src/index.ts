@@ -1,6 +1,7 @@
 import { Bot, InlineKeyboard } from "grammy";
 import { Pokemon } from "./pokeapi";
 import { User } from "./User";
+import { findUser } from "./utils";
 
 const API_KEY = "6836934004:AAHpDd_rCqfMwQOdzJWW6ljjoLDomELq5w4";
 
@@ -14,22 +15,39 @@ bot.command("start", async ctx => {
   return await ctx.reply(msg);
 });
 
-bot.command("register", ctx => {
+bot.command("register", async ctx => {
   const userName = <string>ctx.from?.username
   const condition = userDB.some(el => el.getUserData.userName === userName)
   if (condition) {
-    return ctx.reply(`You are already registered. If you want to erase your data and start over, use /deleteaccount`)
+    return await ctx.reply(`You are already registered. If you want to erase your data and start over, use /deleteaccount`)
   }
 
   // creates new user
   const newUser = new User(userName)
   userDB.push(newUser)
-  ctx.reply(`@${ctx.from?.username} have been registered`)
+  return await ctx.reply(`@${ctx.from?.username} have been registered`)
 })
 
 bot.command("pokemongenerate", async ctx => {
   try {
     // here goes what is used in pokemon api 
+    // const user = userDB.find(el => el.userName === ctx.from?.username)
+    const condition = userDB.some(el => el.userName === ctx.from?.username)
+    if (!condition) return ctx.reply(`You're not registered. You need to register first using /register`)
+
+    // generate pokemon
+    const user = findUser(ctx, userDB)
+    const pokemon = await user.generatePokemon()
+
+    // create message with pokemon
+    const pokemonImage = <string>pokemon?.sprites.other?.["official-artwork"].front_default
+    const inlnKeyboard = new InlineKeyboard().text('YES', "delete").text('NO', "nothing")
+    ctx.replyWithPhoto(pokemonImage, {
+      reply_markup: inlnKeyboard
+    })
+
+    ctx.reply(`@${ctx.from?.username} encountered a wild ${pokemon?.name}`)
+
   } catch (err) {
     console.log(err)
   }
@@ -52,6 +70,15 @@ bot.command("deleteaccount", async ctx => {
   }
 })
 
+bot.command("help", async ctx => {
+  await ctx.reply(`Here are some of the following commands that @${ctx.me.username} receives:
+* /start - Starts de bot
+* /register - register a user into the bot
+* /deleteaccount - Delete your account from PokeBotShowdown
+* /stop - Stops PokeBotShowdown - DO NOT USE IT`)
+})
+
+// responses to deleteaccount
 bot.callbackQuery("delete", async ctx => {
   // delete inline_keyboard
   ctx.deleteMessages([<number>ctx.msg?.message_id])
@@ -72,15 +99,6 @@ bot.command("stop", async ctx => {
   ctx.reply('this bot is stopping...')
   return await bot.stop()
 })
-
-bot.command("help", async ctx => {
-  await ctx.reply(`Here are some of the following commands that @${ctx.me.username} receives:
-* /start - Starts de bot
-* /register - register a user into the bot
-* /deleteaccount - Delete your account from PokeBotShowdown
-* /stop - Stops PokeBotShowdown - DO NOT USE IT`)
-})
-
 
 // commands can't have uppercase
 bot.api.setMyCommands([

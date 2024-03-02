@@ -37,7 +37,16 @@ export class User implements RegisteredUser {
     return
   }
 
-  async generatePokemon(pokemon: string, ctx?: CommandContext<Context>) {
+  generateStarter() { }
+
+  async generatePokemon(pokemon?: string, ctx?: CommandContext<Context>) {
+    try {
+      const randomizer = Math.floor(Math.random() * 809 + 1)
+      const pokemon = await this.pokeApi.getPokemonById(randomizer)
+      return pokemon
+    } catch (err) {
+      console.error(err)
+    }
     /* try {
       // receives and converts raw data from telegram api to pokeapi
       const request = pokemon.toLowerCase();
