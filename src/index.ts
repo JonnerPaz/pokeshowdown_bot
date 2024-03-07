@@ -1,10 +1,12 @@
 import { Bot, InlineKeyboard, InputFile, InputMediaBuilder } from 'grammy'
 import { User } from './User'
+import { PokeApi } from './PokeApi'
 import * as Utils from './utils'
-import { on } from 'events'
+import { Pokemon } from 'pokenode-ts'
 
 // Here must be stored all accounts in the group that are registered by /register
 export let userDB: User[] = []
+let registerStarter: Pokemon[] = []
 
 const API_KEY = '6836934004:AAHpDd_rCqfMwQOdzJWW6ljjoLDomELq5w4'
 
@@ -16,17 +18,16 @@ bot.command('start', async (ctx) => {
 })
 
 bot.command('register', async (ctx) => {
-  const condition = Utils.findUser(ctx, userDB)
-  if (condition) {
+  const user = Utils.findUser(ctx, userDB)
+  if (user) {
     return await ctx.reply(
       `You are already registered. If you want to erase your data and start over, use /deleteaccount`
     )
   }
 
-  // creates new user
-  const userName = <string>ctx.from?.username
-  const newUser = new User(userName)
-  const starters = await newUser.generatePokemonStarter(ctx)
+  // generate Pokemon
+  const starters = await new PokeApi().generatePokemonStarter()
+  registerStarter = starters
   const [firstPkmn, secondPkmn, thirdPkmn] = starters.map((el) =>
     InputMediaBuilder.photo(
       String(el.sprites.other?.['official-artwork'].front_default)
@@ -35,23 +36,53 @@ bot.command('register', async (ctx) => {
   await ctx.reply(
     'To get registered, you first need to get your starter. Pick a pokemon from these ones'
   )
-  await ctx.api.sendMediaGroup(ctx.chat.id, [firstPkmn, secondPkmn, thirdPkmn])
+  await ctx.api
+    .sendMediaGroup(ctx.chat.id, [firstPkmn, secondPkmn, thirdPkmn])
+    .then(async (arr) => {
+      const inlineKeyboard = new InlineKeyboard()
+        .text(starters[0].name, 'starter0')
+        .text(starters[1].name, 'starter1')
+        .text(starters[2].name, 'starter2')
+        .text('Cancel', 'cancel')
+      await ctx.reply('Select the right choice for you:', {
+        reply_markup: inlineKeyboard,
+      })
+    })
+})
 
-  userDB.push(newUser)
-  return await ctx.reply(`@${ctx.from?.username} have been registered`)
+bot.callbackQuery(/starter[012]/, async (ctx) => {
+  const choice = Number(ctx.match[0].slice(-1))
+
+  // creates new user
+  const userName = <string>ctx.from?.username
+  const user = new User(userName, registerStarter[choice])
+  userDB.push(user)
+  console.log(user.getPokemonSummary)
+  await ctx.deleteMessage()
+  await ctx.reply(
+    `@${ctx.from?.username} chose ${registerStarter[choice].name}! now you have been registered`
+  )
+  await ctx.reply(`You can check your pokemons using /pokemonsummary
+Hope you have fun with this bot!
+`)
+  return
+})
+
+bot.callbackQuery('cancel', async (ctx) => {
+  ctx.deleteMessage()
+  return ctx.reply('Your registration have been canceled sucessfully')
 })
 
 bot.command('pokemongenerate', async (ctx) => {
   try {
-    const condition = userDB.some((el) => el.userName === ctx.from?.username)
-    if (!condition)
+    const user = Utils.findUser(ctx, userDB)
+    if (!user)
       return ctx.reply(
         `You're not registered. You need to register first using /register`
       )
 
     // generate pokemon
-    const user = Utils.findUser(ctx, userDB)
-    const pokemon = await user.generatePokemon()
+    const pokemon = await new PokeApi().generatePokemon()
 
     // create message with pokemon
     const pokemonImage = <string>(
@@ -65,10 +96,15 @@ bot.command('pokemongenerate', async (ctx) => {
       reply_markup: inlnKeyboard,
     })
 
+    // send pokemon
     ctx.reply(`@${ctx.from?.username} encountered a wild ${pokemon?.name}`)
   } catch (err) {
     console.log(err)
   }
+})
+
+bot.command('pokemonsummary', (ctx) => {
+  const user = Utils.findUser(ctx, userDB).getPokemonSummary
 })
 
 bot.command('deleteaccount', async (ctx) => {
@@ -92,14 +128,6 @@ bot.command('deleteaccount', async (ctx) => {
   } catch (err) {
     console.error(err)
   }
-})
-
-bot.command('help', async (ctx) => {
-  await ctx.reply(`Here are some of the following commands that @${ctx.me.username} receives:
-* /start - Starts de bot
-* /register - register a user into the bot
-* /deleteaccount - Delete your account from PokeBotShowdown
-* /stop - Stops PokeBotShowdown - DO NOT USE IT`)
 })
 
 // responses to deleteaccount
@@ -126,6 +154,14 @@ bot.command('stop', async (ctx) => {
   return await bot.stop()
 })
 
+bot.command('help', async (ctx) => {
+  await ctx.reply(`Here are some of the following commands that @${ctx.me.username} receives:
+* /start - Starts de bot
+* /register - register a user into the bot
+* /deleteaccount - Delete your account from PokeBotShowdown
+* /stop - Stops PokeBotShowdown - DO NOT USE IT`)
+})
+
 // commands can't have uppercase
 bot.api.setMyCommands([
   { command: 'start', description: 'Starts the bot' },
@@ -140,6 +176,10 @@ bot.api.setMyCommands([
     command: 'pokemongenerate',
     description: 'Start generating random pokemon',
   },
+  /* {
+    command: 'pokemonsummary',
+    description: 'get an info of all your pokemons',
+  }, */
 ])
 
 bot.start()
