@@ -1,8 +1,13 @@
-import { Bot, InlineKeyboard, CommandContext, Context } from 'grammy'
+import {
+  InlineKeyboard,
+  CommandContext,
+  Context,
+  CallbackQueryContext,
+} from 'grammy'
 import { User } from './User'
 
 export const findUser = function (
-  ctx: CommandContext<Context>,
+  ctx: CommandContext<Context> | CallbackQueryContext<Context>,
   dataBase: User[]
 ): User {
   return <User>dataBase.find((el) => el.userName === ctx.from?.username)

@@ -1,4 +1,4 @@
-import { Bot, InlineKeyboard, InputFile, InputMediaBuilder } from 'grammy'
+import { Bot, InlineKeyboard, InputMediaBuilder } from 'grammy'
 import { User } from './User'
 import { PokeApi } from './PokeApi'
 import * as Utils from './utils'
@@ -7,6 +7,7 @@ import { Pokemon } from 'pokenode-ts'
 // Here must be stored all accounts in the group that are registered by /register
 export let userDB: User[] = []
 let registerStarter: Pokemon[] = []
+let currentPokemon: Pokemon
 
 const API_KEY = '6836934004:AAHpDd_rCqfMwQOdzJWW6ljjoLDomELq5w4'
 
@@ -82,29 +83,40 @@ bot.command('pokemongenerate', async (ctx) => {
       )
 
     // generate pokemon
-    const pokemon = await new PokeApi().generatePokemon()
+    const pokemon = <Pokemon>await new PokeApi().generatePokemon()
+    currentPokemon = pokemon
 
     // create message with pokemon
     const pokemonImage = <string>(
       pokemon?.sprites.other?.['official-artwork'].front_default
     )
 
-    const inlnKeyboard = new InlineKeyboard()
-      .text('YES', 'delete')
-      .text('NO', 'nothing')
-    ctx.replyWithPhoto(pokemonImage, {
+    const inlnKeyboard = new InlineKeyboard().text('CATCH', 'catch')
+    await ctx.replyWithPhoto(pokemonImage, {
       reply_markup: inlnKeyboard,
     })
 
     // send pokemon
-    ctx.reply(`@${ctx.from?.username} encountered a wild ${pokemon?.name}`)
+    await ctx.reply(
+      `@${ctx.from?.username} encountered a wild ${pokemon?.name}`
+    )
   } catch (err) {
     console.log(err)
   }
 })
 
-bot.command('pokemonsummary', (ctx) => {
-  const user = Utils.findUser(ctx, userDB).getPokemonSummary
+bot.callbackQuery('catch', async (ctx) => {
+  const user = Utils.findUser(ctx, userDB)
+  user.addPokemon(currentPokemon)
+  ctx.reply(`${user.userName} has captured a ${currentPokemon.name}`)
+})
+
+bot.command('pokemonsummary', async (ctx) => {
+  const userPokemons = Utils.findUser(ctx, userDB).getPokemonSummary
+  const pokemons = userPokemons.map((el) => el.name)
+  return await ctx.reply(
+    `These are the pokemon you have: ${pokemons.join(', ')}`
+  )
 })
 
 bot.command('deleteaccount', async (ctx) => {
@@ -176,10 +188,10 @@ bot.api.setMyCommands([
     command: 'pokemongenerate',
     description: 'Start generating random pokemon',
   },
-  /* {
+  {
     command: 'pokemonsummary',
     description: 'get an info of all your pokemons',
-  }, */
+  },
 ])
 
 bot.start()
