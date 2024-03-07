@@ -52,7 +52,7 @@ export class User implements RegisteredUser {
     // Creates a random ID array with 3 random numbers
     const startersListID = [
       1, 4, 7, 25, 133, 152, 155, 158, 252, 255, 258, 387, 390, 393, 495, 498,
-      501, 650, 653, 657, 722, 725, 728,
+      501, 650, 653, 656, 722, 725, 728,
     ]
     const randomizer = (arr: number[]) =>
       arr.at(Math.floor(Math.random() * arr.length + 1)) ?? 1
@@ -69,7 +69,7 @@ export class User implements RegisteredUser {
       this.pokeApi.getPokemonById(sortedListID[2]),
     ])
       .then((values) => {
-        pokemonStarter = values
+        pokemonStarter = [...values]
       })
       .catch((err) => console.error(err))
 

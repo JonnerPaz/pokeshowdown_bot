@@ -1,6 +1,7 @@
-import { Bot, InlineKeyboard, InputFile } from 'grammy'
+import { Bot, InlineKeyboard, InputFile, InputMediaBuilder } from 'grammy'
 import { User } from './User'
-import { findUser } from './utils'
+import * as Utils from './utils'
+import { on } from 'events'
 
 // Here must be stored all accounts in the group that are registered by /register
 export let userDB: User[] = []
@@ -15,9 +16,7 @@ bot.command('start', async (ctx) => {
 })
 
 bot.command('register', async (ctx) => {
-  const userName = <string>ctx.from?.username
-
-  const condition = userDB.some((el) => el.getUserData.userName === userName)
+  const condition = Utils.findUser(ctx, userDB)
   if (condition) {
     return await ctx.reply(
       `You are already registered. If you want to erase your data and start over, use /deleteaccount`
@@ -25,13 +24,19 @@ bot.command('register', async (ctx) => {
   }
 
   // creates new user
+  const userName = <string>ctx.from?.username
   const newUser = new User(userName)
-  const firstPokemon = await newUser.generatePokemonStarter(ctx)
-  ctx.reply(
-    `You can pick a pokemon out of these 3: ${firstPokemon[0].name}, ${firstPokemon[1].name}, ${firstPokemon[2].name}`
+  const starters = await newUser.generatePokemonStarter(ctx)
+  const [firstPkmn, secondPkmn, thirdPkmn] = starters.map((el) =>
+    InputMediaBuilder.photo(
+      String(el.sprites.other?.['official-artwork'].front_default)
+    )
   )
+  await ctx.reply(
+    'To get registered, you first need to get your starter. Pick a pokemon from these ones'
+  )
+  await ctx.api.sendMediaGroup(ctx.chat.id, [firstPkmn, secondPkmn, thirdPkmn])
 
-  // ctx.reply("To get registered, you first need to get your starter. Pick a pokemon from these ones")
   userDB.push(newUser)
   return await ctx.reply(`@${ctx.from?.username} have been registered`)
 })
@@ -45,13 +50,14 @@ bot.command('pokemongenerate', async (ctx) => {
       )
 
     // generate pokemon
-    const user = findUser(ctx, userDB)
+    const user = Utils.findUser(ctx, userDB)
     const pokemon = await user.generatePokemon()
 
     // create message with pokemon
     const pokemonImage = <string>(
       pokemon?.sprites.other?.['official-artwork'].front_default
     )
+
     const inlnKeyboard = new InlineKeyboard()
       .text('YES', 'delete')
       .text('NO', 'nothing')
