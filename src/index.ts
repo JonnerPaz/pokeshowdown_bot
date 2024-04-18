@@ -1,13 +1,13 @@
 import { Bot, InlineKeyboard, InputMediaBuilder } from 'grammy'
 import { User } from './User'
 import { PokeApi } from './PokeApi'
-import * as Utils from './utils'
-import { Pokemon } from 'pokenode-ts'
+import * as Utils from './Utils'
+import { PokemonRegistered } from './types'
 
 // Here must be stored all accounts in the group that are registered by /register
-export let userDB: User[] = []
-let registerStarter: Pokemon[] = []
-let currentPokemon: Pokemon
+let userDB: User[] = []
+let registerStarter: PokemonRegistered[] = []
+let currentPokemon: PokemonRegistered
 
 const API_KEY = '6836934004:AAHpDd_rCqfMwQOdzJWW6ljjoLDomELq5w4'
 
@@ -27,12 +27,10 @@ bot.command('register', async (ctx) => {
   }
 
   // generate Pokemon
-  const starters = await new PokeApi().generatePokemonStarter()
-  registerStarter = starters
-  const [firstPkmn, secondPkmn, thirdPkmn] = starters.map((el) =>
-    InputMediaBuilder.photo(
-      String(el.sprites.other?.['official-artwork'].front_default)
-    )
+  const starters = await new PokeApi().generateRegisterPokemon()
+  registerStarter = starters // stores starters so can be used lately
+  const [firstPkmn, secondPkmn, thirdPkmn] = registerStarter.map((el) =>
+    InputMediaBuilder.photo(String(el.sprite.frontDefault))
   )
   await ctx.reply(
     'To get registered, you first need to get your starter. Pick a pokemon from these ones'
@@ -83,16 +81,12 @@ bot.command('pokemongenerate', async (ctx) => {
       )
 
     // generate pokemon
-    const pokemon = <Pokemon>await new PokeApi().generatePokemon()
+    const pokemon = await new PokeApi().generatePokemon()
     currentPokemon = pokemon
 
     // create message with pokemon
-    const pokemonImage = <string>(
-      pokemon?.sprites.other?.['official-artwork'].front_default
-    )
-
     const inlnKeyboard = new InlineKeyboard().text('CATCH', 'catch')
-    await ctx.replyWithPhoto(pokemonImage, {
+    await ctx.replyWithPhoto(PokeApi.showPokemonPhoto(pokemon, 'front'), {
       reply_markup: inlnKeyboard,
     })
 
@@ -106,6 +100,7 @@ bot.command('pokemongenerate', async (ctx) => {
 })
 
 bot.callbackQuery('catch', async (ctx) => {
+  ctx.deleteMessage()
   const user = Utils.findUser(ctx, userDB)
   user.addPokemon(currentPokemon)
   ctx.reply(`${user.userName} has captured a ${currentPokemon.name}`)

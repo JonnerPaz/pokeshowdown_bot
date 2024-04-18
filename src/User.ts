@@ -1,23 +1,15 @@
 import { PokeApi } from './PokeApi'
-import { Pokemon } from 'pokenode-ts'
-
-export interface RegisteredUser {
-  userName: string
-  data: {
-    userName: string
-    pokemon: object[]
-  }
-}
+import { PokemonRegistered } from './types'
 
 export class User {
   userName: string
-  private data: {
+  data: {
     userName: string
-    pokemon: Pokemon[]
+    pokemon: PokemonRegistered[]
   }
   pokeApi: PokeApi
 
-  constructor(user: string, starter: Pokemon) {
+  constructor(user: string, starter: PokemonRegistered) {
     this.userName = user
 
     // creates initial data of a given user
@@ -37,7 +29,7 @@ export class User {
     return this.data.pokemon
   }
 
-  addPokemon(pokemon: Pokemon) {
+  addPokemon(pokemon: PokemonRegistered) {
     this.data.pokemon.push(pokemon)
   }
 
