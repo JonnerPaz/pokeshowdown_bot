@@ -1,4 +1,3 @@
-import { PokeApi } from './PokeApi'
 import { PokemonRegistered } from './types'
 
 export class User {
@@ -7,7 +6,6 @@ export class User {
     userName: string
     pokemon: PokemonRegistered[]
   }
-  pokeApi: PokeApi
 
   constructor(user: string, starter: PokemonRegistered) {
     this.userName = user
@@ -17,8 +15,6 @@ export class User {
       userName: this.userName,
       pokemon: [starter],
     }
-
-    this.pokeApi = new PokeApi()
   }
 
   get getUserData() {
@@ -33,9 +29,14 @@ export class User {
     this.data.pokemon.push(pokemon)
   }
 
-  stopGeneratePokemon() {}
-
-  generatePokemonNow() {}
+  deletePokemon(pokemonId: number): void | string {
+    const findPokemon = this.data.pokemon.find((el) => el.id === pokemonId)
+    if (findPokemon) {
+      this.data.pokemon.splice(pokemonId)
+    } else {
+      return 'Process canceled.'
+    }
+  }
 
   catchPokemon() {}
 

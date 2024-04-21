@@ -82,6 +82,7 @@ export class PokeApi {
     pokemon: PokemonRegistered,
     position?: string
   ): string {
+    // using return. No need to use "break"
     switch (position) {
       case 'front':
         return pokemon.sprite.frontDefault

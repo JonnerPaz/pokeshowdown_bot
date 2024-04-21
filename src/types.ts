@@ -1,3 +1,5 @@
+import { InlineKeyboard } from 'grammy'
+
 export interface SpriteType {
   frontDefault: string
   frontDefaultAlt: string
@@ -12,4 +14,9 @@ export interface PokemonRegistered {
   name: string
   ability: string
   heldItem: string
+}
+
+export type PokemonKeyboard = {
+  (pokemon: PokemonRegistered[]): InlineKeyboard
+  (pokemon: PokemonRegistered): InlineKeyboard
 }

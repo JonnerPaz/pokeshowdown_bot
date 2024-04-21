@@ -30,7 +30,7 @@ bot.command('register', async (ctx) => {
   const starters = await new PokeApi().generateRegisterPokemon()
   registerStarter = starters // stores starters so can be used lately
   const [firstPkmn, secondPkmn, thirdPkmn] = registerStarter.map((el) =>
-    InputMediaBuilder.photo(String(el.sprite.frontDefault))
+    InputMediaBuilder.photo(el.sprite.frontDefault)
   )
   await ctx.reply(
     'To get registered, you first need to get your starter. Pick a pokemon from these ones'
@@ -83,7 +83,6 @@ bot.command('pokemongenerate', async (ctx) => {
     // generate pokemon
     const pokemon = await new PokeApi().generatePokemon()
     currentPokemon = pokemon
-
     // create message with pokemon
     const inlnKeyboard = new InlineKeyboard().text('CATCH', 'catch')
     await ctx.replyWithPhoto(PokeApi.showPokemonPhoto(pokemon, 'front'), {
@@ -100,17 +99,39 @@ bot.command('pokemongenerate', async (ctx) => {
 })
 
 bot.callbackQuery('catch', async (ctx) => {
-  ctx.deleteMessage()
   const user = Utils.findUser(ctx, userDB)
+  if (user.data.pokemon.length >= 2) {
+    const inlineKeyboard = Utils.createInlineKeyboard(user.data.pokemon)
+    await ctx.reply(
+      'You have reached the total maximum of pokemon allowed. Which pokemon would you like to let it go?',
+      {
+        reply_markup: inlineKeyboard,
+      }
+    )
+  }
+  ctx.deleteMessage()
   user.addPokemon(currentPokemon)
   ctx.reply(`${user.userName} has captured a ${currentPokemon.name}`)
 })
 
+bot.callbackQuery(/choice[012345]/, async (ctx) => {
+  const user = Utils.findUser(ctx, userDB)
+  const choice = Number(ctx.match[0].at(-1))
+  user.deletePokemon(choice)
+  user.addPokemon(currentPokemon)
+})
+
 bot.command('pokemonsummary', async (ctx) => {
-  const userPokemons = Utils.findUser(ctx, userDB).getPokemonSummary
-  const pokemons = userPokemons.map((el) => el.name)
+  // .sendMediaGroup(ctx.chat.id, [firstPkmn, secondPkmn, thirdPkmn])
+  // .then(async (arr) => {
+  const userPokemon = Utils.findUser(ctx, userDB)
+  const userPokemonImages = userPokemon.getPokemonSummary.map((el) =>
+    InputMediaBuilder.photo(el.sprite.frontDefault)
+  )
+  const pokemonName = userPokemon.data.pokemon.map((el) => el.name)
+  await ctx.api.sendMediaGroup(ctx.chat.id, userPokemonImages)
   return await ctx.reply(
-    `These are the pokemon you have: ${pokemons.join(', ')}`
+    `These are the pokemon you have: ${pokemonName.join(', ')}`
   )
 })
 

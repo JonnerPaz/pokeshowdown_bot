@@ -5,6 +5,7 @@ import {
   CallbackQueryContext,
 } from 'grammy'
 import { User } from './User'
+import { PokemonRegistered } from './types'
 
 export const findUser = function (
   ctx: CommandContext<Context> | CallbackQueryContext<Context>,
@@ -16,17 +17,21 @@ export const findUser = function (
 /**
  * @param pokemonNames {string[] | string} must receive pokemon names
  */
-export const createInlineKeyboard = (pokemonNames: string[] | string) => {
+export const createInlineKeyboard = (
+  pokemonNames: PokemonRegistered[] | PokemonRegistered
+): InlineKeyboard => {
   if (Array.isArray(pokemonNames)) {
-    // pushes a 2 dimensional arr that could be full of numbers and strings
-    const option = [...pokemonNames]
-    const buttonRow = option.map(([label, data]) =>
-      InlineKeyboard.text(label, data)
-    )
-    const keyboard = InlineKeyboard.from([buttonRow])
-    return keyboard
+    // creates a 2 dimensional arr full of strings, labeled as "value, data"
+    const buttonRow = [...pokemonNames]
+      .map((el, i): string[] => {
+        return [el.name, 'choice' + String(i)]
+      })
+      .map(([label, data]) => {
+        return InlineKeyboard.text(label, data)
+      })
+    return InlineKeyboard.from([buttonRow])
   }
 
-  const keyboard = new InlineKeyboard().text(pokemonNames, String(0))
+  const keyboard = new InlineKeyboard().text(String(pokemonNames), String(0))
   return keyboard
 }
