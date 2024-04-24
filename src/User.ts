@@ -29,10 +29,10 @@ export class User {
     this.data.pokemon.push(pokemon)
   }
 
-  deletePokemon(pokemonId: number): void | string {
-    const findPokemon = this.data.pokemon.find((el) => el.id === pokemonId)
+  deletePokemon(pokemonIndex: number): void | string {
+    const findPokemon = this.data.pokemon.at(pokemonIndex)
     if (findPokemon) {
-      this.data.pokemon.splice(pokemonId)
+      this.data.pokemon.splice(pokemonIndex, 1)
     } else {
       return 'Process canceled.'
     }

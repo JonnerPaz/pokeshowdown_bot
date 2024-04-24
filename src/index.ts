@@ -98,30 +98,46 @@ bot.command('pokemongenerate', async (ctx) => {
 })
 
 bot.callbackQuery('catch', async (ctx) => {
-  const user = Utils.findUser(ctx, userDB)
+  try {
+    const user = Utils.findUser(ctx, userDB)
 
-  const isBagFull = await Utils.catchChecker(user, ctx)
-  await ctx.deleteMessage()
+    if (user.data.pokemon.length >= 6) {
+      // inline_keyboard from user inputed pokemon
+      const isBagFull = await Utils.catchChecker(user, ctx)
+      const setChange = await Promise.all([isBagFull])
+        .then(async (res) => {
+          return await ctx.deleteMessage()
+        })
+        .catch((res) => {
+          console.error('promise not fulfilled at setChange')
+          return ctx.reply('Process cancelled. See logs in the console')
+        })
+    }
 
-  if (Utils.isPokemonRegistered(currentPokemon)) {
-    user.addPokemon(currentPokemon)
-    await ctx.reply(`${user.userName} has captured a ${currentPokemon.name}`)
-  } else {
-    await ctx.reply('No pokemon. Null exception')
+    await ctx.deleteMessage()
+    if (Utils.isPokemonRegistered(currentPokemon)) {
+      user.addPokemon(currentPokemon)
+      await ctx.reply(`${user.userName} has captured a ${currentPokemon.name}`)
+    } else {
+      await ctx.reply('No pokemon. Null exception')
+    }
+
+    // set current pokemon empty again
+    // currentPokemon = null
+  } catch (err) {
+    console.error(err)
   }
-
-  // set current pokemon empty again
-  // currentPokemon = null
 })
 
 bot.callbackQuery(/choice[012345]/, async (ctx) => {
-  console.log('chooosing pokemon')
   const user = Utils.findUser(ctx, userDB)
-  const choice = Number(ctx.match[0].at(-1))
+  const choice = Number(ctx.match[0].at(-1)) // 0, 1, 2, 3, 4, 5
 
+  await ctx.deleteMessage()
   if (Utils.isPokemonRegistered(currentPokemon)) {
     user.deletePokemon(choice)
     user.addPokemon(currentPokemon)
+    return await ctx.reply('Process fulfilled')
   } else {
     await ctx.reply('No pokemon. Null exception')
   }
