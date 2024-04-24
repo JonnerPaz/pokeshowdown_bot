@@ -93,6 +93,6 @@ export class PokeApi {
       case 'backShiny':
         return pokemon.sprite.backShiny
     }
-    return pokemon.sprite.frontShiny
+    return pokemon.sprite.frontDefault
   }
 }

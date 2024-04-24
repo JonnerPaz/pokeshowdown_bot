@@ -3,11 +3,12 @@ import { User } from './User'
 import { PokeApi } from './PokeApi'
 import * as Utils from './Utils'
 import { PokemonRegistered } from './types'
+import { InlineKeyboardButton } from '@grammyjs/types'
 
 // Here must be stored all accounts in the group that are registered by /register
 let userDB: User[] = []
 let registerStarter: PokemonRegistered[] = []
-let currentPokemon: PokemonRegistered
+let currentPokemon: PokemonRegistered | null
 
 const API_KEY = '6836934004:AAHpDd_rCqfMwQOdzJWW6ljjoLDomELq5w4'
 
@@ -56,7 +57,6 @@ bot.callbackQuery(/starter[012]/, async (ctx) => {
   const userName = <string>ctx.from?.username
   const user = new User(userName, registerStarter[choice])
   userDB.push(user)
-  console.log(user.getPokemonSummary)
   await ctx.deleteMessage()
   await ctx.reply(
     `@${ctx.from?.username} chose ${registerStarter[choice].name}! now you have been registered`
@@ -69,56 +69,62 @@ Hope you have fun with this bot!
 
 bot.callbackQuery('cancel', async (ctx) => {
   ctx.deleteMessage()
-  return ctx.reply('Your registration have been canceled sucessfully')
+  return ctx.reply('Process cancelled successfully')
 })
 
 bot.command('pokemongenerate', async (ctx) => {
   try {
     const user = Utils.findUser(ctx, userDB)
-    if (!user)
+    if (!user) {
       return ctx.reply(
         `You're not registered. You need to register first using /register`
       )
+    }
 
     // generate pokemon
     const pokemon = await new PokeApi().generatePokemon()
     currentPokemon = pokemon
-    // create message with pokemon
-    const inlnKeyboard = new InlineKeyboard().text('CATCH', 'catch')
-    await ctx.replyWithPhoto(PokeApi.showPokemonPhoto(pokemon, 'front'), {
-      reply_markup: inlnKeyboard,
-    })
 
-    // send pokemon
-    await ctx.reply(
-      `@${ctx.from?.username} encountered a wild ${pokemon?.name}`
-    )
+    // create message with pokemon
+    const caption = `@${ctx.from?.username} encountered a wild ${pokemon?.name}`
+    const inlnKeyboard = new InlineKeyboard().text('CATCH', 'catch')
+    await ctx.replyWithPhoto(PokeApi.showPokemonPhoto(pokemon), {
+      reply_markup: inlnKeyboard,
+      caption: caption,
+    })
   } catch (err) {
-    console.log(err)
+    console.error(err)
   }
 })
 
 bot.callbackQuery('catch', async (ctx) => {
   const user = Utils.findUser(ctx, userDB)
-  if (user.data.pokemon.length >= 2) {
-    const inlineKeyboard = Utils.createInlineKeyboard(user.data.pokemon)
-    await ctx.reply(
-      'You have reached the total maximum of pokemon allowed. Which pokemon would you like to let it go?',
-      {
-        reply_markup: inlineKeyboard,
-      }
-    )
+
+  const isBagFull = await Utils.catchChecker(user, ctx)
+  await ctx.deleteMessage()
+
+  if (Utils.isPokemonRegistered(currentPokemon)) {
+    user.addPokemon(currentPokemon)
+    await ctx.reply(`${user.userName} has captured a ${currentPokemon.name}`)
+  } else {
+    await ctx.reply('No pokemon. Null exception')
   }
-  ctx.deleteMessage()
-  user.addPokemon(currentPokemon)
-  ctx.reply(`${user.userName} has captured a ${currentPokemon.name}`)
+
+  // set current pokemon empty again
+  // currentPokemon = null
 })
 
 bot.callbackQuery(/choice[012345]/, async (ctx) => {
+  console.log('chooosing pokemon')
   const user = Utils.findUser(ctx, userDB)
   const choice = Number(ctx.match[0].at(-1))
-  user.deletePokemon(choice)
-  user.addPokemon(currentPokemon)
+
+  if (Utils.isPokemonRegistered(currentPokemon)) {
+    user.deletePokemon(choice)
+    user.addPokemon(currentPokemon)
+  } else {
+    await ctx.reply('No pokemon. Null exception')
+  }
 })
 
 bot.command('pokemonsummary', async (ctx) => {
