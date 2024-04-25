@@ -1,4 +1,11 @@
-import { Bot, InlineKeyboard, InputMediaBuilder } from 'grammy'
+import {
+  Bot,
+  BotError,
+  GrammyError,
+  HttpError,
+  InlineKeyboard,
+  InputMediaBuilder,
+} from 'grammy'
 import { User } from './User'
 import { PokeApi } from './PokeApi'
 import * as Utils from './Utils'
@@ -102,7 +109,7 @@ bot.callbackQuery('catch', async (ctx) => {
   try {
     const user = Utils.findUser(ctx, userDB)
 
-    if (user.data.pokemon.length >= 6) {
+    if (user.data.pokemon.length >= 2) {
       // inline_keyboard from user inputed pokemon
       const isBagFull = await Utils.catchChecker(user, ctx)
       const setChange = await Promise.all([isBagFull])
@@ -231,3 +238,22 @@ bot.api.setMyCommands([
 ])
 
 bot.start()
+
+bot.catch((err) => {
+  const ctx = err.ctx
+  console.error(`Error while handling update ${ctx.update.update_id}:`)
+  const e = err.error
+  if (e instanceof GrammyError) {
+    console.error('Error in request:', e.description)
+    bot.start()
+  } else if (e instanceof HttpError) {
+    console.error('Could not contact Telegram:', e)
+    bot.start()
+  } else if (e instanceof BotError) {
+    console.error('Error associate with BotError:', e)
+    bot.start()
+  } else {
+    console.error('Unknown error:', e)
+    bot.start()
+  }
+})
