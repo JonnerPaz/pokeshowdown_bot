@@ -3,7 +3,6 @@ import { User } from './User'
 import { PokeApi } from './PokeApi'
 import * as Utils from './Utils'
 import { PokemonRegistered } from './types'
-import { InlineKeyboardButton } from '@grammyjs/types'
 
 // Here must be stored all accounts in the group that are registered by /register
 let userDB: User[] = []
@@ -15,7 +14,9 @@ const API_KEY = '6836934004:AAHpDd_rCqfMwQOdzJWW6ljjoLDomELq5w4'
 const bot = new Bot(API_KEY)
 
 bot.command('start', async (ctx) => {
-  const msg = `Bienvenido a PokeBotShowdown. Este es un Bot creado para capturar, intercambiar y combatir como en las entregas originales de la saga pokemon`
+  const msg = `
+Bienvenido a PokeBotShowdown. Este es un Bot creado para capturar, intercambiar y combatir como en las entregas originales de la saga pokemon
+`
   return await ctx.reply(msg)
 })
 
@@ -38,7 +39,7 @@ bot.command('register', async (ctx) => {
   )
   await ctx.api
     .sendMediaGroup(ctx.chat.id, [firstPkmn, secondPkmn, thirdPkmn])
-    .then(async (arr) => {
+    .then(async () => {
       const inlineKeyboard = new InlineKeyboard()
         .text(starters[0].name, 'starter0')
         .text(starters[1].name, 'starter1')
@@ -105,11 +106,11 @@ bot.callbackQuery('catch', async (ctx) => {
       // inline_keyboard from user inputed pokemon
       const isBagFull = await Utils.catchChecker(user, ctx)
       const setChange = await Promise.all([isBagFull])
-        .then(async (res) => {
+        .then(async () => {
           return await ctx.deleteMessage()
         })
         .catch((res) => {
-          console.error('promise not fulfilled at setChange')
+          console.error('promise not fulfilled at setChange: ' + res)
           return ctx.reply('Process cancelled. See logs in the console')
         })
     }
@@ -199,17 +200,14 @@ bot.callbackQuery('nothing', async (ctx) => {
   await ctx.deleteMessage()
 })
 
-bot.command('stop', async (ctx) => {
-  ctx.reply('this bot is stopping...')
-  return await bot.stop()
-})
-
 bot.command('help', async (ctx) => {
-  await ctx.reply(`Here are some of the following commands that @${ctx.me.username} receives:
+  await ctx.reply(`
+Here are some of the following commands that @${ctx.me.username} receives:
 * /start - Starts de bot
 * /register - register a user into the bot
 * /deleteaccount - Delete your account from PokeBotShowdown
-* /stop - Stops PokeBotShowdown - DO NOT USE IT`)
+* /pokemonsummary - Shows your pokemon party
+`)
 })
 
 // commands can't have uppercase

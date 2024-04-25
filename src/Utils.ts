@@ -20,6 +20,7 @@ export const findUser = function (
  * @param pokemonNames {string[] | string} must receive pokemon names
  * @param buttons {InlineKeyboardButton[][]} if using this, send null to pokemonNames
  */
+// TODO: need a refactor
 export const createInlineKeyboard = (
   pokemonNames: PokemonRegistered[] | PokemonRegistered | null,
   buttons?: InlineKeyboardButton[][]
