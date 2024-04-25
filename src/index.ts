@@ -10,13 +10,14 @@ import { User } from './User'
 import { PokeApi } from './PokeApi'
 import * as Utils from './Utils'
 import { PokemonRegistered } from './types'
+import 'dotenv/config'
 
 // Here must be stored all accounts in the group that are registered by /register
 let userDB: User[] = []
 let registerStarter: PokemonRegistered[] = []
 let currentPokemon: PokemonRegistered | null
 
-const API_KEY = '6836934004:AAHpDd_rCqfMwQOdzJWW6ljjoLDomELq5w4'
+const API_KEY = process.env.API_KEY as string
 
 const bot = new Bot(API_KEY)
 
@@ -62,7 +63,7 @@ bot.callbackQuery(/starter[012]/, async (ctx) => {
   const choice = Number(ctx.match[0].slice(-1))
 
   // creates new user
-  const userName = <string>ctx.from?.username
+  const userName = ctx.from?.username as string
   const user = new User(userName, registerStarter[choice])
   userDB.push(user)
   await ctx.deleteMessage()
@@ -169,7 +170,7 @@ bot.command('deleteaccount', async (ctx) => {
   try {
     // if not a user, return
     const logic = userDB.some(
-      (el) => el.getUserData.userName === <string>ctx.from?.username
+      (el) => el.getUserData.userName === (ctx.from?.username as string)
     )
     const msg = `You're not registered in @${ctx.me.username}. Use /register to use this bot`
     if (!logic) return await ctx.reply(msg)
@@ -191,11 +192,11 @@ bot.command('deleteaccount', async (ctx) => {
 // responses to deleteaccount
 bot.callbackQuery('delete', async (ctx) => {
   // delete inline_keyboard
-  ctx.deleteMessages([<number>ctx.msg?.message_id])
+  ctx.deleteMessages([ctx.msg?.message_id as number])
 
-  const findUser = <User>(
-    userDB.find((el) => el.getUserData.userName === <string>ctx.from?.username)
-  )
+  const findUser = userDB.find(
+    (el) => el.getUserData.userName === ctx.from?.username
+  ) as User
   userDB.splice(userDB.indexOf(findUser))
 
   const msg = 'Your account has now been erased. Sad to see you go!'
