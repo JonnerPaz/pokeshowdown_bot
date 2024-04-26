@@ -1,6 +1,7 @@
 import { Pokemon, PokemonClient } from 'pokenode-ts'
 import { PokemonBuilder } from './PokemonBuilder'
 import { PokemonRegistered } from './types'
+import { TOTAL_OF_POKEMON } from './variables'
 
 export class PokeApi {
   private api: PokemonClient
@@ -18,12 +19,17 @@ export class PokeApi {
     return this.builder
   }
 
+  private randomizer(array?: number[]) {
+    if (array) {
+      return array.at(Math.floor(Math.random() * array.length + 1)) ?? 1
+    }
+    return Math.floor(Math.random() * TOTAL_OF_POKEMON + 1)
+  }
+
   async generatePokemon(): Promise<PokemonRegistered> {
     try {
-      const randomizer = Math.floor(Math.random() * 809 + 1)
-      const requestPokemon = <Pokemon>await this.api.getPokemonById(randomizer)
-      const pokemon = this.buildPokemon(requestPokemon)
-      return pokemon
+      const requestPokemon = await this.api.getPokemonById(this.randomizer())
+      return this.buildPokemon(requestPokemon)
     } catch (err) {
       throw err
     }
@@ -35,13 +41,11 @@ export class PokeApi {
       1, 4, 7, 25, 133, 152, 155, 158, 252, 255, 258, 387, 390, 393, 495, 498,
       501, 650, 653, 656, 722, 725, 728,
     ]
-    const randomizer = (arr: number[]) => {
-      return arr.at(Math.floor(Math.random() * arr.length + 1)) ?? 1
+    const sortedSetID: Set<number> = new Set()
+    while (sortedSetID.size <= 2) {
+      sortedSetID.add(this.randomizer(startersListID))
     }
-    const sortedListID: number[] = []
-    for (let i = 0; i <= 2; i++) {
-      sortedListID.push(randomizer(startersListID))
-    }
+    const sortedListID: number[] = [...sortedSetID]
 
     // Take the random arr and convert them to pokemons
     let pokemonStarter: PokemonRegistered[] = []

@@ -14,6 +14,7 @@ export interface PokemonRegistered {
   name: string
   ability: string
   heldItem: string
+  counter: number
 }
 
 export type PokemonKeyboard = {

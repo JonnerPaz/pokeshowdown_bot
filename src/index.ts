@@ -29,34 +29,38 @@ Bienvenido a PokeBotShowdown. Este es un Bot creado para capturar, intercambiar 
 })
 
 bot.command('register', async (ctx) => {
-  const user = Utils.findUser(ctx, userDB)
-  if (user) {
-    return await ctx.reply(
-      `You are already registered. If you want to erase your data and start over, use /deleteaccount`
-    )
-  }
+  try {
+    const user = Utils.findUser(ctx, userDB)
+    if (user) {
+      return await ctx.reply(
+        `You are already registered. If you want to erase your data and start over, use /deleteaccount`
+      )
+    }
 
-  // generate Pokemon
-  const starters = await new PokeApi().generateRegisterPokemon()
-  registerStarter = starters // stores starters so can be used lately
-  const [firstPkmn, secondPkmn, thirdPkmn] = registerStarter.map((el) =>
-    InputMediaBuilder.photo(el.sprite.frontDefault)
-  )
-  await ctx.reply(
-    'To get registered, you first need to get your starter. Pick a pokemon from these ones'
-  )
-  await ctx.api
-    .sendMediaGroup(ctx.chat.id, [firstPkmn, secondPkmn, thirdPkmn])
-    .then(async () => {
-      const inlineKeyboard = new InlineKeyboard()
-        .text(starters[0].name, 'starter0')
-        .text(starters[1].name, 'starter1')
-        .text(starters[2].name, 'starter2')
-        .text('Cancel', 'cancel')
-      await ctx.reply('Select the right choice for you:', {
-        reply_markup: inlineKeyboard,
+    // generate Pokemon
+    const starters = await new PokeApi().generateRegisterPokemon()
+    registerStarter = starters // stores starters so can be used lately
+    const [firstPkmn, secondPkmn, thirdPkmn] = registerStarter.map((el) =>
+      InputMediaBuilder.photo(el.sprite.frontDefault)
+    )
+    await ctx.reply(
+      'To get registered, you first need to get your starter. Pick a pokemon from these ones'
+    )
+    await ctx.api
+      .sendMediaGroup(ctx.chat.id, [firstPkmn, secondPkmn, thirdPkmn])
+      .then(async () => {
+        const inlineKeyboard = new InlineKeyboard()
+          .text(starters[0].name, 'starter0')
+          .text(starters[1].name, 'starter1')
+          .text(starters[2].name, 'starter2')
+          .text('Cancel', 'cancel')
+        await ctx.reply('Select the right choice for you:', {
+          reply_markup: inlineKeyboard,
+        })
       })
-    })
+  } catch (err) {
+    console.error('error at register: ', err)
+  }
 })
 
 bot.callbackQuery(/starter[012]/, async (ctx) => {
