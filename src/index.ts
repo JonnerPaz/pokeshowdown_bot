@@ -118,14 +118,16 @@ bot.callbackQuery('catch', async (ctx) => {
       if (ctx.msg?.message_id) {
         botMessageId = ctx.msg?.message_id
       }
-      await ctx.reply(
-        'You have reached the total maximum of pokemon allowed. Which pokemon would you like to let it go?'
-      )
       // inline_keyboard from user inputed pokemon
-      await Utils.customInlnKbdBtn(user, ctx).catch((res) => {
+      const keyboard = (await Utils.customInlnKbdBtn(user, ctx).catch((res) => {
         console.error('promise not fulfilled at setChange: ' + res)
         return ctx.reply('Process cancelled. See logs in the console')
-      })
+      })) as InlineKeyboard
+
+      await ctx.reply(
+        'You have reached the total maximum of pokemon allowed. Which pokemon would you like to let it go?',
+        { reply_markup: keyboard }
+      )
       return
     }
 
@@ -145,15 +147,18 @@ bot.callbackQuery('catch', async (ctx) => {
 })
 
 bot.callbackQuery(/choice[012345]/, async (ctx) => {
-  ctx.deleteMessages([botMessageId])
+  await ctx.deleteMessages([botMessageId]) // deletes the wild pokemon msg
   const user = Utils.findUser(ctx, userDB)
   const choice = Number(ctx.match[0].at(-1)) // 0, 1, 2, 3, 4, 5
 
-  await ctx.deleteMessage()
+  await ctx.deleteMessage() // deletes selection party msg
   if (Utils.isPokemonRegistered(currentPokemon)) {
     user.deletePokemon(choice)
     user.addPokemon(currentPokemon)
-    return await ctx.reply('Process fulfilled')
+    const deletedPokemon = user.data.pokemon[choice]
+    return await ctx.reply(
+      `${deletedPokemon.name} was deleted and ${currentPokemon.name} was added to your party!`
+    )
   } else {
     await ctx.reply('No pokemon. Null exception')
   }

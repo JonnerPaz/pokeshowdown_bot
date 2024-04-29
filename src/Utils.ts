@@ -58,7 +58,7 @@ export const isPokemonRegistered = (
 export const customInlnKbdBtn = async (
   user: User,
   ctx: CallbackQueryContext<Context>
-): Promise<InlineKeyboardButton[][]> => {
+): Promise<InlineKeyboard> => {
   const userPokemonPhotos = [...user.getPokemonSummary].map((pokemon) =>
     InputMediaBuilder.photo(pokemon.sprite.frontDefault)
   )
@@ -66,6 +66,8 @@ export const customInlnKbdBtn = async (
     'cancel',
     'cancel' // exits this code and goes to cancel query
   )
-  await ctx.api.sendMediaGroup(ctx.chat?.id as number, userPokemonPhotos)
-  return inlineKeyboard.inline_keyboard
+  if (typeof ctx.chat?.id === 'number') {
+    await ctx.api.sendMediaGroup(ctx.chat?.id, userPokemonPhotos)
+  }
+  return inlineKeyboard
 }

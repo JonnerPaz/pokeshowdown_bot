@@ -35,7 +35,7 @@ export class User {
     if (findPokemon) {
       this.data.pokemon.splice(pokemonIndex, 1)
     } else {
-      return 'Process canceled.'
+      return 'Error in request at deletePokemon'
     }
   }
 
