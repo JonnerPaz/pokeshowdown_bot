@@ -14,7 +14,6 @@ import 'dotenv/config'
 import { MAX_PKMN_PARTY } from './constants'
 
 // Here must be stored all accounts in the group that are registered by /register
-// TODO: connect with a database to get rid of userDB
 let userDB: User[] = []
 let registerStarter: PokemonRegistered[] = []
 let currentPokemon: PokemonRegistered | null
@@ -113,8 +112,24 @@ bot.command('pokemongenerate', async (ctx) => {
 bot.callbackQuery('catch', async (ctx) => {
   try {
     const user = Utils.findUser(ctx, userDB)
+    const { pokemon: pokemons } = user.data
+    const condition = pokemons.some((el) => el.name === currentPokemon?.name)
+    const pkmnFound = pokemons.find((el) => el.name === currentPokemon?.name)
 
-    if (user.data.pokemon.length >= MAX_PKMN_PARTY) {
+    if (currentPokemon && condition) {
+      PokeApi.updateCounter(
+        pokemons.find(
+          (el) => el.name === currentPokemon?.name
+        ) as PokemonRegistered
+      )
+      ctx.deleteMessage()
+      ctx.reply(
+        `You have catched a ${currentPokemon.name}. Your counter has been updated to ${pkmnFound?.counter}`
+      )
+      return
+    }
+
+    if (pokemons.length >= MAX_PKMN_PARTY) {
       if (ctx.msg?.message_id) {
         botMessageId = ctx.msg?.message_id
       }
@@ -123,14 +138,12 @@ bot.callbackQuery('catch', async (ctx) => {
         console.error('promise not fulfilled at setChange: ' + res)
         return ctx.reply('Process cancelled. See logs in the console')
       })) as InlineKeyboard
-
       await ctx.reply(
         'You have reached the total maximum of pokemon allowed. Which pokemon would you like to let it go?',
         { reply_markup: keyboard }
       )
       return
     }
-
     await ctx.deleteMessage()
     if (Utils.isPokemonRegistered(currentPokemon)) {
       user.addPokemon(currentPokemon)
@@ -138,9 +151,6 @@ bot.callbackQuery('catch', async (ctx) => {
     } else {
       await ctx.reply('No pokemon. Null exception')
     }
-
-    // set current pokemon empty again
-    // currentPokemon = null
   } catch (err) {
     console.error(err)
   }

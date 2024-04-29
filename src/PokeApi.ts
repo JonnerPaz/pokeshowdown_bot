@@ -6,13 +6,10 @@ import { TOTAL_OF_POKEMON } from './constants'
 export class PokeApi {
   private api: PokemonClient
   private builder: PokemonBuilder
+
   constructor() {
     this.api = new PokemonClient()
     this.builder = new PokemonBuilder()
-  }
-
-  get getApi() {
-    return this.api
   }
 
   private randomizer(array?: number[]) {
@@ -95,4 +92,10 @@ export class PokeApi {
     }
     return pokemon.sprite.frontDefault
   }
+
+  static updateCounter(pokemon: PokemonRegistered) {
+    return pokemon.counter++
+  }
+
+  static evolvePokemon(pokemon: PokemonRegistered) {}
 }

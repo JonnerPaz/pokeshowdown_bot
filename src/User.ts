@@ -39,7 +39,7 @@ export class User {
     }
   }
 
-  catchPokemon() {}
+  catchPokemon(pokemon: PokemonRegistered, user?: User) {}
 
   viewPokemon() {}
 
