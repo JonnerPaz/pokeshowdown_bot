@@ -11,11 +11,14 @@ import { PokeApi } from './PokeApi'
 import * as Utils from './Utils'
 import { PokemonRegistered } from './types'
 import 'dotenv/config'
+import { MAX_PKMN_PARTY } from './constants'
 
 // Here must be stored all accounts in the group that are registered by /register
+// TODO: connect with a database to get rid of userDB
 let userDB: User[] = []
 let registerStarter: PokemonRegistered[] = []
 let currentPokemon: PokemonRegistered | null
+let botMessageId: number // saves messages from bot to handle it later
 
 const API_KEY = process.env.API_KEY as string
 
@@ -40,24 +43,22 @@ bot.command('register', async (ctx) => {
     // generate Pokemon
     const starters = await new PokeApi().generateRegisterPokemon()
     registerStarter = starters // stores starters so can be used lately
-    const [firstPkmn, secondPkmn, thirdPkmn] = registerStarter.map((el) =>
+    const pokemonMedia = registerStarter.map((el) =>
       InputMediaBuilder.photo(el.sprite.frontDefault)
     )
     await ctx.reply(
       'To get registered, you first need to get your starter. Pick a pokemon from these ones'
     )
-    await ctx.api
-      .sendMediaGroup(ctx.chat.id, [firstPkmn, secondPkmn, thirdPkmn])
-      .then(async () => {
-        const inlineKeyboard = new InlineKeyboard()
-          .text(starters[0].name, 'starter0')
-          .text(starters[1].name, 'starter1')
-          .text(starters[2].name, 'starter2')
-          .text('Cancel', 'cancel')
-        await ctx.reply('Select the right choice for you:', {
-          reply_markup: inlineKeyboard,
-        })
+    await ctx.api.sendMediaGroup(ctx.chat.id, pokemonMedia).then(async () => {
+      const inlineKeyboard = new InlineKeyboard()
+        .text(starters[0].name, 'starter0')
+        .text(starters[1].name, 'starter1')
+        .text(starters[2].name, 'starter2')
+        .text('Cancel', 'cancel')
+      await ctx.reply('Select the right choice for you:', {
+        reply_markup: inlineKeyboard,
       })
+    })
   } catch (err) {
     console.error('error at register: ', err)
   }
@@ -93,13 +94,12 @@ bot.command('pokemongenerate', async (ctx) => {
         `You're not registered. You need to register first using /register`
       )
     }
-
     // generate pokemon
     const pokemon = await new PokeApi().generatePokemon()
     currentPokemon = pokemon
 
     // create message with pokemon
-    const caption = `@${ctx.from?.username} encountered a wild ${pokemon?.name}`
+    const caption = `A wild ${pokemon.name} appeared. Tap "CATCH" to get it`
     const inlnKeyboard = new InlineKeyboard().text('CATCH', 'catch')
     await ctx.replyWithPhoto(PokeApi.showPokemonPhoto(pokemon), {
       reply_markup: inlnKeyboard,
@@ -114,17 +114,19 @@ bot.callbackQuery('catch', async (ctx) => {
   try {
     const user = Utils.findUser(ctx, userDB)
 
-    if (user.data.pokemon.length >= 2) {
+    if (user.data.pokemon.length >= MAX_PKMN_PARTY) {
+      if (ctx.msg?.message_id) {
+        botMessageId = ctx.msg?.message_id
+      }
+      await ctx.reply(
+        'You have reached the total maximum of pokemon allowed. Which pokemon would you like to let it go?'
+      )
       // inline_keyboard from user inputed pokemon
-      const isBagFull = await Utils.catchChecker(user, ctx)
-      const setChange = await Promise.all([isBagFull])
-        .then(async () => {
-          return await ctx.deleteMessage()
-        })
-        .catch((res) => {
-          console.error('promise not fulfilled at setChange: ' + res)
-          return ctx.reply('Process cancelled. See logs in the console')
-        })
+      await Utils.customInlnKbdBtn(user, ctx).catch((res) => {
+        console.error('promise not fulfilled at setChange: ' + res)
+        return ctx.reply('Process cancelled. See logs in the console')
+      })
+      return
     }
 
     await ctx.deleteMessage()
@@ -143,6 +145,7 @@ bot.callbackQuery('catch', async (ctx) => {
 })
 
 bot.callbackQuery(/choice[012345]/, async (ctx) => {
+  ctx.deleteMessages([botMessageId])
   const user = Utils.findUser(ctx, userDB)
   const choice = Number(ctx.match[0].at(-1)) // 0, 1, 2, 3, 4, 5
 

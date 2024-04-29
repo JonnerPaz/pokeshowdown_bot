@@ -55,7 +55,7 @@ export const isPokemonRegistered = (
   return (pokemon as PokemonRegistered).name !== null
 }
 
-export const catchChecker = async (
+export const customInlnKbdBtn = async (
   user: User,
   ctx: CallbackQueryContext<Context>
 ): Promise<InlineKeyboardButton[][]> => {
@@ -67,11 +67,5 @@ export const catchChecker = async (
     'cancel' // exits this code and goes to cancel query
   )
   await ctx.api.sendMediaGroup(ctx.chat?.id as number, userPokemonPhotos)
-  await ctx.reply(
-    'You have reached the total maximum of pokemon allowed. Which pokemon would you like to let it go?',
-    {
-      reply_markup: inlineKeyboard,
-    }
-  )
   return inlineKeyboard.inline_keyboard
 }

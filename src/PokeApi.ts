@@ -1,7 +1,7 @@
 import { Pokemon, PokemonClient } from 'pokenode-ts'
 import { PokemonBuilder } from './PokemonBuilder'
 import { PokemonRegistered } from './types'
-import { TOTAL_OF_POKEMON } from './variables'
+import { TOTAL_OF_POKEMON } from './constants'
 
 export class PokeApi {
   private api: PokemonClient
@@ -13,10 +13,6 @@ export class PokeApi {
 
   get getApi() {
     return this.api
-  }
-
-  get getBuilder() {
-    return this.builder
   }
 
   private randomizer(array?: number[]) {
