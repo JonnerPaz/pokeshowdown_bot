@@ -147,7 +147,8 @@ bot.callbackQuery('catch', async (ctx) => {
     await ctx.deleteMessage()
     if (Utils.isPokemonRegistered(currentPokemon)) {
       user.addPokemon(currentPokemon)
-      await ctx.reply(`${user.userName} has captured a ${currentPokemon.name}`)
+      const { userName } = user.data
+      await ctx.reply(`${userName} has captured a ${currentPokemon.name}`)
     } else {
       await ctx.reply('No pokemon. Null exception')
     }
@@ -192,7 +193,7 @@ bot.command('deleteaccount', async (ctx) => {
   try {
     // if not a user, return
     const logic = userDB.some(
-      (el) => el.getUserData.userName === (ctx.from?.username as string)
+      (el) => el.data.userName === (ctx.from?.username as string)
     )
     const msg = `You're not registered in @${ctx.me.username}. Use /register to use this bot`
     if (!logic) return await ctx.reply(msg)
@@ -217,7 +218,7 @@ bot.callbackQuery('delete', async (ctx) => {
   ctx.deleteMessages([ctx.msg?.message_id as number])
 
   const findUser = userDB.find(
-    (el) => el.getUserData.userName === ctx.from?.username
+    (el) => el.data.userName === ctx.from?.username
   ) as User
   userDB.splice(userDB.indexOf(findUser))
 

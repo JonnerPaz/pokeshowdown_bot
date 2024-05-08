@@ -2,24 +2,17 @@ import { PokemonRegistered } from './types'
 
 // TODO: Connect user class with a database
 export class User {
-  userName: string
   data: {
     userName: string
     pokemon: PokemonRegistered[]
   }
 
   constructor(user: string, starter: PokemonRegistered) {
-    this.userName = user
-
     // creates initial data of a given user
     this.data = {
-      userName: this.userName,
+      userName: user,
       pokemon: [starter],
     }
-  }
-
-  get getUserData() {
-    return this.data
   }
 
   get getPokemonSummary() {
