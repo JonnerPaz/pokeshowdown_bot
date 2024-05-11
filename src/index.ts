@@ -12,6 +12,7 @@ import * as Utils from './Utils'
 import { PokemonRegistered } from './types'
 import 'dotenv/config'
 import { MAX_PKMN_PARTY } from './constants'
+import { db } from './Database'
 
 // Here must be stored all accounts in the group that are registered by /register
 let userDB: User[] = []
@@ -69,6 +70,7 @@ bot.callbackQuery(/starter[012]/, async (ctx) => {
   // creates new user
   const userName = ctx.from?.username as string
   const user = new User(userName, registerStarter[choice])
+  db.addUser(user) // Inserts User into Database
   userDB.push(user)
   await ctx.deleteMessage()
   await ctx.reply(
@@ -193,7 +195,7 @@ bot.command('deleteaccount', async (ctx) => {
   try {
     // if not a user, return
     const logic = userDB.some(
-      (el) => el.data.userName === (ctx.from?.username as string)
+      (el) => el.userName === (ctx.from?.username as string)
     )
     const msg = `You're not registered in @${ctx.me.username}. Use /register to use this bot`
     if (!logic) return await ctx.reply(msg)
@@ -218,7 +220,7 @@ bot.callbackQuery('delete', async (ctx) => {
   ctx.deleteMessages([ctx.msg?.message_id as number])
 
   const findUser = userDB.find(
-    (el) => el.data.userName === ctx.from?.username
+    (el) => el.userName === ctx.from?.username
   ) as User
   userDB.splice(userDB.indexOf(findUser))
 

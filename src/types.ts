@@ -1,4 +1,5 @@
 import { InlineKeyboard } from 'grammy'
+import { User } from './User'
 
 export interface SpriteType {
   frontDefault: string
@@ -21,3 +22,5 @@ export type PokemonKeyboard = {
   (pokemon: PokemonRegistered[]): InlineKeyboard
   (pokemon: PokemonRegistered): InlineKeyboard
 }
+
+export type UserSchema = User

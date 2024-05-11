@@ -13,7 +13,7 @@ export const findUser = function (
   ctx: CommandContext<Context> | CallbackQueryContext<Context>,
   dataBase: User[]
 ): User {
-  return <User>dataBase.find((el) => el.data.userName === ctx.from?.username)
+  return <User>dataBase.find((el) => el.userName === ctx.from?.username)
 }
 
 /**
