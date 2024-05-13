@@ -12,7 +12,6 @@ import * as Utils from './Utils'
 import { PokemonRegistered } from './types'
 import 'dotenv/config'
 import { MAX_PKMN_PARTY } from './constants'
-import { db } from './Database'
 
 // Here must be stored all accounts in the group that are registered by /register
 let userDB: User[] = []
@@ -25,10 +24,11 @@ const API_KEY = process.env.API_KEY as string
 const bot = new Bot(API_KEY)
 
 bot.command('start', async (ctx) => {
-  const msg = `
-Bienvenido a PokeBotShowdown. Este es un Bot creado para capturar, intercambiar y combatir como en las entregas originales de la saga pokemon
-`
-  return await ctx.reply(msg)
+  const msg1 =
+    'Bienvenido a PokeBotShowdown. Este es un Bot creado para capturar, '
+  const msg2 =
+    'intercambiar y combatir como en las entregas originales de la saga pokemon'
+  return await ctx.reply(msg1.concat(msg2))
 })
 
 bot.command('register', async (ctx) => {
@@ -70,7 +70,7 @@ bot.callbackQuery(/starter[012]/, async (ctx) => {
   // creates new user
   const userName = ctx.from?.username as string
   const user = new User(userName, registerStarter[choice])
-  db.addUser(user) // Inserts User into Database
+  // await db.addUser(user) // Inserts User into Database
   userDB.push(user)
   await ctx.deleteMessage()
   await ctx.reply(
@@ -251,7 +251,6 @@ bot.api.setMyCommands([
     command: 'deleteaccount',
     description: 'Delete your account from PokeBotShowdown',
   },
-  { command: 'stop', description: 'Stops PokeBotShowdown' },
   { command: 'help', description: 'Show all commands' },
   {
     command: 'pokemongenerate',

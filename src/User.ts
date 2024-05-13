@@ -1,4 +1,5 @@
 import { PokemonRegistered } from './types'
+import db from './Mongo'
 
 // TODO: Connect user class with a database
 export class User {
