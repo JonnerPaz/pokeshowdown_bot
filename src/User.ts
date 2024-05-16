@@ -1,35 +1,31 @@
 import { PokemonRegistered } from './types'
-import db from './Mongo'
+import mongo from './Mongo'
 
 // TODO: Connect user class with a database
 export class User {
   userName: string
-  data: {
-    userName: string
-    pokemon: PokemonRegistered[]
-  }
+  pokemonParty: PokemonRegistered[]
 
   constructor(user: string, starter: PokemonRegistered) {
-    // creates initial data of a given user
     this.userName = user
-    this.data = {
-      userName: user,
-      pokemon: [starter],
-    }
+    this.pokemonParty = [starter]
+
+    // Adds User into mongodb
+    mongo.addUser(this)
   }
 
   get getPokemonSummary() {
-    return this.data.pokemon
+    return this.pokemonParty
   }
 
   addPokemon(pokemon: PokemonRegistered) {
-    this.data.pokemon.push(pokemon)
+    this.pokemonParty.push(pokemon)
   }
 
   deletePokemon(pokemonIndex: number): void | string {
-    const findPokemon = this.data.pokemon.at(pokemonIndex)
+    const findPokemon = this.pokemonParty.at(pokemonIndex)
     if (findPokemon) {
-      this.data.pokemon.splice(pokemonIndex, 1)
+      this.pokemonParty.splice(pokemonIndex, 1)
     } else {
       return 'Error in request at deletePokemon'
     }
@@ -40,4 +36,13 @@ export class User {
   viewPokemon() {}
 
   tradePokemon() {}
+
+  /**
+   * @param user {string} Receives User's userName property
+   */
+  static async findUser(user: string): Promise<string> {
+    const query = await mongo.findOneUser(user)
+    const result: string = query?.userName
+    return result
+  }
 }

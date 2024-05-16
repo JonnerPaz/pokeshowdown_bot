@@ -12,13 +12,6 @@ export class PokeApi {
     this.builder = new PokemonBuilder()
   }
 
-  private randomizer(array?: number[]) {
-    if (array) {
-      return array.at(Math.floor(Math.random() * array.length + 1)) ?? 1
-    }
-    return Math.floor(Math.random() * TOTAL_OF_POKEMON + 1)
-  }
-
   async generatePokemon(): Promise<PokemonRegistered> {
     try {
       const requestPokemon = await this.api.getPokemonById(this.randomizer())
@@ -98,4 +91,11 @@ export class PokeApi {
   }
 
   static evolvePokemon(pokemon: PokemonRegistered) {}
+
+  private randomizer(array?: number[]) {
+    if (array) {
+      return array.at(Math.floor(Math.random() * array.length + 1)) ?? 1
+    }
+    return Math.floor(Math.random() * TOTAL_OF_POKEMON + 1)
+  }
 }

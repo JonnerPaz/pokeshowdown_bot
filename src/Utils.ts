@@ -6,15 +6,9 @@ import {
   InputMediaBuilder,
 } from 'grammy'
 import { User } from './User'
+import { UserRegistered } from './types'
 import { PokemonRegistered } from './types'
 import { InlineKeyboardButton } from '@grammyjs/types'
-
-export const findUser = function (
-  ctx: CommandContext<Context> | CallbackQueryContext<Context>,
-  dataBase: User[]
-): User {
-  return <User>dataBase.find((el) => el.userName === ctx.from?.username)
-}
 
 /**
  * @param pokemonNames {string[] | string} must receive pokemon names
@@ -62,7 +56,7 @@ export const customInlnKbdBtn = async (
   const userPokemonPhotos = [...user.getPokemonSummary].map((pokemon) =>
     InputMediaBuilder.photo(pokemon.sprite.frontDefault)
   )
-  const inlineKeyboard = createInlineKeyboard(user.data.pokemon).text(
+  const inlineKeyboard = createInlineKeyboard(user.pokemonParty).text(
     'cancel',
     'cancel' // exits this code and goes to cancel query
   )

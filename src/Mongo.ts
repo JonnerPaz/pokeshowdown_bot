@@ -1,10 +1,11 @@
 import { Collection, Document, MongoClient } from 'mongodb'
 import { User } from './User'
+import 'dotenv/config'
 
 class Mongo {
   private client: MongoClient
   private password = process.env.DATABASE_PASSWORD
-  private uri = `mongodb+srv://jonnerpazp:${this.password}@pokebotcluster.kgeb0ma.mongodb.net/?retryWrites=true&w=majority&appName=pokebotcluster`
+  private uri = `mongodb+srv://jonner:${this.password}@pokebotcluster.kgeb0ma.mongodb.net/?retryWrites=true&w=majority&appName=pokebotcluster`
   private usersCollection: Collection<Document>
 
   constructor() {
@@ -33,22 +34,32 @@ class Mongo {
     try {
       await this.client.connect()
       const newUser = await this.usersCollection.insertOne(user)
-      newUser.insertedId = user.console.log('new id: ', newUser)
       await this.client.close()
     } catch (err) {
       throw err
     }
   }
 
-  async findOneUser() {
+  /**
+    @param user {string} User's userName
+    @returns a user from Mongo
+   */
+  async findOneUser(user: string) {
     try {
       await this.client.connect()
+      const query = { userName: user }
+      const result = await this.usersCollection.findOne(query)
+      if (!result) {
+        throw new Error('not found any user')
+      }
+      this.client.close()
+      return result
     } catch (err) {
       console.error(err)
     }
   }
 }
 
-const db = new Mongo()
+const mongo = new Mongo()
 
-export default db
+export default mongo
