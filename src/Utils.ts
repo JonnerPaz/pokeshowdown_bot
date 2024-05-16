@@ -1,13 +1,6 @@
-import {
-  InlineKeyboard,
-  CommandContext,
-  Context,
-  CallbackQueryContext,
-  InputMediaBuilder,
-} from 'grammy'
+import { InlineKeyboard, InputMediaBuilder } from 'grammy'
 import { User } from './User'
-import { UserRegistered } from './types'
-import { PokemonRegistered } from './types'
+import { PokemonRegistered, grammyContext } from './types'
 import { InlineKeyboardButton } from '@grammyjs/types'
 
 /**
@@ -51,7 +44,7 @@ export const isPokemonRegistered = (
 
 export const customInlnKbdBtn = async (
   user: User,
-  ctx: CallbackQueryContext<Context>
+  ctx: grammyContext
 ): Promise<InlineKeyboard> => {
   const userPokemonPhotos = [...user.getPokemonSummary].map((pokemon) =>
     InputMediaBuilder.photo(pokemon.sprite.frontDefault)

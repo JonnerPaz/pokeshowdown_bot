@@ -37,11 +37,11 @@ bot.command('register', async (ctx) => {
     const userCache = cache.findUser(ctx)
     // search DB for user
     if (!userCache) {
-      const user = await User.findUser(ctx.from?.username as string)
-      if (user)
-        return await ctx.reply(
-          `You are already registered. If you want to erase your data and start over, use /deleteaccount`
-        )
+      const user = await User.findUserInDB(ctx.from?.username as string)
+      if (user) {
+        const msg = `You are already registered. If you want to erase your data and start over, use /deleteaccount`
+        return await ctx.reply(msg)
+      }
     }
 
     // generate Pokemon
@@ -92,12 +92,6 @@ bot.callbackQuery('cancel', async (ctx) => {
 
 bot.command('pokemongenerate', async (ctx) => {
   try {
-    const user = Utils.findUser(ctx, cache.getUserList)
-    if (!user) {
-      return ctx.reply(
-        `You're not registered. You need to register first using /register`
-      )
-    }
     // generate pokemon
     const pokemon = await new PokeApi().generatePokemon()
     currentPokemon = pokemon
@@ -116,7 +110,12 @@ bot.command('pokemongenerate', async (ctx) => {
 
 bot.callbackQuery('catch', async (ctx) => {
   try {
-    const user = Utils.findUser(ctx, cache.getUserList)
+    const user = cache.findUser(ctx)
+    if (!user) {
+      const msg = `You're not registered. You need to register first using /register`
+      return ctx.reply(msg)
+    }
+
     const party = user.pokemonParty
     const condition = party.some((el) => el.name === currentPokemon?.name)
     const pkmnFound = party.find((el) => el.name === currentPokemon?.name)
@@ -152,8 +151,8 @@ bot.callbackQuery('catch', async (ctx) => {
     await ctx.deleteMessage()
     if (Utils.isPokemonRegistered(currentPokemon)) {
       user.addPokemon(currentPokemon)
-      const userName = user
-      await ctx.reply(`${userName} has captured a ${currentPokemon.name}`)
+      const userName = user.userName
+      await ctx.reply(`@${userName} has captured a ${currentPokemon.name}`)
     } else {
       await ctx.reply('No pokemon. Null exception')
     }
@@ -164,7 +163,7 @@ bot.callbackQuery('catch', async (ctx) => {
 
 bot.callbackQuery(/choice[012345]/, async (ctx) => {
   await ctx.deleteMessages([botMessageId]) // deletes the wild pokemon msg
-  const user = cache.findUser(ctx) as User // Always gonna be a User
+  const user = cache.findUser(ctx) as UserRegistered // Always gonna be a User
   const choice = Number(ctx.match[0].at(-1))
   await ctx.deleteMessage() // deletes selection party msg
   if (Utils.isPokemonRegistered(currentPokemon)) {
@@ -180,27 +179,22 @@ bot.callbackQuery(/choice[012345]/, async (ctx) => {
 })
 
 bot.command('pokemonsummary', async (ctx) => {
-  // .sendMediaGroup(ctx.chat.id, [firstPkmn, secondPkmn, thirdPkmn])
-  // .then(async (arr) => {
   const user = cache.findUser(ctx)
+  if (!user) return
   const userPokemonImages = user.getPokemonSummary.map((el) =>
     InputMediaBuilder.photo(el.sprite.frontDefault)
   )
   const pokemonName = user.pokemonParty.map((el) => el.name)
   await ctx.api.sendMediaGroup(ctx.chat.id, userPokemonImages)
-  return await ctx.reply(
-    `These are the pokemon you have: ${pokemonName.join(', ')}`
-  )
+  const msg = `@${ctx.from?.username}, These are the pokemon you have: ${pokemonName.join(', ')}`
+  return await ctx.reply(msg)
 })
 
 bot.command('deleteaccount', async (ctx) => {
   try {
-    // if not a user, return
-    const logic = cache.some(
-      (el) => el.userName === (ctx.from?.username as string)
-    )
+    const user = await User.findUserInDB(ctx.msg.from?.username as string)
     const msg = `You're not registered in @${ctx.me.username}. Use /register to use this bot`
-    if (!logic) return await ctx.reply(msg)
+    if (!user) return await ctx.reply(msg)
 
     const inlnKeyboard = new InlineKeyboard()
       .text('YES', 'delete')
@@ -221,10 +215,8 @@ bot.callbackQuery('delete', async (ctx) => {
   // delete inline_keyboard
   ctx.deleteMessages([ctx.msg?.message_id as number])
 
-  const findUser = cache.find(
-    (el) => el.userName === ctx.from?.username
-  ) as User
-  cache.splice(cache.indexOf(findUser))
+  const user = cache.findUser(ctx)
+  cache.clearOneUser(ctx)
 
   const msg = 'Your account has now been erased. Sad to see you go!'
   await ctx.answerCallbackQuery(msg)

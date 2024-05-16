@@ -1,4 +1,9 @@
-import { InlineKeyboard } from 'grammy'
+import {
+  CallbackQueryContext,
+  CommandContext,
+  Context,
+  InlineKeyboard,
+} from 'grammy'
 import { User } from './User'
 
 export interface SpriteType {
@@ -24,3 +29,7 @@ export type PokemonKeyboard = {
 }
 
 export type UserRegistered = User
+
+export type grammyContext =
+  | CommandContext<Context>
+  | CallbackQueryContext<Context>

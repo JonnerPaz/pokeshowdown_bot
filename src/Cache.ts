@@ -1,26 +1,28 @@
-import { UserRegistered } from './types'
-import { CommandContext, Context, CallbackQueryContext } from 'grammy'
+import { UserRegistered, grammyContext } from './types'
 
 export class Cache {
   private userList: UserRegistered[] = []
 
-  clear(user: UserRegistered) {
-    this.userList.length = 0
-    this
+  private clear(user: UserRegistered) {
+    return (this.userList.length = 0)
+  }
+
+  clearOneUser(user: grammyContext) {
+    const query = this.findUser(user)
+    if (!query) throw Error('No User found in cache')
+    const index = this.getUserList.indexOf(query)
+    return this.getUserList.splice(index)
   }
 
   add(user: UserRegistered) {
-    this.userList.push(user)
-    return this
+    return this.userList.push(user)
   }
 
-  findUser(
-    ctx: CommandContext<Context> | CallbackQueryContext<Context>
-  ): UserRegistered | null {
-    const query = this.getUserList.find(
-      (el) => el.userName === ctx.from?.username
-    )
+  findUser(ctx: grammyContext): UserRegistered | null {
+    const userName = ctx.from?.username as string
+    const query = this.getUserList.find((el) => el.userName === userName)
     if (!query) return null
+    console.log('Cache.findUser', query)
     return query
   }
 
