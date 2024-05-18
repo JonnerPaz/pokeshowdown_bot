@@ -20,7 +20,6 @@ class Mongo {
     try {
       await this.client.connect()
       const dbs = await this.client.db().admin().listDatabases()
-      console.log(dbs.databases)
       await this.client.close()
     } catch (err) {
       throw err
@@ -33,7 +32,9 @@ class Mongo {
   async addUser(user: User) {
     try {
       await this.client.connect()
-      const newUser = await this.usersCollection.insertOne(user)
+      const query = await this.findOneUser(user.userName)
+      if (query) return null
+      await this.usersCollection.insertOne(user)
       await this.client.close()
     } catch (err) {
       throw err
@@ -49,15 +50,17 @@ class Mongo {
       await this.client.connect()
       const query = { userName: user }
       const result = await this.usersCollection.findOne(query)
-      if (!result) {
-        throw new Error('not found any user')
-      }
+      if (!result) return null
       this.client.close()
       return result
     } catch (err) {
       console.error(err)
     }
   }
+
+  async updateUser() {}
+
+  async deleteUser() {}
 }
 
 const mongo = new Mongo()

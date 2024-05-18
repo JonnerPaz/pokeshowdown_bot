@@ -5,6 +5,7 @@ import {
   InlineKeyboard,
 } from 'grammy'
 import { User } from './User'
+import { Document, WithId } from 'mongodb'
 
 export interface SpriteType {
   frontDefault: string
@@ -33,3 +34,5 @@ export type UserRegistered = User
 export type grammyContext =
   | CommandContext<Context>
   | CallbackQueryContext<Context>
+
+export type userFound = WithId<Document> | UserRegistered

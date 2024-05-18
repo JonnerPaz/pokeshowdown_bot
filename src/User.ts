@@ -1,5 +1,6 @@
-import { PokemonRegistered, UserRegistered } from './types'
+import { PokemonRegistered, UserRegistered, userFound } from './types'
 import mongo from './Mongo'
+import { Document } from 'mongodb'
 
 // TODO: Connect user class with a database
 export class User {
@@ -42,8 +43,10 @@ export class User {
    */
   static async findUserInDB(user: string): Promise<UserRegistered | null> {
     const query = await mongo.findOneUser(user)
-    console.log('User.findUser', query)
+    console.log(query)
+    console.log(typeof query)
     if (query instanceof User) {
+      console.log('entering here')
       return query
     }
     return null

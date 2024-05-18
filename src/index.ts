@@ -16,6 +16,7 @@ import { Cache } from './Cache'
 
 // Here must be stored all accounts in the group that are registered by /register
 const cache = new Cache()
+let counter = 0
 let registerStarter: PokemonRegistered[] = []
 let currentPokemon: PokemonRegistered | null
 let botMessageId: number // saves messages from bot to handle it later
@@ -46,10 +47,11 @@ bot.command('register', async (ctx) => {
 
     // generate Pokemon
     const starters = await new PokeApi().generateRegisterPokemon()
-    registerStarter = starters
+    registerStarter = starters // Store starters globally
     const pokemonMedia = registerStarter.map((el) =>
       InputMediaBuilder.photo(el.sprite.frontDefault)
     )
+
     await ctx.reply(
       'To get registered, you first need to get your starter. Pick a pokemon from these ones'
     )
@@ -73,7 +75,7 @@ bot.callbackQuery(/starter[012]/, async (ctx) => {
 
   // creates new user
   const userName = ctx.from?.username as string
-  const user = new User(userName, registerStarter[choice])
+  const user = new User(userName, registerStarter[choice]) // Create User and stores it into DB
   cache.add(user)
   await ctx.deleteMessage()
   await ctx.reply(
@@ -82,7 +84,6 @@ bot.callbackQuery(/starter[012]/, async (ctx) => {
   await ctx.reply(`You can check your pokemons using /pokemonsummary
 Hope you have fun with this bot!
 `)
-  return
 })
 
 bot.callbackQuery('cancel', async (ctx) => {
@@ -92,6 +93,7 @@ bot.callbackQuery('cancel', async (ctx) => {
 
 bot.command('pokemongenerate', async (ctx) => {
   try {
+    const msgCount = 0
     // generate pokemon
     const pokemon = await new PokeApi().generatePokemon()
     currentPokemon = pokemon
@@ -110,13 +112,23 @@ bot.command('pokemongenerate', async (ctx) => {
 
 bot.callbackQuery('catch', async (ctx) => {
   try {
-    const user = cache.findUser(ctx)
-    if (!user) {
-      const msg = `You're not registered. You need to register first using /register`
-      return ctx.reply(msg)
+    let userCache = cache.findUser(ctx)
+    console.log('usr-cac', userCache)
+    if (!userCache) {
+      const user = (await User.findUserInDB(
+        ctx.callbackQuery.from.username as string
+      )) as UserRegistered
+      console.log('username from telegram', ctx.callbackQuery.from.username)
+      console.log('usr-cac-DB', user)
+      if (!user) {
+        const msg = `You're not registered. You need to register first using /register`
+        return ctx.reply(msg)
+      }
+      cache.add(user)
+      userCache = cache.findUser(ctx) as User
+      console.log('usercache at catch callbck query', userCache)
     }
-
-    const party = user.pokemonParty
+    const party = userCache.pokemonParty
     const condition = party.some((el) => el.name === currentPokemon?.name)
     const pkmnFound = party.find((el) => el.name === currentPokemon?.name)
 
@@ -138,10 +150,12 @@ bot.callbackQuery('catch', async (ctx) => {
         botMessageId = ctx.msg?.message_id
       }
       // inline_keyboard from user inputed pokemon
-      const keyboard = (await Utils.customInlnKbdBtn(user, ctx).catch((res) => {
-        console.error('promise not fulfilled at setChange: ' + res)
-        return ctx.reply('Process cancelled. See logs in the console')
-      })) as InlineKeyboard
+      const keyboard = (await Utils.customInlnKbdBtn(userCache, ctx).catch(
+        (res) => {
+          console.error('promise not fulfilled at setChange: ' + res)
+          return ctx.reply('Process cancelled. See logs in the console')
+        }
+      )) as InlineKeyboard
       await ctx.reply(
         'You have reached the total maximum of pokemon allowed. Which pokemon would you like to let it go?',
         { reply_markup: keyboard }
@@ -150,8 +164,8 @@ bot.callbackQuery('catch', async (ctx) => {
     }
     await ctx.deleteMessage()
     if (Utils.isPokemonRegistered(currentPokemon)) {
-      user.addPokemon(currentPokemon)
-      const userName = user.userName
+      userCache.addPokemon(currentPokemon)
+      const userName = userCache.userName
       await ctx.reply(`@${userName} has captured a ${currentPokemon.name}`)
     } else {
       await ctx.reply('No pokemon. Null exception')
@@ -255,6 +269,29 @@ bot.api.setMyCommands([
     description: 'get an info of all your pokemons',
   },
 ])
+
+// every 100 messages the pokemon generates
+bot.hears(/(?<!\/)\w/, async (ctx) => {
+  try {
+    counter++
+    if (counter === 3) {
+      const pokemon = await new PokeApi().generatePokemon()
+      currentPokemon = pokemon
+
+      // create message with pokemon
+      const caption = `A wild ${pokemon.name} appeared. Tap "CATCH" to get it`
+      const inlnKeyboard = new InlineKeyboard().text('CATCH', 'catch')
+      await ctx.replyWithPhoto(PokeApi.showPokemonPhoto(pokemon), {
+        reply_markup: inlnKeyboard,
+        caption: caption,
+      })
+
+      counter = 0
+    }
+  } catch (e) {
+    console.error(e)
+  }
+})
 
 bot.start()
 

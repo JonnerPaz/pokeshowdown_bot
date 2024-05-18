@@ -15,14 +15,13 @@ export class Cache {
   }
 
   add(user: UserRegistered) {
-    return this.userList.push(user)
+    this.userList.push(user)
   }
 
   findUser(ctx: grammyContext): UserRegistered | null {
     const userName = ctx.from?.username as string
     const query = this.getUserList.find((el) => el.userName === userName)
     if (!query) return null
-    console.log('Cache.findUser', query)
     return query
   }
 
