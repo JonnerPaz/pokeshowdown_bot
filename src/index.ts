@@ -113,25 +113,23 @@ bot.command('pokemongenerate', async (ctx) => {
 bot.callbackQuery('catch', async (ctx) => {
   try {
     let userCache = cache.findUser(ctx)
-    console.log('usr-cac', userCache)
     if (!userCache) {
-      const user = (await User.findUserInDB(
+      const user = await User.findUserInDB(
         ctx.callbackQuery.from.username as string
-      )) as UserRegistered
-      console.log('username from telegram', ctx.callbackQuery.from.username)
-      console.log('usr-cac-DB', user)
+      )
       if (!user) {
         const msg = `You're not registered. You need to register first using /register`
         return ctx.reply(msg)
       }
+      // insert user found in DB to cache
       cache.add(user)
       userCache = cache.findUser(ctx) as User
-      console.log('usercache at catch callbck query', userCache)
     }
     const party = userCache.pokemonParty
     const condition = party.some((el) => el.name === currentPokemon?.name)
     const pkmnFound = party.find((el) => el.name === currentPokemon?.name)
 
+    // update pokemon counter from user if he has it
     if (currentPokemon && condition) {
       PokeApi.updateCounter(
         party.find(
@@ -164,7 +162,9 @@ bot.callbackQuery('catch', async (ctx) => {
     }
     await ctx.deleteMessage()
     if (Utils.isPokemonRegistered(currentPokemon)) {
-      userCache.addPokemon(currentPokemon)
+      console.log('enter to final stage of catch pokemon')
+      console.log(userCache)
+      userCache.pokemonParty.push(currentPokemon)
       const userName = userCache.userName
       await ctx.reply(`@${userName} has captured a ${currentPokemon.name}`)
     } else {
@@ -194,8 +194,8 @@ bot.callbackQuery(/choice[012345]/, async (ctx) => {
 
 bot.command('pokemonsummary', async (ctx) => {
   const user = cache.findUser(ctx)
-  if (!user) return
-  const userPokemonImages = user.getPokemonSummary.map((el) =>
+  if (!user) return await ctx.reply('No user found')
+  const userPokemonImages = user.pokemonParty.map((el) =>
     InputMediaBuilder.photo(el.sprite.frontDefault)
   )
   const pokemonName = user.pokemonParty.map((el) => el.name)

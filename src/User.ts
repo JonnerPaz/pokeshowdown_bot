@@ -20,7 +20,7 @@ export class User {
   }
 
   addPokemon(pokemon: PokemonRegistered) {
-    this.pokemonParty.push(pokemon)
+    return this.pokemonParty.push(pokemon)
   }
 
   deletePokemon(pokemonIndex: number): void | string {
@@ -43,12 +43,7 @@ export class User {
    */
   static async findUserInDB(user: string): Promise<UserRegistered | null> {
     const query = await mongo.findOneUser(user)
-    console.log(query)
-    console.log(typeof query)
-    if (query instanceof User) {
-      console.log('entering here')
-      return query
-    }
-    return null
+    if (!query) return null
+    return query
   }
 }
