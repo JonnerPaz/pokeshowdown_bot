@@ -1,6 +1,5 @@
 import { PokemonRegistered, UserRegistered, userFound } from './types'
 import mongo from './Mongo'
-import { Document } from 'mongodb'
 
 // TODO: Connect user class with a database
 export class User {

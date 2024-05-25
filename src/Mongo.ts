@@ -52,7 +52,6 @@ class Mongo {
       const query = { userName: user }
       const result = await this.usersCollection.findOne(query)
       if (!result) return null
-      this.client.close()
       return result
     } catch (err) {
       console.error(err)
@@ -61,7 +60,18 @@ class Mongo {
 
   async updateUser() {}
 
-  async deleteUser() {}
+  async deleteUser(byUserName: string) {
+    try {
+      // no need to call connect and close from mongodb api
+      // these are being used from findOneUser
+      const user = (await this.findOneUser(byUserName)) ?? null
+      if (!user) return 'No user found'
+      const result = (await this.usersCollection.deleteOne(user)) ?? null
+      return result
+    } catch (error) {
+      console.error(error)
+    }
+  }
 }
 
 const mongo = new Mongo()

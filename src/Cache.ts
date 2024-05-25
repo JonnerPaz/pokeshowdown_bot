@@ -1,5 +1,8 @@
 import { UserRegistered, grammyContext } from './types'
 
+/**
+ * Use this class as a faster method to retrieve data from DB
+ */
 export class Cache {
   private userList: UserRegistered[] = []
 
@@ -7,9 +10,9 @@ export class Cache {
     return (this.userList.length = 0)
   }
 
-  clearOneUser(user: grammyContext) {
+  clearAUser(user: grammyContext) {
     const query = this.findUser(user)
-    if (!query) throw Error('No User found in cache')
+    if (!query) return null
     const index = this.getUserList.indexOf(query)
     return this.getUserList.splice(index)
   }

@@ -13,6 +13,7 @@ import { PokemonRegistered, UserRegistered } from './types'
 import 'dotenv/config'
 import { MAX_PKMN_PARTY } from './constants'
 import { Cache } from './Cache'
+import mongo from './Mongo'
 
 // Here must be stored all accounts in the group that are registered by /register
 const cache = new Cache()
@@ -35,19 +36,13 @@ bot.command('start', async (ctx) => {
 
 bot.command('register', async (ctx) => {
   try {
-    const userCache = cache.findUser(ctx)
-    // search DB for user
-    if (!userCache) {
-      const user = await User.findUserInDB(ctx.from?.username as string)
-      if (user) {
-        const msg = `You are already registered. If you want to erase your data and start over, use /deleteaccount`
-        return await ctx.reply(msg)
-      }
-    }
+    const registeredMsg = `You are already registered. If you want to erase your data and start over, use /deleteaccount`
+    const user = await Utils.findUser(ctx)
+    if (user) return ctx.reply(registeredMsg)
 
-    // generate Pokemon
     const starters = await new PokeApi().generateRegisterPokemon()
-    registerStarter = starters // Store starters globally
+    // Store starters globally
+    registerStarter = starters
     const pokemonMedia = registerStarter.map((el) =>
       InputMediaBuilder.photo(el.sprite.frontDefault)
     )
@@ -55,6 +50,8 @@ bot.command('register', async (ctx) => {
     await ctx.reply(
       'To get registered, you first need to get your starter. Pick a pokemon from these ones'
     )
+
+    // send selection of starters
     await ctx.api.sendMediaGroup(ctx.chat.id, pokemonMedia).then(async () => {
       const inlineKeyboard = new InlineKeyboard()
         .text(starters[0].name, 'starter0')
@@ -93,7 +90,6 @@ bot.callbackQuery('cancel', async (ctx) => {
 
 bot.command('pokemongenerate', async (ctx) => {
   try {
-    const msgCount = 0
     // generate pokemon
     const pokemon = await new PokeApi().generatePokemon()
     currentPokemon = pokemon
@@ -112,6 +108,7 @@ bot.command('pokemongenerate', async (ctx) => {
 
 bot.callbackQuery('catch', async (ctx) => {
   try {
+    // find user, from cache or retrieve from DB
     let userCache = cache.findUser(ctx)
     if (!userCache) {
       const user = await User.findUserInDB(
@@ -224,13 +221,16 @@ bot.command('deleteaccount', async (ctx) => {
   }
 })
 
-// responses to deleteaccount
 bot.callbackQuery('delete', async (ctx) => {
   // delete inline_keyboard
   ctx.deleteMessages([ctx.msg?.message_id as number])
 
-  const user = cache.findUser(ctx)
-  cache.clearOneUser(ctx)
+  const user = await Utils.findUser(ctx)
+  if (!user) return await ctx.reply('there is no user')
+
+  // deletes user from all storages
+  cache.clearAUser(ctx)
+  await mongo.deleteUser(user.userName)
 
   const msg = 'Your account has now been erased. Sad to see you go!'
   await ctx.answerCallbackQuery(msg)
@@ -271,9 +271,14 @@ bot.api.setMyCommands([
 ])
 
 // every 100 messages the pokemon generates
+// This goes at bottom of the page so commands
+// can be loaded before this. Load this early
+// catches commands as part of this listener
+// and makes them not work
 bot.hears(/(?<!\/)\w/, async (ctx) => {
   try {
     counter++
+    // TODO: edit counter to 100
     if (counter === 3) {
       const pokemon = await new PokeApi().generatePokemon()
       currentPokemon = pokemon
