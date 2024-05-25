@@ -73,7 +73,9 @@ bot.callbackQuery(/starter[012]/, async (ctx) => {
   // creates new user
   const userName = ctx.from?.username as string
   const user = new User(userName, registerStarter[choice]) // Create User and stores it into DB
+  await mongo.addUser(user)
   cache.add(user)
+
   await ctx.deleteMessage()
   await ctx.reply(
     `@${ctx.from?.username} chose ${registerStarter[choice].name}! now you have been registered`
@@ -111,7 +113,7 @@ bot.callbackQuery('catch', async (ctx) => {
     // find user, from cache or retrieve from DB
     let userCache = cache.findUser(ctx)
     if (!userCache) {
-      const user = await User.findUserInDB(
+      const user = await mongo.findOneUser(
         ctx.callbackQuery.from.username as string
       )
       if (!user) {
@@ -159,8 +161,8 @@ bot.callbackQuery('catch', async (ctx) => {
     }
     await ctx.deleteMessage()
     if (Utils.isPokemonRegistered(currentPokemon)) {
-      console.log('enter to final stage of catch pokemon')
-      console.log(userCache)
+      /* console.log('enter to final stage of catch pokemon')
+      console.log(userCache) */
       userCache.pokemonParty.push(currentPokemon)
       const userName = userCache.userName
       await ctx.reply(`@${userName} has captured a ${currentPokemon.name}`)
@@ -203,7 +205,7 @@ bot.command('pokemonsummary', async (ctx) => {
 
 bot.command('deleteaccount', async (ctx) => {
   try {
-    const user = await User.findUserInDB(ctx.msg.from?.username as string)
+    const user = await mongo.findOneUser(ctx.msg.from?.username as string)
     const msg = `You're not registered in @${ctx.me.username}. Use /register to use this bot`
     if (!user) return await ctx.reply(msg)
 

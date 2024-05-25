@@ -34,7 +34,7 @@ class Mongo {
     try {
       await this.client.connect()
       const query = await this.findOneUser(user.userName)
-      if (query) return null
+      if (query) return null // if user already created
       await this.usersCollection.insertOne(user)
       await this.client.close()
     } catch (err) {

@@ -1,5 +1,4 @@
-import { PokemonRegistered, UserRegistered, userFound } from './types'
-import mongo from './Mongo'
+import { PokemonRegistered } from './types'
 
 // TODO: Connect user class with a database
 export class User {
@@ -9,9 +8,6 @@ export class User {
   constructor(user: string, starter: PokemonRegistered) {
     this.userName = user
     this.pokemonParty = [starter]
-
-    // Adds User into mongodb
-    mongo.addUser(this)
   }
 
   get getPokemonSummary() {
@@ -29,20 +25,5 @@ export class User {
     } else {
       return 'Error in request at deletePokemon'
     }
-  }
-
-  catchPokemon(pokemon: PokemonRegistered, user?: User) {}
-
-  viewPokemon() {}
-
-  tradePokemon() {}
-
-  /**
-   * @param user {string} Receives User's userName property
-   */
-  static async findUserInDB(user: string): Promise<UserRegistered | null> {
-    const query = await mongo.findOneUser(user)
-    if (!query) return null
-    return query
   }
 }
