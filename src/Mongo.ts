@@ -59,22 +59,24 @@ class Mongo {
     }
   }
 
-  async updateUser(
+  async updatePokemonCount(
     byUser: UserRegistered,
-    updatePokemonCount?: [string, number]
+    updatePokemonCount: [string, number]
   ) {
-    if (updatePokemonCount) {
-      await this.client.connect()
-      const user = (await this.findOneUser(byUser.userName)) as User
-      // FIX: fuck this shit
-      const query = {
+    await this.client.connect()
+    const findQuery = await this.findOneUser(byUser.userName)
+    const pokemonName = updatePokemonCount[0]
+    await this.usersCollection.updateOne(
+      { userName: byUser.userName, 'pokemonParty.name': pokemonName },
+      {
         $inc: {
-          [`pokemonParty[${index}].counter`]: updatePokemonCount[1],
+          'pokemonParty.$.counter': 1,
         },
       }
-      this.usersCollection.updateOne(user, query)
-    }
+    )
   }
+
+  async updateUser() {}
 
   async deleteUser(byUserName: string) {
     try {

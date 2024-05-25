@@ -1,4 +1,4 @@
-import { Pokemon, PokemonClient } from 'pokenode-ts'
+import { EvolutionClient, Pokemon, PokemonClient } from 'pokenode-ts'
 import { PokemonBuilder } from './PokemonBuilder'
 import { PokemonRegistered } from './types'
 import { TOTAL_OF_POKEMON } from './constants'
@@ -12,8 +12,17 @@ export class PokeApi {
     this.builder = new PokemonBuilder()
   }
 
-  async generatePokemon(): Promise<PokemonRegistered> {
+  async generatePokemon(pokemon?: string | number): Promise<PokemonRegistered> {
     try {
+      if (pokemon) {
+        if (typeof pokemon === 'string') {
+          const requestPokemon = await this.api.getPokemonByName(pokemon)
+          return this.buildPokemon(requestPokemon)
+        }
+        const requestPokemon = await this.api.getPokemonById(pokemon)
+        return this.buildPokemon(requestPokemon)
+      }
+      // TODO: Get back randomizer where it needs to be
       // this.randomizer()
       const requestPokemon = await this.api.getPokemonById(1)
       return this.buildPokemon(requestPokemon)
@@ -93,7 +102,20 @@ export class PokeApi {
     return pokemon.counter++
   }
 
-  static evolvePokemon(pokemon: PokemonRegistered) {}
+  async evolvePokemon(pokemon: PokemonRegistered) {
+    const evolve = new EvolutionClient()
+    let nextPokemon
+    const logger = await evolve
+      .getEvolutionChainById(pokemon.id)
+      .then(async (el) => {
+        const isPokemon = el.chain.evolves_to.at(0)?.species.name
+        if (isPokemon) {
+          const newPokemon = await this.generatePokemon(isPokemon)
+          return newPokemon
+        }
+      })
+    return logger
+  }
 
   private randomizer(array?: number[]) {
     if (array) {

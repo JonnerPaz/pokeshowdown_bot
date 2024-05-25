@@ -127,10 +127,10 @@ bot.callbackQuery('catch', async (ctx) => {
         party.find((el) => el.name === currentPokemon?.name) ?? null
       const counter = PokeApi.updateCounter(pokemonFound) as number
       if (counter) {
-        mongo.updateUser(user, [currentPokemon.name, counter])
+        mongo.updatePokemonCount(user, [currentPokemon.name, counter])
         ctx.deleteMessage()
         ctx.reply(
-          `You have catched a ${currentPokemon.name}. Your counter has been updated to ${pokemonFound?.counter}`
+          `You have catched a ${currentPokemon.name}. You've cached ${currentPokemon.name} ${pokemonFound?.counter} times`
         )
         console.log(pokemonFound?.counter)
         return
@@ -181,6 +181,23 @@ bot.callbackQuery(/choice[012345]/, async (ctx) => {
     )
   } else {
     await ctx.reply('No pokemon. Null exception')
+  }
+})
+
+bot.command('evolve', async (ctx) => {
+  const pokemonChoosed = ctx.msg.text.slice(7).trim()
+  console.log(pokemonChoosed)
+  const user = await Utils.findUser(ctx)
+  const msg = `You're not registered. You need to register first using /register`
+  if (!user) await ctx.reply(msg)
+
+  const userPokemon = user?.pokemonParty.find(
+    (el) => el.name === pokemonChoosed
+  ) as PokemonRegistered
+
+  if (userPokemon) {
+    // TODO: make mongodb replace old pokemon with new pokemon
+    const evolve = await new PokeApi().evolvePokemon(userPokemon)
   }
 })
 
@@ -264,7 +281,11 @@ bot.api.setMyCommands([
     description: 'get an info of all your pokemons',
   },
   {
-    command: 'summary',
+    command: 'pokemonsummary',
+    description: 'get an info of all your pokemons',
+  },
+  {
+    command: 'evolve',
     description: 'get an info of all your pokemons',
   },
 ])

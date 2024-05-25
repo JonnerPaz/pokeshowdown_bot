@@ -1,6 +1,5 @@
 import { PokemonRegistered } from './types'
 
-// TODO: Connect user class with a database
 export class User {
   userName: string
   pokemonParty: PokemonRegistered[]
