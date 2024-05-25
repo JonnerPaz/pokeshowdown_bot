@@ -104,17 +104,20 @@ export class PokeApi {
 
   async evolvePokemon(pokemon: PokemonRegistered) {
     const evolve = new EvolutionClient()
-    let nextPokemon
     const logger = await evolve
       .getEvolutionChainById(pokemon.id)
       .then(async (el) => {
         const isPokemon = el.chain.evolves_to.at(0)?.species.name
+        const isis = el.chain.evolves_to
+        console.log(isPokemon)
+        console.log(isis)
         if (isPokemon) {
           const newPokemon = await this.generatePokemon(isPokemon)
           return newPokemon
         }
       })
-    return logger
+    console.log(logger)
+    return logger as PokemonRegistered
   }
 
   private randomizer(array?: number[]) {

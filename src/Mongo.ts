@@ -1,7 +1,7 @@
 import { Collection, MongoClient } from 'mongodb'
 import { User } from './User'
 import 'dotenv/config'
-import { UserRegistered } from './types'
+import { PokemonRegistered, UserRegistered } from './types'
 
 class Mongo {
   private client: MongoClient
@@ -64,7 +64,6 @@ class Mongo {
     updatePokemonCount: [string, number]
   ) {
     await this.client.connect()
-    const findQuery = await this.findOneUser(byUser.userName)
     const pokemonName = updatePokemonCount[0]
     await this.usersCollection.updateOne(
       { userName: byUser.userName, 'pokemonParty.name': pokemonName },
@@ -76,6 +75,30 @@ class Mongo {
     )
   }
 
+  async evolvePokemon(
+    byUser: UserRegistered,
+    oldPokemon: PokemonRegistered,
+    newPokemon: PokemonRegistered
+  ) {
+    try {
+      const args = [byUser, oldPokemon, newPokemon].some((el) => el === null)
+      if (args) return new Error('args from evolve Pokemon includes null')
+
+      const userDB = this.findOneUser(byUser.userName)
+      if (!userDB) return new Error('No user found')
+      const poki = { ...newPokemon }
+
+      await this.usersCollection.updateOne(
+        { userName: byUser.userName, 'pokemonParty.name': oldPokemon.name },
+        {
+          $set: {
+            'pokemonParty.$': poki,
+          },
+        }
+      )
+    } catch (error) {}
+  }
+
   async updateUser() {}
 
   async deleteUser(byUserName: string) {
@@ -83,7 +106,7 @@ class Mongo {
       // no need to call connect and close from mongodb api
       // these are being used from findOneUser
       const user = (await this.findOneUser(byUserName)) ?? null
-      if (!user) return 'No user found'
+      if (!user) return new Error('No user found')
       const result = (await this.usersCollection.deleteOne(user)) ?? null
       return result
     } catch (error) {

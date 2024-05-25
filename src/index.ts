@@ -185,19 +185,26 @@ bot.callbackQuery(/choice[012345]/, async (ctx) => {
 })
 
 bot.command('evolve', async (ctx) => {
-  const pokemonChoosed = ctx.msg.text.slice(7).trim()
-  console.log(pokemonChoosed)
-  const user = await Utils.findUser(ctx)
-  const msg = `You're not registered. You need to register first using /register`
-  if (!user) await ctx.reply(msg)
+  try {
+    const pokemonChoosed = ctx.msg.text.slice(7).trim()
+    const user = await Utils.findUser(ctx)
+    const msg = `You're not registered. You need to register first using /register`
+    if (!user) return await ctx.reply(msg)
 
-  const userPokemon = user?.pokemonParty.find(
-    (el) => el.name === pokemonChoosed
-  ) as PokemonRegistered
+    const userPokemon = user?.pokemonParty.find(
+      (el) => el.name === pokemonChoosed
+    ) as PokemonRegistered
 
-  if (userPokemon) {
-    // TODO: make mongodb replace old pokemon with new pokemon
-    const evolve = await new PokeApi().evolvePokemon(userPokemon)
+    if (userPokemon && userPokemon.counter === 5) {
+      // TODO: make mongodb replace old pokemon with new pokemon
+      const oldPokemon = user.pokemonParty.find(
+        (el) => el.name === pokemonChoosed
+      ) as PokemonRegistered
+      const pokemonEvolved = await new PokeApi().evolvePokemon(userPokemon)
+      await mongo.evolvePokemon(user, oldPokemon, pokemonEvolved)
+    }
+  } catch (error) {
+    console.error(error)
   }
 })
 
@@ -300,7 +307,7 @@ bot.hears(/(?<!\/)\w/, async (ctx) => {
     counter++
     // TODO: edit counter to 100
     if (counter === 3) {
-      const pokemon = await new PokeApi().generatePokemon()
+      const pokemon = await new PokeApi().generatePokemon('charmeleon')
       currentPokemon = pokemon
 
       // create message with pokemon
