@@ -21,6 +21,7 @@ class Mongo {
     try {
       await this.client.connect()
       const dbs = await this.client.db().admin().listDatabases()
+      console.log(dbs)
       await this.client.close()
     } catch (err) {
       throw err
@@ -58,7 +59,22 @@ class Mongo {
     }
   }
 
-  async updateUser() {}
+  async updateUser(
+    byUser: UserRegistered,
+    updatePokemonCount?: [string, number]
+  ) {
+    if (updatePokemonCount) {
+      await this.client.connect()
+      const user = (await this.findOneUser(byUser.userName)) as User
+      // FIX: fuck this shit
+      const query = {
+        $inc: {
+          [`pokemonParty[${index}].counter`]: updatePokemonCount[1],
+        },
+      }
+      this.usersCollection.updateOne(user, query)
+    }
+  }
 
   async deleteUser(byUserName: string) {
     try {

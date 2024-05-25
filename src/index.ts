@@ -111,35 +111,30 @@ bot.command('pokemongenerate', async (ctx) => {
 bot.callbackQuery('catch', async (ctx) => {
   try {
     // find user, from cache or retrieve from DB
-    let userCache = cache.findUser(ctx)
-    if (!userCache) {
-      const user = await mongo.findOneUser(
-        ctx.callbackQuery.from.username as string
-      )
-      if (!user) {
-        const msg = `You're not registered. You need to register first using /register`
-        return ctx.reply(msg)
-      }
-      // insert user found in DB to cache
-      cache.add(user)
-      userCache = cache.findUser(ctx) as User
-    }
-    const party = userCache.pokemonParty
-    const condition = party.some((el) => el.name === currentPokemon?.name)
-    const pkmnFound = party.find((el) => el.name === currentPokemon?.name)
+    const user = await Utils.findUser(ctx)
+    const msg = `You're not registered. You need to register first using /register`
+    if (!user) return ctx.reply(msg)
+
+    const party = user.pokemonParty
+    const isPokemonInParty = party.some(
+      (el) => el.name === currentPokemon?.name
+    )
 
     // update pokemon counter from user if he has it
-    if (currentPokemon && condition) {
-      PokeApi.updateCounter(
-        party.find(
-          (el) => el.name === currentPokemon?.name
-        ) as PokemonRegistered
-      )
-      ctx.deleteMessage()
-      ctx.reply(
-        `You have catched a ${currentPokemon.name}. Your counter has been updated to ${pkmnFound?.counter}`
-      )
-      return
+    // after passing into this, code block stops
+    if (currentPokemon && isPokemonInParty) {
+      const pokemonFound =
+        party.find((el) => el.name === currentPokemon?.name) ?? null
+      const counter = PokeApi.updateCounter(pokemonFound) as number
+      if (counter) {
+        mongo.updateUser(user, [currentPokemon.name, counter])
+        ctx.deleteMessage()
+        ctx.reply(
+          `You have catched a ${currentPokemon.name}. Your counter has been updated to ${pokemonFound?.counter}`
+        )
+        console.log(pokemonFound?.counter)
+        return
+      }
     }
 
     if (party.length >= MAX_PKMN_PARTY) {
@@ -147,12 +142,10 @@ bot.callbackQuery('catch', async (ctx) => {
         botMessageId = ctx.msg?.message_id
       }
       // inline_keyboard from user inputed pokemon
-      const keyboard = (await Utils.customInlnKbdBtn(userCache, ctx).catch(
-        (res) => {
-          console.error('promise not fulfilled at setChange: ' + res)
-          return ctx.reply('Process cancelled. See logs in the console')
-        }
-      )) as InlineKeyboard
+      const keyboard = (await Utils.customInlnKbdBtn(user, ctx).catch((res) => {
+        console.error('promise not fulfilled at setChange: ' + res)
+        return ctx.reply('Process cancelled. See logs in the console')
+      })) as InlineKeyboard
       await ctx.reply(
         'You have reached the total maximum of pokemon allowed. Which pokemon would you like to let it go?',
         { reply_markup: keyboard }
@@ -163,8 +156,8 @@ bot.callbackQuery('catch', async (ctx) => {
     if (Utils.isPokemonRegistered(currentPokemon)) {
       /* console.log('enter to final stage of catch pokemon')
       console.log(userCache) */
-      userCache.pokemonParty.push(currentPokemon)
-      const userName = userCache.userName
+      user.pokemonParty.push(currentPokemon)
+      const userName = user.userName
       await ctx.reply(`@${userName} has captured a ${currentPokemon.name}`)
     } else {
       await ctx.reply('No pokemon. Null exception')
@@ -192,7 +185,7 @@ bot.callbackQuery(/choice[012345]/, async (ctx) => {
 })
 
 bot.command('pokemonsummary', async (ctx) => {
-  const user = cache.findUser(ctx)
+  const user = await Utils.findUser(ctx)
   if (!user) return await ctx.reply('No user found')
   const userPokemonImages = user.pokemonParty.map((el) =>
     InputMediaBuilder.photo(el.sprite.frontDefault)
@@ -268,6 +261,10 @@ bot.api.setMyCommands([
   },
   {
     command: 'pokemonsummary',
+    description: 'get an info of all your pokemons',
+  },
+  {
+    command: 'summary',
     description: 'get an info of all your pokemons',
   },
 ])
