@@ -1,7 +1,7 @@
 import { Collection, MongoClient } from 'mongodb'
-import { User } from './User'
+import { User } from '../User'
 import 'dotenv/config'
-import { PokemonRegistered, UserRegistered } from './types'
+import { IUser, PokemonRegistered, UserRegistered } from '../types'
 
 class Mongo {
   private client: MongoClient
@@ -14,15 +14,14 @@ class Mongo {
     this.usersCollection = this.client.db('pokebot-db').collection('users')
   }
 
-  /** 
-   @returns Data outputted will be printed on console
-    */
+  /**
+   * @returns Array of user's registered pokemon
+   * */
   async listDB() {
     try {
       await this.client.connect()
       const dbs = await this.client.db().admin().listDatabases()
       console.log(dbs)
-      await this.client.close()
     } catch (err) {
       throw err
     }
@@ -35,27 +34,54 @@ class Mongo {
     try {
       await this.client.connect()
       const query = await this.findOneUser(user.userName)
-      if (query) return null // if user already created
+      if (query) return null // User is already created
       await this.usersCollection.insertOne(user)
-      await this.client.close()
     } catch (err) {
       throw err
     }
   }
 
   /**
-    @param user {string} User's userName
+    @param byUserName {string} User's userName
     @returns a user from Mongo
    */
-  async findOneUser(user: string) {
+  async findOneUser(byUserName: string) {
     try {
       await this.client.connect()
-      const query = { userName: user }
+      const query = { userName: byUserName }
       const result = await this.usersCollection.findOne(query)
       if (!result) return null
       return result
     } catch (err) {
       console.error(err)
+    }
+  }
+
+  /**
+   * push new pokemon to user' db
+   * */
+  async addPokemon(byUser: UserRegistered, pokemon: PokemonRegistered) {
+    try {
+      await this.usersCollection.updateOne(
+        { userName: byUser.userName },
+        { $push: { pokemonParty: pokemon } }
+      )
+    } catch (error) {
+      throw error
+    }
+  }
+
+  async deletePokemon(byUser: UserRegistered, pokemon: PokemonRegistered) {
+    try {
+      const user = await this.findOneUser(byUser.userName)
+      await this.usersCollection.updateOne(
+        {
+          userName: byUser.userName,
+        },
+        { $pull: { pokemonParty: pokemon } }
+      )
+    } catch (error) {
+      throw error
     }
   }
 
@@ -96,7 +122,9 @@ class Mongo {
           },
         }
       )
-    } catch (error) {}
+    } catch (error) {
+      console.error(error)
+    }
   }
 
   async updateUser() {}

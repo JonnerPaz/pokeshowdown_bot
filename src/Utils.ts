@@ -2,8 +2,6 @@ import { InlineKeyboard, InputMediaBuilder } from 'grammy'
 import { User } from './User'
 import { PokemonRegistered, grammyContext } from './types'
 import { InlineKeyboardButton } from '@grammyjs/types'
-import { Cache } from './Cache'
-import mongo from './Mongo'
 
 /**
  * @param pokemonNames {string[] | string} must receive pokemon names
@@ -24,7 +22,7 @@ export const createInlineKeyboard = (
   if (Array.isArray(pokemonNames)) {
     // creates a 2 dimensional arr full of strings, labeled as "value, data"
     const buttonRow = [...pokemonNames].map((el, i) => {
-      return InlineKeyboard.text(el.name, 'choice' + String(i))
+      return InlineKeyboard.text(el.name, `${el.name} choice${i}`)
     })
     return InlineKeyboard.from([buttonRow])
   }
@@ -59,7 +57,7 @@ export const customInlnKbdBtn = async (
   user: User,
   ctx: grammyContext
 ): Promise<InlineKeyboard> => {
-  const userPokemonPhotos = [...user.getPokemonSummary].map((pokemon) =>
+  const userPokemonPhotos = [...user.pokemonParty].map((pokemon) =>
     InputMediaBuilder.photo(pokemon.sprite.frontDefault)
   )
   const inlineKeyboard = createInlineKeyboard(user.pokemonParty).text(
@@ -70,24 +68,4 @@ export const customInlnKbdBtn = async (
     await ctx.api.sendMediaGroup(ctx.chat?.id, userPokemonPhotos)
   }
   return inlineKeyboard
-}
-
-/**
- *
- * Searches through Cache() and Mongo() to get the User
- * If none is found, return null
- *
- * @param ctx {grammyContext} - the exact ctx obj received from any grammy command
- */
-export const findUser = async (ctx: grammyContext) => {
-  const cache = new Cache()
-  const userCache = cache.findUser(ctx)
-
-  // search DB for user
-  if (!userCache) {
-    const user = (await mongo.findOneUser(ctx.from?.username as string)) ?? null
-    if (user) return user
-    return null
-  }
-  return userCache
 }

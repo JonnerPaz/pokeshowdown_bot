@@ -1,4 +1,4 @@
-import { PokemonRegistered } from './types'
+import { PokemonRegistered, UserRegistered } from './types'
 
 export class User {
   userName: string
@@ -7,14 +7,6 @@ export class User {
   constructor(user: string, starter: PokemonRegistered) {
     this.userName = user
     this.pokemonParty = [starter]
-  }
-
-  get getPokemonSummary() {
-    return this.pokemonParty
-  }
-
-  addPokemon(pokemon: PokemonRegistered) {
-    return this.pokemonParty.push(pokemon)
   }
 
   deletePokemon(pokemonIndex: number): void | string {

@@ -29,6 +29,8 @@ export type PokemonKeyboard = {
   (pokemon: PokemonRegistered): InlineKeyboard
 }
 
+export interface IUser extends User {}
+
 export type UserRegistered = User
 
 export type grammyContext =

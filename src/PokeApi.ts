@@ -22,9 +22,7 @@ export class PokeApi {
         const requestPokemon = await this.api.getPokemonById(pokemon)
         return this.buildPokemon(requestPokemon)
       }
-      // TODO: Get back randomizer where it needs to be
-      // this.randomizer()
-      const requestPokemon = await this.api.getPokemonById(1)
+      const requestPokemon = await this.api.getPokemonById(this.randomizer())
       return this.buildPokemon(requestPokemon)
     } catch (err) {
       throw err
@@ -43,13 +41,11 @@ export class PokeApi {
     }
     const [p1, p2, p3]: number[] = [...sortedSetID]
 
-    // TODO: remove numbers and add variables from above
-    // Take the random arr and convert them to pokemons
     let pokemonStarter: PokemonRegistered[] = []
     await Promise.all([
-      this.api.getPokemonById(1),
-      this.api.getPokemonById(1),
-      this.api.getPokemonById(1),
+      this.api.getPokemonById(p1),
+      this.api.getPokemonById(p2),
+      this.api.getPokemonById(p3),
     ])
       .then((values) => {
         pokemonStarter = [...values].map((el) => {
@@ -97,8 +93,7 @@ export class PokeApi {
     return pokemon.sprite.frontDefault
   }
 
-  static updateCounter(pokemon: PokemonRegistered | null) {
-    if (!pokemon) return null
+  static updateCounter(pokemon: PokemonRegistered) {
     return pokemon.counter++
   }
 
