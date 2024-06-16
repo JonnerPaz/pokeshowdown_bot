@@ -1,4 +1,4 @@
-import { InlineKeyboard, InputMediaBuilder } from 'grammy'
+import { InlineKeyboard, InputMediaBuilder, Keyboard } from 'grammy'
 import { User } from './User'
 import { PokemonRegistered, grammyContext } from './types'
 import { InlineKeyboardButton } from '@grammyjs/types'
@@ -24,7 +24,7 @@ export const createInlineKeyboard = (
     const buttonRow = [...pokemonNames].map((el, i) => {
       return InlineKeyboard.text(el.name, `${el.name} choice${i}`)
     })
-    return InlineKeyboard.from([buttonRow])
+    return InlineKeyboard.from([buttonRow]).toFlowed(3)
   }
 
   if (pokemonNames !== null) {
