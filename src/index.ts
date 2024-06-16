@@ -285,9 +285,8 @@ bot.api.setMyCommands([
 bot.hears(/(?<!\/)\w/, async (ctx) => {
   try {
     counter++
-    // TODO: edit counter to 100
-    if (counter === 3) {
-      const pokemon = await new PokeApi().generatePokemon('charmeleon')
+    if (counter === 50) {
+      const pokemon = await new PokeApi().generatePokemon()
       currentWildPokemon = pokemon
 
       // create message with pokemon
