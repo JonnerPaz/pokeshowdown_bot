@@ -9,7 +9,10 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: '22'
-      - run: npm install
+      - name: install packages
+        run: npm install
+      - name: run bot
+        run: npm run start
       env:
         CI: true
         API_KEY: ${{ secrets.API_KEY }}
