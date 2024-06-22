@@ -1,20 +1,18 @@
-name: learn-git
+---
+name: learn-github-actions
 run-name: ${{ github.actor }} is learning GitHub Actions
 on: [push]
 jobs:
-  bot-deploy:
+  deploy-bot:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
         with:
-          node-version: '22'
-      - name: install packages
-        run: npm install
-      - name: run bot
-        run: npm run start
-      env:
-        CI: true
-        API_KEY: ${{ secrets.API_KEY }}
-        DATABASE_PASSWORD: ${{ secrets.DATABASE_PASSWORD }}
-
+          node-version: '20'
+      - run: npm install
+      - run: npm run start
+        env:
+          CI: true
+          API_KEY: ${{ secrets.API_KEY }}
+          DATABASE_PASSWORD: ${{ secrets.DATABASE_PASSWORD }}
