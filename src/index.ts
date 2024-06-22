@@ -9,7 +9,7 @@ import {
 import { User } from './User'
 import { PokeApi } from './PokeApi'
 import * as Utils from './Utils'
-import { PokemonRegistered, UserRegistered } from './types'
+import { PokemonRegistered } from './types'
 import 'dotenv/config'
 import { MAX_PKMN_PARTY } from './constants'
 import mongo from './db/Mongo'
@@ -19,7 +19,8 @@ let registerStarter: PokemonRegistered[] = []
 let currentWildPokemon: PokemonRegistered | null
 let botMessageId: number // saves messages from bot to handle it later
 
-const API_KEY = process.env.API_KEY as string
+const API_KEY = process.env.API_KEY
+if (!API_KEY) throw new Error('BOT_TOKEN is unset')
 
 const bot = new Bot(API_KEY)
 
@@ -306,17 +307,20 @@ bot.hears(/(?<!\/)\w/, async (ctx) => {
 
 bot.start()
 
-bot.catch((err) => {
+bot.catch(async (err) => {
   const ctx = err.ctx
   console.error(`Error while handling update ${ctx.update.update_id}:`)
   const e = err.error
   if (e instanceof GrammyError) {
+    await ctx.reply('there was an error: Error in request')
     console.error('Error in request:', e.description)
     bot.start()
   } else if (e instanceof HttpError) {
+    await ctx.reply('There was an error: Could not contact Telegram')
     console.error('Could not contact Telegram:', e)
     bot.start()
   } else if (e instanceof BotError) {
+    await ctx.reply('There was an error: ' + e.message)
     console.error('Error associate with BotError:', e)
     bot.start()
   } else {
