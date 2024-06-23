@@ -86,7 +86,7 @@ bot.callbackQuery('cancel', async (ctx) => {
   return ctx.reply('Process cancelled successfully')
 })
 
-bot.command('pokemongenerate', async (ctx) => {
+/* bot.command('pokemongenerate', async (ctx) => {
   try {
     // generate pokemon
     const pokemon = await new PokeApi().generatePokemon()
@@ -102,7 +102,7 @@ bot.command('pokemongenerate', async (ctx) => {
   } catch (err) {
     console.error(err)
   }
-})
+}) */
 
 bot.callbackQuery('catch', async (ctx) => {
   try {
