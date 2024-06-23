@@ -287,7 +287,7 @@ bot.hears(/(?<!\/)\w/, async (ctx) => {
   try {
     counter++
     // TODO: edit counter to 100
-    if (counter === 3) {
+    if (counter === 100) {
       const pokemon = await new PokeApi().generatePokemon('charmeleon')
       currentWildPokemon = pokemon
 
@@ -306,7 +306,10 @@ bot.hears(/(?<!\/)\w/, async (ctx) => {
   }
 })
 
-bot.start()
+async function start() {
+  await bot.start()
+}
+start()
 
 bot.catch(async (err) => {
   const ctx = err.ctx
