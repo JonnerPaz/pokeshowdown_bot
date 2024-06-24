@@ -285,7 +285,7 @@ bot.api.setMyCommands([
 bot.hears(/(?<!\/)\w/, async (ctx) => {
   try {
     counter++
-    if (counter === 100) {
+    if (counter === 75) {
       const pokemon = await new PokeApi().generatePokemon()
       currentWildPokemon = pokemon
 
