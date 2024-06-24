@@ -178,7 +178,6 @@ bot.command('evolve', async (ctx) => {
     ) as PokemonRegistered
 
     if (userPokemon && userPokemon.counter === 5) {
-      // TODO: make mongodb replace old pokemon with new pokemon
       const oldPokemon = user.pokemonParty.find(
         (el) => el.name === pokemonChoosed
       ) as PokemonRegistered
@@ -286,9 +285,8 @@ bot.api.setMyCommands([
 bot.hears(/(?<!\/)\w/, async (ctx) => {
   try {
     counter++
-    // TODO: edit counter to 100
     if (counter === 100) {
-      const pokemon = await new PokeApi().generatePokemon('charmeleon')
+      const pokemon = await new PokeApi().generatePokemon()
       currentWildPokemon = pokemon
 
       // create message with pokemon
