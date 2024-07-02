@@ -5,6 +5,7 @@ import {
   HttpError,
   InlineKeyboard,
   InputMediaBuilder,
+  webhookCallback,
 } from 'grammy'
 import { User } from './User'
 import { PokeApi } from './PokeApi'
@@ -13,16 +14,17 @@ import { PokemonRegistered } from './types'
 import 'dotenv/config'
 import { MAX_PKMN_PARTY } from './constants'
 import mongo from './db/Mongo'
+import express from 'express'
 
 let counter = 0
 let registerStarter: PokemonRegistered[] = []
 let currentWildPokemon: PokemonRegistered | null
 let botMessageId: number // saves messages from bot to handle it later
+const PORT = process.env.PORT
+const RESOURCE = process.env.RESOURCE
 
-const API_KEY = process.env.API_KEY
-if (!API_KEY) throw new Error('BOT_TOKEN is unset')
-
-const bot = new Bot(API_KEY)
+const API_KEY = process.env.API_KEY as string
+export const bot = new Bot(API_KEY)
 
 bot.command('start', async (ctx) => {
   const msg1 =
@@ -304,10 +306,13 @@ bot.hears(/(?<!\/)\w/, async (ctx) => {
   }
 })
 
-async function start() {
-  await bot.start()
-}
-start()
+// Initialise Bot
+const server = express()
+server.use(express.json())
+// This is what sends responses to the bot. DO NOT delete these lines
+server.post('/webhook', webhookCallback(bot, 'express'))
+server.listen(PORT)
+bot.api.setWebhook(`${RESOURCE}/webhook`)
 
 bot.catch(async (err) => {
   const ctx = err.ctx
