@@ -1,7 +1,7 @@
 import { EvolutionClient, Pokemon, PokemonClient } from 'pokenode-ts'
-import { PokemonBuilder } from './PokemonBuilder'
-import { PokemonRegistered } from './types'
-import { TOTAL_OF_POKEMON } from './constants'
+import { PokemonBuilder } from '../classes/PokemonBuilder'
+import { PokemonRegistered } from '../types'
+import { TOTAL_OF_POKEMON } from '../constants'
 
 export class PokeApi {
   private api: PokemonClient

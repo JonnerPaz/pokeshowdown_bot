@@ -4,7 +4,7 @@ import {
   Context,
   InlineKeyboard,
 } from 'grammy'
-import { User } from './User'
+import { User } from './classes/User'
 import { Document, WithId } from 'mongodb'
 
 export interface SpriteType {
@@ -29,9 +29,7 @@ export type PokemonKeyboard = {
   (pokemon: PokemonRegistered): InlineKeyboard
 }
 
-export interface IUser extends User {}
-
-export type UserRegistered = User
+export interface UserRegistered extends User {}
 
 export type grammyContext =
   | CommandContext<Context>

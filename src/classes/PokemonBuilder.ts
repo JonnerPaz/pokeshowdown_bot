@@ -1,4 +1,4 @@
-import { SpriteType, PokemonRegistered } from './types'
+import { SpriteType, PokemonRegistered } from '../types'
 
 export class PokemonBuilder {
   private pokemonName: string | null = null

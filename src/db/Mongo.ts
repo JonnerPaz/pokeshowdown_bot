@@ -1,7 +1,7 @@
 import { Collection, MongoClient } from 'mongodb'
-import { User } from '../User'
+import { User } from '../classes/User'
 import 'dotenv/config'
-import { IUser, PokemonRegistered, UserRegistered } from '../types'
+import { UserRegistered, PokemonRegistered } from '../types'
 
 class Mongo {
   private client: MongoClient
@@ -73,7 +73,6 @@ class Mongo {
 
   async deletePokemon(byUser: UserRegistered, pokemon: PokemonRegistered) {
     try {
-      const user = await this.findOneUser(byUser.userName)
       await this.usersCollection.updateOne(
         {
           userName: byUser.userName,

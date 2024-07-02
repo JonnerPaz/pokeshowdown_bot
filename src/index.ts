@@ -7,70 +7,73 @@ import {
   InputMediaBuilder,
   webhookCallback,
 } from 'grammy'
-import { User } from './User'
-import { PokeApi } from './PokeApi'
-import * as Utils from './Utils'
+import { User } from './classes/User'
+import { PokeApi } from './classes/PokeApi'
+import * as Utils from './classes/Utils'
 import { PokemonRegistered } from './types'
 import 'dotenv/config'
-import { MAX_PKMN_PARTY } from './constants'
+import { EVOLVE_COUNTER, MAX_PKMN_PARTY } from './constants'
 import mongo from './db/Mongo'
 import express from 'express'
 
 let counter = 0
 let registerStarter: PokemonRegistered[] = []
 let currentWildPokemon: PokemonRegistered | null
-let botMessageId: number // saves messages from bot to handle it later
 const PORT = process.env.PORT
 const RESOURCE = process.env.RESOURCE
-
 const API_KEY = process.env.API_KEY as string
-export const bot = new Bot(API_KEY)
+const bot = new Bot(API_KEY)
 
 bot.command('start', async (ctx) => {
-  const msg1 =
-    'Bienvenido a PokeBotShowdown. Este es un Bot creado para capturar, '
-  const msg2 =
+  const msg =
+    'Bienvenido a PokeBotShowdown. Este es un Bot creado para capturar, ' +
     'intercambiar y combatir como en las entregas originales de la saga pokemon'
-  return await ctx.reply(msg1.concat(msg2))
+  return await ctx.reply(msg)
 })
 
 bot.command('register', async (ctx) => {
   try {
-    const registeredMsg = `You are already registered. If you want to erase your data and start over, use /deleteaccount`
     const user = await mongo.findOneUser(ctx.from?.username as string)
-    if (user) return ctx.reply(registeredMsg)
-
-    const starters = await new PokeApi().generateRegisterPokemon()
-    // Store starters globally
-    registerStarter = starters
-    const pokemonMedia = registerStarter.map((el) =>
-      InputMediaBuilder.photo(el.sprite.frontDefault)
-    )
+    if (user) {
+      return await ctx.reply(
+        'You are already registered. ' +
+          'If you want to erase your data and start over, use /deleteaccount'
+      )
+    }
 
     await ctx.reply(
       'To get registered, you first need to get your starter. Pick a pokemon from these ones'
     )
 
+    // create starters
+    registerStarter = await new PokeApi().generateRegisterPokemon()
+    const pokemonMedia = registerStarter.map((el) =>
+      InputMediaBuilder.photo(el.sprite.frontDefault)
+    )
     // send selection of starters
-    await ctx.api.sendMediaGroup(ctx.chat.id, pokemonMedia).then(async () => {
-      const inlineKeyboard = new InlineKeyboard()
-        .text(starters[0].name, 'starter0')
-        .text(starters[1].name, 'starter1')
-        .text(starters[2].name, 'starter2')
-        .text('Cancel', 'cancel')
-      await ctx.reply('Select the right choice for you:', {
-        reply_markup: inlineKeyboard,
-      })
+    const inlineKeyboard = new InlineKeyboard()
+      .text(registerStarter[0].name, 'starter0')
+      .text(registerStarter[1].name, 'starter1')
+      .text(registerStarter[2].name, 'starter2')
+      .text('Cancel', 'cancel')
+    await ctx.replyWithMediaGroup(pokemonMedia)
+    await ctx.reply('Select the right choice for your:', {
+      reply_markup: inlineKeyboard,
     })
   } catch (err) {
+    await ctx.reply(
+      'Error at register. Check logs or contact the author of this bot'
+    )
     console.error('error at register: ', err)
   }
 })
 
 bot.callbackQuery(/starter[012]/, async (ctx) => {
+  // Receives last number of callbackQuery
+  ctx.deleteMessage()
   const choice = Number(ctx.callbackQuery.data.at(-1) as string)
-  // creates new user
   const userName = ctx.from?.username as string
+  // creates new user
   const user = new User(userName, registerStarter[choice]) // Create User and stores it into DB
   await mongo.addUser(user)
 
@@ -88,7 +91,7 @@ bot.callbackQuery('cancel', async (ctx) => {
   return ctx.reply('Process cancelled successfully')
 })
 
-/* bot.command('pokemongenerate', async (ctx) => {
+bot.command('pokemongenerate', async (ctx) => {
   try {
     // generate pokemon
     const pokemon = await new PokeApi().generatePokemon()
@@ -104,10 +107,11 @@ bot.callbackQuery('cancel', async (ctx) => {
   } catch (err) {
     console.error(err)
   }
-}) */
+})
 
 bot.callbackQuery('catch', async (ctx) => {
   try {
+    await ctx.deleteMessage()
     const user = await mongo.findOneUser(ctx.from.username as string)
     const msg = `Error Procesing the request. The pokemon may be missing or you're not registered`
     if (!user || !currentWildPokemon) return ctx.reply(msg)
@@ -117,31 +121,23 @@ bot.callbackQuery('catch', async (ctx) => {
       null
 
     // update pokemon counter from user if he has it
-    if (currentWildPokemon && pokemonInParty) {
+    if (pokemonInParty) {
       const counter = PokeApi.updateCounter(pokemonInParty) as number
       await mongo.updatePokemonCount(user, [currentWildPokemon.name, counter])
       const msg = `You have catched a ${currentWildPokemon.name}. You've cached ${currentWildPokemon.name} ${pokemonInParty?.counter} times`
-      await ctx.deleteMessage()
       await ctx.reply(msg)
-      console.log(pokemonInParty?.counter)
       return
     }
 
     if (user.pokemonParty.length >= MAX_PKMN_PARTY) {
-      botMessageId = ctx.msg?.message_id as number
       // inline_keyboard from user inputed pokemon
-      const keyboard = (await Utils.customInlnKbdBtn(user, ctx).catch((res) => {
-        console.error('customInlnKbdBtn gets fucked up: ' + res)
-        return ctx.reply('Process cancelled. See logs in the console')
-      })) as InlineKeyboard
+      const keyboard = await Utils.customInlnKbdBtn(user, ctx)
       await ctx.reply(
         'You have reached the total maximum of pokemon allowed. Which pokemon would you like to let it go?',
         { reply_markup: keyboard }
       )
       return
     }
-
-    await ctx.deleteMessage()
 
     // Add new pokemon
     await mongo.addPokemon(user, currentWildPokemon)
@@ -154,7 +150,6 @@ bot.callbackQuery('catch', async (ctx) => {
 })
 
 bot.callbackQuery(/choice[012345]/, async (ctx) => {
-  await ctx.deleteMessages([botMessageId]) // deletes the wild pokemon msg
   const user = (await mongo.findOneUser(ctx.from.username as string)) as User
   const [pokemonToDelete, choice] = ctx.callbackQuery.data.split(' ')
   const pokemonChosen = user.pokemonParty.find(
@@ -179,13 +174,15 @@ bot.command('evolve', async (ctx) => {
       (el) => el.name === pokemonChoosed
     ) as PokemonRegistered
 
-    if (userPokemon && userPokemon.counter === 5) {
-      const oldPokemon = user.pokemonParty.find(
-        (el) => el.name === pokemonChoosed
-      ) as PokemonRegistered
-      const pokemonEvolved = await new PokeApi().evolvePokemon(userPokemon)
-      await mongo.evolvePokemon(user, oldPokemon, pokemonEvolved)
+    if (!userPokemon) return await ctx.reply('There is no pokemon')
+    if (userPokemon.counter !== EVOLVE_COUNTER) {
+      return await ctx.reply(
+        `You need to catch ${EVOLVE_COUNTER - userPokemon.counter} ${userPokemon.name} ` +
+          'more to be able to evolve'
+      )
     }
+    const pokemonEvolved = await new PokeApi().evolvePokemon(userPokemon)
+    await mongo.evolvePokemon(user, userPokemon, pokemonEvolved)
   } catch (error) {
     console.error(error)
   }
@@ -198,7 +195,7 @@ bot.command('pokemonsummary', async (ctx) => {
     InputMediaBuilder.photo(el.sprite.frontDefault)
   )
   const pokemonName = user.pokemonParty.map((el) => el.name)
-  await ctx.api.sendMediaGroup(ctx.chat.id, userPokemonImages)
+  await ctx.replyWithMediaGroup(userPokemonImages)
   const msg = `@${ctx.from?.username}, These are the pokemon you have: ${pokemonName.join(', ')}`
   return await ctx.reply(msg)
 })

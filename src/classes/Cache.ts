@@ -1,4 +1,4 @@
-import { UserRegistered, grammyContext } from './types'
+import { UserRegistered, grammyContext } from '../types'
 
 /**
  * Use this class as a faster method to retrieve data from DB
