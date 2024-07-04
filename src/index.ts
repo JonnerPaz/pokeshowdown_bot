@@ -15,8 +15,10 @@ import 'dotenv/config'
 import { EVOLVE_COUNTER, MAX_PKMN_PARTY } from './constants'
 import mongo from './db/Mongo'
 import express from 'express'
+import { userInfo } from 'os'
 
 let counter = 0
+let userChoice: string
 let registerStarter: PokemonRegistered[] = []
 let currentWildPokemon: PokemonRegistered | null
 const PORT = process.env.PORT
@@ -132,6 +134,7 @@ bot.callbackQuery('catch', async (ctx) => {
     if (user.pokemonParty.length >= MAX_PKMN_PARTY) {
       // inline_keyboard from user inputed pokemon
       const keyboard = await Utils.customInlnKbdBtn(user, ctx)
+      userChoice = user.userName
       await ctx.reply(
         'You have reached the total maximum of pokemon allowed. Which pokemon would you like to let it go?',
         { reply_markup: keyboard }
@@ -151,16 +154,27 @@ bot.callbackQuery('catch', async (ctx) => {
 
 bot.callbackQuery(/choice[012345]/, async (ctx) => {
   const user = (await mongo.findOneUser(ctx.from.username as string)) as User
-  const [pokemonToDelete, choice] = ctx.callbackQuery.data.split(' ')
-  const pokemonChosen = user.pokemonParty.find(
-    (el) => el.name === pokemonToDelete
-  ) as PokemonRegistered
 
-  await ctx.deleteMessage() // deletes selection party msg
+  // User who catch the pokemon is different than the one who press options
+  if (user.userName !== userChoice) {
+    await ctx.reply(
+      `${user.userName}, wait for ${userChoice} to finish its process`
+    )
 
-  await mongo.deletePokemon(user, pokemonChosen)
-  await mongo.addPokemon(user, currentWildPokemon as PokemonRegistered)
-  return await ctx.reply(`${currentWildPokemon?.name} was added to your party!`)
+    return await Utils.resolvePokemon(
+      user,
+      mongo,
+      currentWildPokemon as PokemonRegistered,
+      ctx
+    )
+  }
+
+  return await Utils.resolvePokemon(
+    user,
+    mongo,
+    currentWildPokemon as PokemonRegistered,
+    ctx
+  )
 })
 
 bot.command('evolve', async (ctx) => {

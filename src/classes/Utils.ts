@@ -1,7 +1,17 @@
-import { InlineKeyboard, InputMediaBuilder } from 'grammy'
+import {
+  CallbackQueryContext,
+  Context,
+  InlineKeyboard,
+  InputMediaBuilder,
+} from 'grammy'
 import { User } from '../classes/User'
-import { PokemonRegistered, grammyContext } from '../types'
-import { InlineKeyboardButton } from '@grammyjs/types'
+import {
+  MongoType,
+  PokemonRegistered,
+  UserRegistered,
+  grammyContext,
+} from '../types'
+import { CallbackQuery, InlineKeyboardButton } from '@grammyjs/types'
 
 /**
  * Creates a button with the pokemon you passed in
@@ -92,4 +102,22 @@ export async function customInlnKbdBtn(
     await ctx.api.sendMediaGroup(ctx.chat?.id, userPokemonPhotos)
   }
   return inlineKeyboard
+}
+
+export async function resolvePokemon(
+  user: UserRegistered,
+  db: MongoType,
+  currentWildPokemon: PokemonRegistered,
+  ctx: CallbackQueryContext<Context>
+) {
+  const [pokemonToDelete, choice] = ctx.callbackQuery.data.split(' ')
+  const pokemonChosen = user.pokemonParty.find(
+    (el) => el.name === pokemonToDelete
+  ) as PokemonRegistered
+
+  await ctx.deleteMessage() // deletes selection party msg
+
+  await db.deletePokemon(user, pokemonChosen)
+  await db.addPokemon(user, currentWildPokemon as PokemonRegistered)
+  return await ctx.reply(`${currentWildPokemon?.name} was added to your party!`)
 }
