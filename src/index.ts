@@ -9,24 +9,23 @@ import {
 } from 'grammy'
 import { User } from './classes/User'
 import { PokeApi } from './classes/PokeApi'
-import * as Utils from './classes/Utils'
 import { PokemonRegistered } from './types'
 import 'dotenv/config'
 import { EVOLVE_COUNTER, MAX_PKMN_PARTY } from './constants'
 import mongo from './db/Mongo'
-import express from 'express'
-import { userInfo } from 'os'
+import customInlnKbdBtn from './utils/customInlnKbdBtn'
+import uSendPrivate from './utils/uSendPrivate'
 
 let counter = 0
-let userChoice: string
 let registerStarter: PokemonRegistered[] = []
-let currentWildPokemon: PokemonRegistered | null
+let currentWildPokemon: PokemonRegistered
 const PORT = process.env.PORT
 const RESOURCE = process.env.RESOURCE
 const API_KEY = process.env.API_KEY as string
 const bot = new Bot(API_KEY)
 
 bot.command('start', async (ctx) => {
+  uSendPrivate(ctx, 'f')
   const msg =
     'Bienvenido a PokeBotShowdown. Este es un Bot creado para capturar, ' +
     'intercambiar y combatir como en las entregas originales de la saga pokemon'
@@ -133,11 +132,12 @@ bot.callbackQuery('catch', async (ctx) => {
 
     if (user.pokemonParty.length >= MAX_PKMN_PARTY) {
       // inline_keyboard from user inputed pokemon
-      const keyboard = await Utils.customInlnKbdBtn(user, ctx)
-      userChoice = user.userName
-      await ctx.reply(
-        'You have reached the total maximum of pokemon allowed. Which pokemon would you like to let it go?',
-        { reply_markup: keyboard }
+      const keyboard = await customInlnKbdBtn(user, ctx)
+      uSendPrivate(
+        ctx,
+        `You can't catch ${currentWildPokemon.name} as you have reached the total maximum of pokemon allowed. ` +
+          'Which pokemon would you like to let it go?',
+        keyboard
       )
       return
     }
@@ -155,35 +155,27 @@ bot.callbackQuery('catch', async (ctx) => {
 bot.callbackQuery(/choice[012345]/, async (ctx) => {
   const user = (await mongo.findOneUser(ctx.from.username as string)) as User
 
-  // User who catch the pokemon is different than the one who press options
-  if (user.userName !== userChoice) {
-    await ctx.reply(
-      `${user.userName}, wait for ${userChoice} to finish its process`
-    )
+  const pokemonToDelete = ctx.callbackQuery.data.split('_').at(0)
+  const pokemonChosen = user.pokemonParty.find(
+    (el) => el.name === pokemonToDelete
+  ) as PokemonRegistered
 
-    return await Utils.resolvePokemon(
-      user,
-      mongo,
-      currentWildPokemon as PokemonRegistered,
-      ctx
-    )
-  }
+  await ctx.deleteMessage() // deletes selection party msg
 
-  return await Utils.resolvePokemon(
-    user,
-    mongo,
-    currentWildPokemon as PokemonRegistered,
-    ctx
-  )
+  await mongo.deletePokemon(user, pokemonChosen)
+  await mongo.addPokemon(user, currentWildPokemon)
+  return await ctx.reply(`${currentWildPokemon?.name} was added to your party!`)
 })
 
 bot.command('evolve', async (ctx) => {
   try {
-    const pokemonChoosed = ctx.msg.text.slice(7).trim()
     const user = await mongo.findOneUser(ctx.from?.username as string)
-    const msg = `You're not registered. You need to register first using /register`
-    if (!user) return await ctx.reply(msg)
+    if (!user)
+      return await ctx.reply(
+        `You're not registered. You need to register first using /register`
+      )
 
+    const pokemonChoosed = ctx.msg.text.slice(7).trim()
     const userPokemon = user?.pokemonParty.find(
       (el) => el.name === pokemonChoosed
     ) as PokemonRegistered
@@ -192,7 +184,7 @@ bot.command('evolve', async (ctx) => {
     if (userPokemon.counter !== EVOLVE_COUNTER) {
       return await ctx.reply(
         `You need to catch ${EVOLVE_COUNTER - userPokemon.counter} ${userPokemon.name} ` +
-          'more to be able to evolve'
+          'more to be able to evolve it'
       )
     }
     const pokemonEvolved = await new PokeApi().evolvePokemon(userPokemon)
@@ -298,8 +290,8 @@ bot.api.setMyCommands([
 bot.hears(/(?<!\/)\w/, async (ctx) => {
   try {
     counter++
-    if (counter === 75) {
-      const pokemon = await new PokeApi().generatePokemon()
+    if (counter === 1) {
+      const pokemon = await new PokeApi().generatePokemon('cyndaquil')
       currentWildPokemon = pokemon
 
       // create message with pokemon
@@ -318,12 +310,15 @@ bot.hears(/(?<!\/)\w/, async (ctx) => {
 })
 
 // Initialise Bot
-const server = express()
+// ACTIVATE THIS WHEN GOING ONLINE
+/* const server = express()
 server.use(express.json())
 // This is what sends responses to the bot. DO NOT delete these lines
 server.post('/webhook', webhookCallback(bot, 'express'))
 server.listen(PORT)
-bot.api.setWebhook(`${RESOURCE}/webhook`)
+bot.api.setWebhook(`${RESOURCE}/webhook`) */
+
+bot.start()
 
 bot.catch(async (err) => {
   const ctx = err.ctx

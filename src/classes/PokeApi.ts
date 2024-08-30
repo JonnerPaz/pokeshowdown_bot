@@ -104,8 +104,8 @@ export class PokeApi {
       .then(async (el) => {
         const isPokemon = el.chain.evolves_to.at(0)?.species.name
         const isis = el.chain.evolves_to
-        console.log(isPokemon)
-        console.log(isis)
+        console.log('isPokemon', isPokemon)
+        console.log('isis', isis)
         if (isPokemon) {
           const newPokemon = await this.generatePokemon(isPokemon)
           return newPokemon
