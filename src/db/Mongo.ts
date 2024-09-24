@@ -19,11 +19,12 @@ class Mongo {
    * */
   async listDB() {
     try {
-      await this.client.connect()
       const dbs = await this.client.db().admin().listDatabases()
       console.log(dbs)
     } catch (err) {
       throw err
+    } finally {
+      this.client.close()
     }
   }
 
@@ -32,12 +33,13 @@ class Mongo {
    */
   async addUser(user: User) {
     try {
-      await this.client.connect()
       const query = await this.findOneUser(user.userName)
       if (query) return null // User is already created
       await this.usersCollection.insertOne(user)
     } catch (err) {
       throw err
+    } finally {
+      this.client.close()
     }
   }
 
@@ -47,13 +49,14 @@ class Mongo {
    */
   async findOneUser(byUserName: string) {
     try {
-      await this.client.connect()
       const query = { userName: byUserName }
       const result = await this.usersCollection.findOne(query)
       if (!result) return null
       return result
     } catch (err) {
       console.error(err)
+    } finally {
+      this.client.close()
     }
   }
 
@@ -68,6 +71,8 @@ class Mongo {
       )
     } catch (error) {
       throw error
+    } finally {
+      this.client.close()
     }
   }
 
@@ -81,6 +86,8 @@ class Mongo {
       )
     } catch (error) {
       throw error
+    } finally {
+      this.client.close()
     }
   }
 
@@ -88,16 +95,21 @@ class Mongo {
     byUser: UserRegistered,
     updatePokemonCount: [string, number]
   ) {
-    await this.client.connect()
-    const pokemonName = updatePokemonCount[0]
-    await this.usersCollection.updateOne(
-      { userName: byUser.userName, 'pokemonParty.name': pokemonName },
-      {
-        $inc: {
-          'pokemonParty.$.counter': 1,
-        },
-      }
-    )
+    try {
+      const pokemonName = updatePokemonCount[0]
+      await this.usersCollection.updateOne(
+        { userName: byUser.userName, 'pokemonParty.name': pokemonName },
+        {
+          $inc: {
+            'pokemonParty.$.counter': 1,
+          },
+        }
+      )
+    } catch (err) {
+      throw err
+    } finally {
+      this.client.close()
+    }
   }
 
   async evolvePokemon(
@@ -123,6 +135,8 @@ class Mongo {
       )
     } catch (error) {
       console.error(error)
+    } finally {
+      this.client.close()
     }
   }
 
@@ -130,14 +144,14 @@ class Mongo {
 
   async deleteUser(byUserName: string) {
     try {
-      // no need to call connect and close from mongodb api
-      // these are being used from findOneUser
       const user = (await this.findOneUser(byUserName)) ?? null
       if (!user) return new Error('No user found')
       const result = (await this.usersCollection.deleteOne(user)) ?? null
       return result
     } catch (error) {
       console.error(error)
+    } finally {
+      this.client.close()
     }
   }
 }

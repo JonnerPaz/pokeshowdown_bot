@@ -2,6 +2,7 @@ import { EvolutionClient, Pokemon, PokemonClient } from 'pokenode-ts'
 import { PokemonBuilder } from '../classes/PokemonBuilder'
 import { PokemonRegistered } from '../types'
 import { TOTAL_OF_POKEMON } from '../constants'
+import { InputMediaBuilder } from 'grammy'
 
 export class PokeApi {
   private api: PokemonClient
@@ -57,24 +58,6 @@ export class PokeApi {
     return pokemonStarter
   }
 
-  private buildPokemon(pokemon: Pokemon): PokemonRegistered {
-    return this.builder
-      .setName(pokemon.name)
-      .setId(pokemon.id)
-      .setAbility(pokemon.abilities[0].ability.name)
-      .setHeldItem(null)
-      .setSprite({
-        frontShiny: String(pokemon.sprites.front_shiny),
-        frontDefaultAlt: String(pokemon.sprites.front_default),
-        frontDefault: String(
-          pokemon.sprites.other?.['official-artwork'].front_default
-        ),
-        backShiny: String(pokemon.sprites.back_shiny),
-        backDefault: String(pokemon.sprites.back_default),
-      })
-      .build()
-  }
-
   static showPokemonPhoto(
     pokemon: PokemonRegistered,
     position?: string
@@ -120,5 +103,23 @@ export class PokeApi {
       return array.at(Math.floor(Math.random() * array.length + 1)) ?? 1
     }
     return Math.floor(Math.random() * TOTAL_OF_POKEMON + 1)
+  }
+
+  private buildPokemon(pokemon: Pokemon): PokemonRegistered {
+    return this.builder
+      .setName(pokemon.name)
+      .setId(pokemon.id)
+      .setAbility(pokemon.abilities[0].ability.name)
+      .setHeldItem(null)
+      .setSprite({
+        frontShiny: String(pokemon.sprites.front_shiny),
+        frontDefaultAlt: String(pokemon.sprites.front_default),
+        frontDefault: String(
+          pokemon.sprites.other?.['official-artwork'].front_default
+        ),
+        backShiny: String(pokemon.sprites.back_shiny),
+        backDefault: String(pokemon.sprites.back_default),
+      })
+      .build()
   }
 }
