@@ -4,10 +4,22 @@ import registerPokemon from './controllers/registerPokemon'
 import cb_registerPokemon from './controllers/cb_registerPokemon'
 import pokemonGenerate from './controllers/pokemonGenerate'
 import cb_catch from './controllers/cb_catch'
+import cb_pokemonPartyFull from './controllers/cb_pokemonPartyFull'
+import deleteAccount from './controllers/deleteAccount'
+import cb_deleteAccount from './controllers/cb_deleteAccount'
+import pokemonSummary from './controllers/pokemonSummary'
+import { PokeApi } from './classes/PokeApi'
+import listenUpdates from './controllers/listenUpdates'
+import { RESET_LOOP } from './constants'
+import { commands } from './controllers/commands'
+import getHelp from './controllers/getHelp'
 
 const PORT = process.env.PORT
 const RESOURCE = process.env.RESOURCE
 const API_KEY = process.env.API_KEY as string
+let counter = 0
+export const pokeApi = new PokeApi()
+
 const bot = new Bot(API_KEY)
 
 export default bot
@@ -18,6 +30,8 @@ bot.command('start', async (ctx) => {
     'intercambiar y combatir como en las entregas originales de la saga pokemon'
   return await ctx.reply(msg)
 })
+
+bot.command('pokemonsummary', async (ctx) => await pokemonSummary(ctx))
 
 bot.command('register', async (ctx) => await registerPokemon(ctx))
 
@@ -31,6 +45,30 @@ bot.callbackQuery('cancel', async (ctx) => {
 bot.command('pokemongenerate', async (ctx) => await pokemonGenerate(ctx))
 
 bot.callbackQuery('catch', async (ctx) => await cb_catch(ctx))
+
+bot.callbackQuery(
+  /choice[012345]/,
+  async (ctx) => await cb_pokemonPartyFull(ctx)
+)
+
+bot.command('deleteaccount', async (ctx) => await deleteAccount(ctx))
+
+bot.callbackQuery('delete', async (ctx) => await cb_deleteAccount(ctx))
+
+bot.hears(/(?<!\/)\w/, async (ctx) => {
+  try {
+    counter++
+    if (counter === RESET_LOOP) {
+      await listenUpdates(ctx)
+      counter = 0
+    }
+    return
+  } catch (error) {}
+})
+
+bot.command('help', async (ctx) => getHelp(ctx))
+
+bot.api.setMyCommands(commands)
 
 // Initialise Bot
 // ACTIVATE THIS WHEN GOING ONLINE

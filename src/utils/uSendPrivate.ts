@@ -5,11 +5,10 @@ export default async function uSendPrivate(
   msg: string,
   media?: any
 ) {
-  return await ctx
-    .getAuthor()
-    .then((user) =>
-      media
-        ? ctx.api.sendMessage(user.user.id, msg, { reply_markup: media })
-        : ctx.api.sendMessage(user.user.id, msg)
-    )
+  const user = await ctx.getAuthor()
+  if (media) {
+    return await ctx.api.sendMessage(user.user.id, msg, { reply_markup: media })
+  }
+
+  return await ctx.api.sendMessage(user.user.id, msg)
 }

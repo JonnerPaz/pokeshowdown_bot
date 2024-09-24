@@ -39,8 +39,6 @@ class Mongo {
       await this.usersCollection.insertOne(user)
     } catch (err) {
       throw err
-    } finally {
-      this.client.close()
     }
   }
 
@@ -51,6 +49,7 @@ class Mongo {
    */
   async findOneUser(byUserName: string) {
     try {
+      await this.client.connect()
       const query = { userName: byUserName }
       const result = await this.usersCollection.findOne(query)
       if (!result) return null
@@ -88,8 +87,6 @@ class Mongo {
       )
     } catch (error) {
       throw error
-    } finally {
-      this.client.close()
     }
   }
 

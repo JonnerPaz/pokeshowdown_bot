@@ -1,7 +1,7 @@
 import { CallbackQueryContext, Context } from 'grammy'
 import mongo from '../db/Mongo'
 import { User } from '../classes/User'
-import { pokeApi } from '../events'
+import { pokeApi } from '../index'
 
 export default async function cb_registerPokemon(
   ctx: CallbackQueryContext<Context>
