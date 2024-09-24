@@ -58,10 +58,7 @@ export class PokeApi {
     return pokemonStarter
   }
 
-  static showPokemonPhoto(
-    pokemon: PokemonRegistered,
-    position?: string
-  ): string {
+  showPokemonPhoto(pokemon: PokemonRegistered, position?: string): string {
     // using return. No need to use "break"
     switch (position) {
       case 'front':
@@ -76,7 +73,7 @@ export class PokeApi {
     return pokemon.sprite.frontDefault
   }
 
-  static updateCounter(pokemon: PokemonRegistered) {
+  updateCounter(pokemon: PokemonRegistered) {
     return pokemon.counter++
   }
 

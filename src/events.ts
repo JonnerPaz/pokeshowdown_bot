@@ -1,92 +1,11 @@
-import bot from './index'
-import { InlineKeyboard, InputMediaBuilder } from 'grammy'
-import { User } from './classes/User'
 import { PokeApi } from './classes/PokeApi'
 import { PokemonRegistered } from './types'
-import { EVOLVE_COUNTER, MAX_PKMN_PARTY } from './constants'
-import mongo from './db/Mongo'
-import customInlnKbdBtn from './utils/customInlnKbdBtn'
-import uSendPrivate from './utils/uSendPrivate'
-import registerPokemon from './controllers/registerPokemon'
-import cb_registerPokemon from './controllers/cb_registerPokemon'
 
 let counter = 0
 let currentWildPokemon: PokemonRegistered
 export const pokeApi = new PokeApi()
 
-// bot.command('start', async (ctx) => {
-//   const msg =
-//     'Bienvenido a PokeBotShowdown. Este es un Bot creado para capturar, ' +
-//     'intercambiar y combatir como en las entregas originales de la saga pokemon'
-//   return await ctx.reply(msg)
-// })
-
-bot.callbackQuery('cancel', async (ctx) => {
-  ctx.deleteMessage()
-  return ctx.reply('Process cancelled successfully')
-})
-
-bot.command('pokemongenerate', async (ctx) => {
-  try {
-    // generate pokemon
-    const pokemon = await new PokeApi().generatePokemon()
-    currentWildPokemon = pokemon
-
-    // create message with pokemon
-    const caption = `A wild ${pokemon.name} appeared. Tap "CATCH" to get it`
-    const inlnKeyboard = new InlineKeyboard().text('CATCH', 'catch')
-    await ctx.replyWithPhoto(PokeApi.showPokemonPhoto(pokemon), {
-      reply_markup: inlnKeyboard,
-      caption: caption,
-    })
-  } catch (err) {
-    console.error(err)
-  }
-})
-
-bot.callbackQuery('catch', async (ctx) => {
-  try {
-    await ctx.deleteMessage()
-    const user = await mongo.findOneUser(ctx.from.username as string)
-    const msg = `Error Procesing the request. The pokemon may be missing or you're not registered`
-    if (!user || !currentWildPokemon) return ctx.reply(msg)
-
-    const pokemonInParty =
-      user.pokemonParty.find((el) => el.name === currentWildPokemon?.name) ??
-      null
-
-    // update pokemon counter from user if he has it
-    if (pokemonInParty) {
-      const counter = PokeApi.updateCounter(pokemonInParty) as number
-      await mongo.updatePokemonCount(user, [currentWildPokemon.name, counter])
-      const msg = `You have catched a ${currentWildPokemon.name}. You've cached ${currentWildPokemon.name} ${pokemonInParty?.counter} times`
-      await ctx.reply(msg)
-      return
-    }
-
-    if (user.pokemonParty.length >= MAX_PKMN_PARTY) {
-      // inline_keyboard from user inputed pokemon
-      const keyboard = await customInlnKbdBtn(user, ctx)
-      uSendPrivate(
-        ctx,
-        `You can't catch ${currentWildPokemon.name} as you have reached the total maximum of pokemon allowed. ` +
-          'Which pokemon would you like to let it go?',
-        keyboard
-      )
-      return
-    }
-
-    // Add new pokemon
-    await mongo.addPokemon(user, currentWildPokemon)
-    await ctx.reply(
-      `@${user.userName} has captured a ${currentWildPokemon.name}`
-    )
-  } catch (err) {
-    console.error(err)
-  }
-})
-
-bot.callbackQuery(/choice[012345]/, async (ctx) => {
+/* bot.callbackQuery(/choice[012345]/, async (ctx) => {
   const user = (await mongo.findOneUser(ctx.from.username as string)) as User
 
   const pokemonToDelete = ctx.callbackQuery.data.split('_').at(0)
@@ -160,7 +79,7 @@ bot.command('deleteaccount', async (ctx) => {
   }
 })
 
-bot.callbackQuery('delete', async (ctx) => {
+bot.callbackQuery('delete', async (ctx) => {eve
   // delete inline_keyboard
   ctx.deleteMessages([ctx.msg?.message_id as number])
 
@@ -241,8 +160,4 @@ bot.hears(/(?<!\/)\w/, async (ctx) => {
   } catch (e) {
     console.error(e)
   }
-})
-
-export default async function Load() {
-  return await bot.start()
-}
+}) */

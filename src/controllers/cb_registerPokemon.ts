@@ -7,18 +7,22 @@ export default async function cb_registerPokemon(
   ctx: CallbackQueryContext<Context>
 ) {
   try {
-    console.log(ctx.entities())
-    await ctx.deleteMessage()
-    const choice = Number(ctx.callbackQuery.data.at(-1) as string)
+    const index = Number(ctx.callbackQuery.data.at(-1) as string)
+    const choice =
+      ctx.callbackQuery.message?.reply_markup?.inline_keyboard[0][index].text
+
     if (!choice) throw new Error('Choice is not defined at cb_registerPokemon')
+
     const userName = ctx.from?.username as string
+    const starterPokemon = await pokeApi.generatePokemon(choice)
 
     // creates new user
-    const user = new User(userName, await pokeApi.generatePokemon()) // Create User and stores it into DB
+    const user = new User(userName, starterPokemon) // Create User and stores it into DB
     await mongo.addUser(user)
 
+    await ctx.deleteMessage()
     await ctx.reply(
-      `@${ctx.from?.username} chose ${undefined}! now you have been registered`
+      `@${ctx.from?.username} chose ${starterPokemon.name}! now you have been registered`
     )
     await ctx.reply(`You can check your pokemons using /pokemonsummary
 Hope you have fun with this bot!

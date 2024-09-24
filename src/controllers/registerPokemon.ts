@@ -18,7 +18,7 @@ export default async function registerPokemon(ctx: CommandContext<Context>) {
     }
 
     await ctx.reply(
-      'To get registered, you first need to get your starter. Pick a pokemon from these ones'
+      'To get registered, you first need to get your starter. Pick a pokemon from these ones:...'
     )
 
     // create starters
@@ -33,7 +33,7 @@ export default async function registerPokemon(ctx: CommandContext<Context>) {
       .text('Cancel', 'cancel')
 
     await ctx.replyWithMediaGroup(media)
-    await ctx.reply('Select the right choice for your:', {
+    await ctx.reply('Select the right choice for you', {
       reply_markup: options,
     })
   } catch (err) {
