@@ -9,12 +9,11 @@ import cb_deleteAccount from './controllers/cb_deleteAccount'
 import pokemonSummary from './controllers/pokemonSummary'
 import listenUpdates from './controllers/listenUpdates'
 import getHelp from './controllers/getHelp'
-import { PokeApi } from './classes/PokeApi'
+import evolvePokemon from './controllers/evolvePokemon'
 import { RESET_LOOP } from './constants'
 import { Composer } from 'grammy'
 
 export const events = new Composer()
-export const pokeApi = new PokeApi()
 let counter = 0
 
 events.command('start', async (ctx) => {
@@ -51,6 +50,11 @@ events.command('deleteaccount', async (ctx) => await deleteAccount(ctx))
 
 events.callbackQuery('delete', async (ctx) => await cb_deleteAccount(ctx))
 
+events.command('help', async (ctx) => await getHelp(ctx))
+
+events.command('evolve', async (ctx) => await evolvePokemon(ctx))
+
+// this must be the last controller
 events.hears(/(?<!\/)\w/, async (ctx) => {
   try {
     counter++
@@ -63,5 +67,3 @@ events.hears(/(?<!\/)\w/, async (ctx) => {
     throw error
   }
 })
-
-events.command('help', async (ctx) => getHelp(ctx))

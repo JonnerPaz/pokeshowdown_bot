@@ -1,16 +1,49 @@
-import { EvolutionClient, Pokemon, PokemonClient } from 'pokenode-ts'
+import {
+  EvolutionClient,
+  MainClient,
+  Pokemon,
+  PokemonClient,
+} from 'pokenode-ts'
 import { PokemonBuilder } from '../classes/PokemonBuilder'
 import { PokemonRegistered } from '../types'
 import { TOTAL_OF_POKEMON } from '../constants'
 import { InputMediaBuilder } from 'grammy'
+import evolvePokemon from '../controllers/evolvePokemon'
 
 export class PokeApi {
   private api: PokemonClient
   private builder: PokemonBuilder
+  private evolution: EvolutionClient
 
   constructor() {
     this.api = new PokemonClient()
     this.builder = new PokemonBuilder()
+    this.evolution = new EvolutionClient()
+  }
+
+  private randomizer(array?: number[]) {
+    if (array) {
+      return array.at(Math.floor(Math.random() * array.length + 1)) ?? 1
+    }
+    return Math.floor(Math.random() * TOTAL_OF_POKEMON + 1)
+  }
+
+  private buildPokemon(pokemon: Pokemon): PokemonRegistered {
+    return this.builder
+      .setName(pokemon.name)
+      .setId(pokemon.id)
+      .setAbility(pokemon.abilities[0].ability.name)
+      .setHeldItem(null)
+      .setSprite({
+        frontShiny: String(pokemon.sprites.front_shiny),
+        frontDefaultAlt: String(pokemon.sprites.front_default),
+        frontDefault: String(
+          pokemon.sprites.other?.['official-artwork'].front_default
+        ),
+        backShiny: String(pokemon.sprites.back_shiny),
+        backDefault: String(pokemon.sprites.back_default),
+      })
+      .build()
   }
 
   async generatePokemon(pokemon?: string | number): Promise<PokemonRegistered> {
@@ -78,45 +111,34 @@ export class PokeApi {
   }
 
   async evolvePokemon(pokemon: PokemonRegistered) {
-    const evolve = new EvolutionClient()
-    const logger = await evolve
-      .getEvolutionChainById(pokemon.id)
-      .then(async (el) => {
-        const isPokemon = el.chain.evolves_to.at(0)?.species.name
-        const isis = el.chain.evolves_to
-        console.log('isPokemon', isPokemon)
-        console.log('isis', isis)
-        if (isPokemon) {
-          const newPokemon = await this.generatePokemon(isPokemon)
-          return newPokemon
-        }
-      })
-    console.log(logger)
-    return logger as PokemonRegistered
-  }
+    try {
+      // input pokemon
+      const pokemonToEvolve = await this.api.getPokemonSpeciesByName(
+        pokemon.name
+      )
+      // retrieves id used for evolution chain
+      const evoQuery = Number(
+        pokemonToEvolve.evolution_chain.url.split('/').at(-2)
+      )
+      // evolution chain
+      const evolution = await this.evolution.getEvolutionChainById(evoQuery)
 
-  private randomizer(array?: number[]) {
-    if (array) {
-      return array.at(Math.floor(Math.random() * array.length + 1)) ?? 1
+      const pokeSecondForm = evolution.chain.evolves_to.at(0)?.species.name
+
+      // final evolution process
+      if (pokeSecondForm === pokemon.name) {
+        const pokeFinalForm = evolution.chain.evolves_to.at(0)?.evolves_to.at(0)
+          ?.species.name
+        return await pokeApi.generatePokemon(pokeFinalForm)
+      }
+
+      return await pokeApi.generatePokemon(pokeSecondForm)
+    } catch (error) {
+      throw error
     }
-    return Math.floor(Math.random() * TOTAL_OF_POKEMON + 1)
-  }
-
-  private buildPokemon(pokemon: Pokemon): PokemonRegistered {
-    return this.builder
-      .setName(pokemon.name)
-      .setId(pokemon.id)
-      .setAbility(pokemon.abilities[0].ability.name)
-      .setHeldItem(null)
-      .setSprite({
-        frontShiny: String(pokemon.sprites.front_shiny),
-        frontDefaultAlt: String(pokemon.sprites.front_default),
-        frontDefault: String(
-          pokemon.sprites.other?.['official-artwork'].front_default
-        ),
-        backShiny: String(pokemon.sprites.back_shiny),
-        backDefault: String(pokemon.sprites.back_default),
-      })
-      .build()
   }
 }
+
+const pokeApi = new PokeApi()
+
+export default pokeApi

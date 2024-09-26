@@ -15,8 +15,8 @@ const commands = [
     description: 'get an info of all your pokemons',
   },
   {
-    command: 'pokemonsummary',
-    description: 'get an info of all your pokemons',
+    command: 'evolve',
+    description: 'Evolve one of your pokemons!',
   },
 ]
 export default commands

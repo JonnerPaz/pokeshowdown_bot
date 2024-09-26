@@ -21,7 +21,7 @@ bot.api.setWebhook(`${RESOURCE}/webhook`) */
 
 bot.use(events)
 
-bot.api.setMyCommands(commands)
+// bot.api.setMyCommands(commands)
 
 bot.start()
 
