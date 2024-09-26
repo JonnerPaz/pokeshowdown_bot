@@ -10,7 +10,9 @@ class Mongo {
 
   constructor() {
     this.client = new MongoClient(this.uri)
-    this.usersCollection = this.client.db('pokebot-db').collection('users')
+    this.usersCollection = this.client
+      .db('pokebot-db')
+      .collection((process.env.DATABASE_COLLECTION as string) || 'users')
   }
 
   /**
