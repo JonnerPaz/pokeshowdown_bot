@@ -1,4 +1,4 @@
-export const commands = [
+const commands = [
   { command: 'start', description: 'Starts the bot' },
   { command: 'register', description: 'register a user into the bot' },
   {
@@ -19,3 +19,4 @@ export const commands = [
     description: 'get an info of all your pokemons',
   },
 ]
+export default commands

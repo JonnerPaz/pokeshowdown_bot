@@ -1,5 +1,5 @@
-import { Bot, BotError, GrammyError, HttpError } from 'grammy'
 import 'dotenv/config'
+import { Bot, BotError, GrammyError, HttpError } from 'grammy'
 import registerPokemon from './controllers/registerPokemon'
 import cb_registerPokemon from './controllers/cb_registerPokemon'
 import pokemonGenerate from './controllers/pokemonGenerate'
@@ -8,11 +8,11 @@ import cb_pokemonPartyFull from './controllers/cb_pokemonPartyFull'
 import deleteAccount from './controllers/deleteAccount'
 import cb_deleteAccount from './controllers/cb_deleteAccount'
 import pokemonSummary from './controllers/pokemonSummary'
-import { PokeApi } from './classes/PokeApi'
 import listenUpdates from './controllers/listenUpdates'
-import { RESET_LOOP } from './constants'
-import { commands } from './controllers/commands'
+import commands from './controllers/commands'
 import getHelp from './controllers/getHelp'
+import { PokeApi } from './classes/PokeApi'
+import { RESET_LOOP } from './constants'
 
 const PORT = process.env.PORT
 const RESOURCE = process.env.RESOURCE
@@ -38,8 +38,8 @@ bot.command('register', async (ctx) => await registerPokemon(ctx))
 bot.callbackQuery(/starter[012]/, async (ctx) => await cb_registerPokemon(ctx))
 
 bot.callbackQuery('cancel', async (ctx) => {
-  ctx.deleteMessage()
-  return ctx.reply('Process cancelled successfully')
+  await ctx.deleteMessage()
+  return await ctx.reply('Process cancelled successfully')
 })
 
 bot.command('pokemongenerate', async (ctx) => await pokemonGenerate(ctx))
@@ -63,7 +63,9 @@ bot.hears(/(?<!\/)\w/, async (ctx) => {
       counter = 0
     }
     return
-  } catch (error) {}
+  } catch (error) {
+    throw error
+  }
 })
 
 bot.command('help', async (ctx) => getHelp(ctx))

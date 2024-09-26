@@ -19,7 +19,6 @@ export default async function cb_catch(ctx: CallbackQueryContext<Context>) {
     const pokemon = ctx.callbackQuery.message?.caption
       ?.split(' ')
       .at(2) as string
-
     const pokemonInParty =
       user.pokemonParty.find((el) => el.name === pokemon) ?? null
 
@@ -37,6 +36,7 @@ export default async function cb_catch(ctx: CallbackQueryContext<Context>) {
     const choice = (await pokemonGenerate(pokemon)) as PokemonRegistered
     await mongo.addPokemon(user, choice)
     await ctx.reply(`@${user.userName} has captured a ${choice.name}`)
+    return
   } catch (err) {
     await ctx.reply(err as string)
     console.error(err)

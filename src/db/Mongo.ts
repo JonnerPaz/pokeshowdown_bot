@@ -1,12 +1,11 @@
 import { Collection, MongoClient } from 'mongodb'
 import { User } from '../classes/User'
-import 'dotenv/config'
 import { UserRegistered, PokemonRegistered } from '../types'
+import 'dotenv/config'
 
 class Mongo {
   private client: MongoClient
-  private password = process.env.DATABASE_PASSWORD
-  private uri = `mongodb+srv://jonner:${this.password}@pokebotcluster.kgeb0ma.mongodb.net/?retryWrites=true&w=majority&appName=pokebotcluster`
+  private uri = process.env.DATABASE as string
   private usersCollection: Collection<UserRegistered>
 
   constructor() {
