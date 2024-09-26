@@ -9,6 +9,7 @@ import { PokemonRegistered } from '../types'
 import { TOTAL_OF_POKEMON } from '../constants'
 import { InputMediaBuilder } from 'grammy'
 import evolvePokemon from '../controllers/evolvePokemon'
+import pokemonGenerate from '../controllers/pokemonGenerate'
 
 export class PokeApi {
   private api: PokemonClient
@@ -120,19 +121,24 @@ export class PokeApi {
       const evoQuery = Number(
         pokemonToEvolve.evolution_chain.url.split('/').at(-2)
       )
+
       // evolution chain
       const evolution = await this.evolution.getEvolutionChainById(evoQuery)
-
-      const pokeSecondForm = evolution.chain.evolves_to.at(0)?.species.name
-
-      // final evolution process
-      if (pokeSecondForm === pokemon.name) {
-        const pokeFinalForm = evolution.chain.evolves_to.at(0)?.evolves_to.at(0)
-          ?.species.name
-        return await pokeApi.generatePokemon(pokeFinalForm)
+      const evolutionChain = {
+        firstForm: evolution.chain.species.name,
+        secondForm: evolution.chain.evolves_to.at(0)?.species.name,
+        thirdForm: evolution.chain.evolves_to.at(0)?.evolves_to.at(0)?.species
+          .name,
       }
 
-      return await pokeApi.generatePokemon(pokeSecondForm)
+      // evolution resolver
+      if (pokemon.name === evolutionChain.firstForm) {
+        return await this.generatePokemon(evolutionChain.secondForm)
+      } else if (pokemon.name === evolutionChain.secondForm) {
+        return await this.generatePokemon(evolutionChain.thirdForm)
+      } else {
+        throw Error('This pokemon cannot evolve')
+      }
     } catch (error) {
       throw error
     }

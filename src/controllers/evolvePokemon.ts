@@ -12,7 +12,7 @@ export default async function evolvePokemon(ctx: CommandContext<Context>) {
     const pokemon = user.pokemonParty.find((el) => el.name === pokemonQuery)
     console.log(pokemonQuery)
 
-    if (!pokemon || pokemon.counter < EVOLVE_COUNTER)
+    if (!pokemon)
       throw Error(
         'Your choice does not match any of your pokemon or your pokemon cannot evolve yet. Type /pokemonsummary to access them'
       )
@@ -21,12 +21,9 @@ export default async function evolvePokemon(ctx: CommandContext<Context>) {
     await mongo.deletePokemon(user, pokemon)
     await mongo.addPokemon(user, pokemonEvolved)
     await ctx.reply(
-      `Your ${pokemon.name} has evolved to ${pokemonEvolved.name}! (counter reset...)`
+      `Your ${pokemon.name} has evolved to ${pokemonEvolved.name}!`
     )
   } catch (error) {
-    await ctx.reply(
-      'Your choice does not match any of your pokemon. Type /pokemonsummary to access them'
-    )
     throw error
   }
 }
