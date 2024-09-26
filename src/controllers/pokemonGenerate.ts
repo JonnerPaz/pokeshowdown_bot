@@ -1,4 +1,4 @@
-import { pokeApi } from '../index'
+import { pokeApi } from '../events'
 import { CommandContext, Context, InlineKeyboard } from 'grammy'
 
 /**

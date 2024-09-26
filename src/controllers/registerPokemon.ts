@@ -5,7 +5,7 @@ import {
   InputMediaBuilder,
 } from 'grammy'
 import mongo from '../db/Mongo'
-import { pokeApi } from '../index'
+import { pokeApi } from '../events'
 
 export default async function registerPokemon(ctx: CommandContext<Context>) {
   try {

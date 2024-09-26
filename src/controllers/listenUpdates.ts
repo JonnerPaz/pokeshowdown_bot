@@ -1,5 +1,5 @@
 import { Context, HearsContext, InlineKeyboard } from 'grammy'
-import { pokeApi } from '../index'
+import { pokeApi } from '../events'
 
 export default async function listenUpdates(ctx: HearsContext<Context>) {
   try {

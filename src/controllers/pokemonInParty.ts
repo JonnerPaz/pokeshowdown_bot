@@ -1,5 +1,5 @@
 import { CallbackQueryContext, Context } from 'grammy'
-import { pokeApi } from '../index'
+import { pokeApi } from '../events'
 import mongo from '../db/Mongo'
 import { PokemonRegistered } from '../types'
 import { User } from '../classes/User'
