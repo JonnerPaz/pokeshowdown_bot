@@ -1,6 +1,7 @@
-import { Bot, BotError, GrammyError, HttpError } from 'grammy'
+import { Bot, BotError, GrammyError, HttpError, webhookCallback } from 'grammy'
 import commands from './controllers/commands'
 import { events } from './events'
+import express from 'express'
 
 const PORT = process.env.PORT
 const RESOURCE = process.env.RESOURCE
@@ -11,19 +12,17 @@ export const bot = new Bot(API_KEY)
 export default bot
 
 // Initialise Bot
-// ACTIVATE THIS WHEN GOING ONLINE
-/* const server = express()
+const server = express()
 server.use(express.json())
-// This is what sends responses to the bot. DO NOT delete these lines
-server.post('/webhook', webhookCallback(bot, 'express'))
-server.listen(PORT)
-bot.api.setWebhook(`${RESOURCE}/webhook`) */
-
+server.use('/webhook', webhookCallback(bot, 'express'))
 bot.use(events)
+
+bot.api.setWebhook(`${RESOURCE}/webhook`)
+server.listen(8080)
 
 // bot.api.setMyCommands(commands)
 
-bot.start()
+// bot.start()
 
 bot.catch(async (err) => {
   const ctx = err.ctx
