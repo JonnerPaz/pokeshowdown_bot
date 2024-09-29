@@ -1,66 +1,75 @@
 import 'dotenv/config'
 import registerPokemon from './controllers/registerPokemon'
-import cb_registerPokemon from './controllers/cb_registerPokemon'
-import pokemonGenerate from './controllers/pokemonGenerate'
-import cb_catch from './controllers/cb_catch'
-import cb_pokemonPartyFull from './controllers/cb_pokemonPartyFull'
+import generatePokemon from './controllers/pokemonGenerate'
 import deleteAccount from './controllers/deleteAccount'
-import cb_deleteAccount from './controllers/cb_deleteAccount'
 import pokemonSummary from './controllers/pokemonSummary'
 import listenUpdates from './controllers/listenUpdates'
 import getHelp from './controllers/getHelp'
 import evolvePokemon from './controllers/evolvePokemon'
+import cb_registerPokemon from './controllers/cb_registerPokemon'
+import cb_catch from './controllers/cb_catch'
+import cb_pokemonPartyFull from './controllers/cb_pokemonPartyFull'
+import cb_deleteAccount from './controllers/cb_deleteAccount'
 import { RESET_LOOP } from './constants'
-import { Composer } from 'grammy'
+import { Composer, session } from 'grammy'
 import commands from './controllers/commands'
 import tradeRequest from './controllers/tradeRequest'
-import { conversations } from '@grammyjs/conversations'
+import { conversations, createConversation } from '@grammyjs/conversations'
+import { MainContext } from './types'
+import cb_tradeResponse from './controllers/cb_tradeResponse'
 
-export const events = new Composer()
+export const events = new Composer<MainContext>()
 let counter = 0
 
-// events.use(conversations())
+events.use(
+  session({
+    initial() {
+      return {}
+    },
+  })
+)
+events.use(conversations())
+events.use(createConversation(cb_registerPokemon))
+events.use(createConversation(cb_pokemonPartyFull))
+events.use(createConversation(cb_catch))
+events.use(createConversation(cb_deleteAccount))
+events.use(createConversation(cb_tradeResponse))
 
 events.command('start', async (ctx) => {
   await ctx.api.setMyCommands(commands)
-  const msg =
-    'Bienvenido a PokeBotShowdown. Este es un Bot creado para capturar, ' +
-    'intercambiar y combatir como en las entregas originales de la saga pokemon'
-  return await ctx.reply(msg)
+  return await ctx.reply(
+    'Welcome to PokeBotShowdown. This is a bot created to catch,' +
+      'trade and battle against other player, like the original games and series'
+  )
 })
 
 events.command('pokemonsummary', async (ctx) => await pokemonSummary(ctx))
 
 events.command('register', async (ctx) => await registerPokemon(ctx))
 
-events.callbackQuery(
-  /starter[012]/,
-  async (ctx) => await cb_registerPokemon(ctx)
-)
-
-events.callbackQuery('cancel', async (ctx) => {
-  await ctx.deleteMessage()
-  return await ctx.reply('Process cancelled successfully')
+events.command('pokemongenerate', async (ctx) => {
+  if (ctx.from?.username === process.env.AUTHOR) await generatePokemon(ctx)
+  return
 })
 
-events.command('pokemongenerate', async (ctx) => await pokemonGenerate(ctx))
-
-events.callbackQuery('catch', async (ctx) => await cb_catch(ctx))
-
-events.callbackQuery(
-  /choice[012345]/,
-  async (ctx) => await cb_pokemonPartyFull(ctx)
-)
-
 events.command('deleteaccount', async (ctx) => await deleteAccount(ctx))
-
-events.callbackQuery('delete', async (ctx) => await cb_deleteAccount(ctx))
 
 events.command('help', async (ctx) => await getHelp(ctx))
 
 events.command('evolve', async (ctx) => await evolvePokemon(ctx))
 
 events.command('trade', async (ctx) => await tradeRequest(ctx))
+
+events.command('cancel', async (ctx) => {
+  await ctx.conversation.exit()
+  return await ctx.reply('Process cancelled successfully.')
+})
+
+events.callbackQuery('cancel', async (ctx) => {
+  await ctx.conversation.exit('cancel')
+  await ctx.deleteMessage()
+  return await ctx.reply('Process cancelled successfully')
+})
 
 // this must be the last controller
 events.hears(/(?<!\/)\w/, async (ctx) => {

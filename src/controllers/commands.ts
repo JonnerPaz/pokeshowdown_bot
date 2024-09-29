@@ -19,5 +19,6 @@ const commands = [
     description: 'Evolve one of your pokemons!',
   },
   { command: 'trade', description: 'Trade pokemon with your friends' },
+  { command: 'cancel', description: 'Cancels any current process' },
 ]
 export default commands

@@ -1,15 +1,8 @@
-import { CommandContext, Context, InlineKeyboard } from 'grammy'
-import mongo from '../db/Mongo'
+import { InlineKeyboard } from 'grammy'
+import { MainContext } from '../types'
 
-export default async function deleteAccount(ctx: CommandContext<Context>) {
+export default async function deleteAccount(ctx: MainContext) {
   try {
-    const user = await mongo.findOneUser(ctx.msg.from?.username as string)
-
-    if (!user)
-      throw Error(
-        `You're not registered in @${ctx.me.username}. Use /register to use this bot`
-      )
-
     const inlnKeyboard = new InlineKeyboard()
       .text('YES', 'delete')
       .text('NO', 'cancel')
@@ -20,8 +13,12 @@ export default async function deleteAccount(ctx: CommandContext<Context>) {
     await ctx.reply('Delete your account (including all of your data)?', {
       reply_markup: inlnKeyboard,
     })
+
+    return await ctx.conversation.enter('cb_deleteAccount')
   } catch (err) {
-    await ctx.reply(err as string)
+    await ctx.reply(
+      'Error while deleting yout account. Contact the author of this plugin for issues'
+    )
     throw err
   }
 }

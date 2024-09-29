@@ -1,13 +1,8 @@
-import {
-  CommandContext,
-  InlineKeyboard,
-  Context,
-  InputMediaBuilder,
-} from 'grammy'
 import mongo from '../db/Mongo'
 import pokeApi from '../classes/PokeApi'
+import { MainContext } from '../types'
 
-export default async function registerPokemon(ctx: CommandContext<Context>) {
+export default async function registerPokemon(ctx: MainContext) {
   try {
     const user = await mongo.findOneUser(ctx.from?.username as string)
     if (user) {
@@ -21,21 +16,13 @@ export default async function registerPokemon(ctx: CommandContext<Context>) {
       'To get registered, you first need to get your starter. Pick a pokemon from these ones:...'
     )
 
-    // create starters
-    const pokemons = await pokeApi.generateRegisterPokemon()
-    const media = pokemons.map((el) =>
-      InputMediaBuilder.photo(el.sprite.frontDefault)
-    )
-    const options = new InlineKeyboard()
-      .text(pokemons[0].name, 'starter0')
-      .text(pokemons[1].name, 'starter1')
-      .text(pokemons[2].name, 'starter2')
-      .text('Cancel', 'cancel')
-
+    const [media, options] = await pokeApi.generateStarters()
     await ctx.replyWithMediaGroup(media)
     await ctx.reply('Select the right choice for you', {
       reply_markup: options,
     })
+
+    const conv = await ctx.conversation.enter('cb_registerPokemon')
   } catch (err) {
     await ctx.reply(
       'Error at register. Check logs or contact the author of this bot'

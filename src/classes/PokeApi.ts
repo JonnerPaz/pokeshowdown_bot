@@ -7,9 +7,8 @@ import {
 import { PokemonBuilder } from '../classes/PokemonBuilder'
 import { PokemonRegistered } from '../types'
 import { TOTAL_OF_POKEMON } from '../constants'
-import { InputMediaBuilder } from 'grammy'
-import evolvePokemon from '../controllers/evolvePokemon'
-import pokemonGenerate from '../controllers/pokemonGenerate'
+import { InlineKeyboard, InputMediaBuilder } from 'grammy'
+import { InputMediaPhoto } from 'grammy/types'
 
 export class PokeApi {
   private api: PokemonClient
@@ -47,24 +46,7 @@ export class PokeApi {
       .build()
   }
 
-  async generatePokemon(pokemon?: string | number): Promise<PokemonRegistered> {
-    try {
-      if (pokemon) {
-        if (typeof pokemon === 'string') {
-          const requestPokemon = await this.api.getPokemonByName(pokemon)
-          return this.buildPokemon(requestPokemon)
-        }
-        const requestPokemon = await this.api.getPokemonById(pokemon)
-        return this.buildPokemon(requestPokemon)
-      }
-      const requestPokemon = await this.api.getPokemonById(this.randomizer())
-      return this.buildPokemon(requestPokemon)
-    } catch (err) {
-      throw err
-    }
-  }
-
-  async generateRegisterPokemon() {
+  private async generateRegisterPokemon() {
     // Creates a random ID array with 3 random numbers
     const startersListID = [
       1, 4, 7, 25, 133, 152, 155, 158, 252, 255, 258, 387, 390, 393, 495, 498,
@@ -90,6 +72,41 @@ export class PokeApi {
       .catch((err) => console.error(err))
 
     return pokemonStarter
+  }
+
+  async generatePokemon(pokemon?: string | number): Promise<PokemonRegistered> {
+    try {
+      if (pokemon) {
+        if (typeof pokemon === 'string') {
+          const requestPokemon = await this.api.getPokemonByName(pokemon)
+          return this.buildPokemon(requestPokemon)
+        }
+        const requestPokemon = await this.api.getPokemonById(pokemon)
+        return this.buildPokemon(requestPokemon)
+      }
+      const requestPokemon = await this.api.getPokemonById(this.randomizer())
+      return this.buildPokemon(requestPokemon)
+    } catch (err) {
+      throw err
+    }
+  }
+
+  /**
+   * Generates images of pokemon's starters and its keyboard options
+   */
+  async generateStarters(): Promise<[InputMediaPhoto[], InlineKeyboard]> {
+    // create starters
+    const pokemons = await pokeApi.generateRegisterPokemon()
+    const media = pokemons.map((el) =>
+      InputMediaBuilder.photo(el.sprite.frontDefault)
+    )
+    const kbdOptions = new InlineKeyboard()
+      .text(pokemons[0].name, 'starter0')
+      .text(pokemons[1].name, 'starter1')
+      .text(pokemons[2].name, 'starter2')
+      .text('Cancel', 'cancel')
+
+    return [media, kbdOptions]
   }
 
   showPokemonPhoto(pokemon: PokemonRegistered, position?: string): string {

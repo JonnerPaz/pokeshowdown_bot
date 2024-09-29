@@ -1,14 +1,13 @@
 import pokeApi from '../classes/PokeApi'
-import { CommandContext, Context, InlineKeyboard } from 'grammy'
+import { InlineKeyboard } from 'grammy'
+import { MainContext } from '../types'
 
 /**
- * @param ctx {CommandContext<Context> | string} Deliver ctx grammy context whenever possible. If passed a string,
+ * @param ctx {MainContext| string} Deliver ctx grammy context whenever possible. If passed a string,
  * it will return a pokemon with given string. Otherwise, it will return an error
  *
  */
-export default async function pokemonGenerate(
-  ctx: CommandContext<Context> | string
-) {
+export default async function generatePokemon(ctx: MainContext | string) {
   try {
     if (typeof ctx === 'string') {
       return await pokeApi.generatePokemon(ctx)
@@ -23,6 +22,7 @@ export default async function pokemonGenerate(
       reply_markup: inlnKeyboard,
       caption: caption,
     })
+    const conv = await ctx.conversation.enter('cb_catch')
   } catch (err) {
     throw err
   }
