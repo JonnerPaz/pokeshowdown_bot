@@ -6,7 +6,7 @@ import {
   SessionFlavor,
 } from 'grammy'
 import { User } from './classes/User'
-import { ConversationFlavor } from '@grammyjs/conversations'
+import { Conversation, ConversationFlavor } from '@grammyjs/conversations'
 
 export interface SpriteType {
   frontDefault: string
@@ -39,5 +39,7 @@ export type grammyContext =
 // here goes all properties of a session
 interface ISession {}
 
-// necessary for session plugin to work
+// necessary for session and conversations plugin to work
 export type MainContext = Context & SessionFlavor<ISession> & ConversationFlavor
+
+export type ConversationCB = Conversation<MainContext>
