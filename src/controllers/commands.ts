@@ -18,5 +18,6 @@ const commands = [
     command: 'evolve',
     description: 'Evolve one of your pokemons!',
   },
+  { command: 'trade', description: 'Trade pokemon with your friends' },
 ]
 export default commands

@@ -20,6 +20,7 @@
     "typescript": "^5.3.3"
   },
   "dependencies": {
+    "@grammyjs/conversations": "^1.2.0",
     "axios": "^1.6.5",
     "axios-cache-interceptor": "^1.4.1",
     "dotenv": "^16.4.5",

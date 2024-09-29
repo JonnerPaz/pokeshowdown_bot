@@ -1,15 +1,27 @@
-import { Bot, BotError, GrammyError, HttpError, webhookCallback } from 'grammy'
-import commands from './controllers/commands'
+import {
+  Bot,
+  BotError,
+  GrammyError,
+  HttpError,
+  session,
+  webhookCallback,
+} from 'grammy'
 import { events } from './events'
 import express from 'express'
+import { MainContext } from './types'
+import { conversations } from '@grammyjs/conversations'
+import { initial } from './db/grammySession'
 
 const PORT = process.env.PORT
 const RESOURCE = process.env.RESOURCE
 const API_KEY = process.env.API_KEY as string
 
-export const bot = new Bot(API_KEY)
+export const bot = new Bot<MainContext>(API_KEY)
 
 export default bot
+
+bot.use(session({ initial }))
+bot.use(conversations())
 
 // Initialise Bot
 const server = express()
@@ -18,9 +30,7 @@ server.use('/webhook', webhookCallback(bot, 'express'))
 bot.use(events)
 
 bot.api.setWebhook(`${RESOURCE}/webhook`)
-server.listen(8080)
-
-// bot.api.setMyCommands(commands)
+server.listen(PORT || 8000)
 
 // bot.start()
 

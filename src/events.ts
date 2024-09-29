@@ -12,11 +12,17 @@ import getHelp from './controllers/getHelp'
 import evolvePokemon from './controllers/evolvePokemon'
 import { RESET_LOOP } from './constants'
 import { Composer } from 'grammy'
+import commands from './controllers/commands'
+import tradeRequest from './controllers/tradeRequest'
+import { conversations } from '@grammyjs/conversations'
 
 export const events = new Composer()
 let counter = 0
 
+// events.use(conversations())
+
 events.command('start', async (ctx) => {
+  await ctx.api.setMyCommands(commands)
   const msg =
     'Bienvenido a PokeBotShowdown. Este es un Bot creado para capturar, ' +
     'intercambiar y combatir como en las entregas originales de la saga pokemon'
@@ -53,6 +59,8 @@ events.callbackQuery('delete', async (ctx) => await cb_deleteAccount(ctx))
 events.command('help', async (ctx) => await getHelp(ctx))
 
 events.command('evolve', async (ctx) => await evolvePokemon(ctx))
+
+events.command('trade', async (ctx) => await tradeRequest(ctx))
 
 // this must be the last controller
 events.hears(/(?<!\/)\w/, async (ctx) => {

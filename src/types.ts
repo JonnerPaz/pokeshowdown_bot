@@ -3,8 +3,10 @@ import {
   CommandContext,
   Context,
   InlineKeyboard,
+  SessionFlavor,
 } from 'grammy'
 import { User } from './classes/User'
+import { ConversationFlavor } from '@grammyjs/conversations'
 
 export interface SpriteType {
   frontDefault: string
@@ -33,3 +35,9 @@ export interface UserRegistered extends User {}
 export type grammyContext =
   | CommandContext<Context>
   | CallbackQueryContext<Context>
+
+// here goes all properties of a session
+interface ISession {}
+
+// necessary for session plugin to work
+export type MainContext = Context & SessionFlavor<ISession> & ConversationFlavor
