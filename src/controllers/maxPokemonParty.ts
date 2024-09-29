@@ -12,6 +12,7 @@ export default async function maxPokemonParty(
   const keyboard = await customInlnKbdBtn(user, ctx)
   await uSendPrivate(
     ctx,
+    user.tlgID,
     `You can't catch ${pokemon} as you have reached the total maximum of pokemon allowed. ` +
       'Which pokemon would you like to let it go?',
     keyboard

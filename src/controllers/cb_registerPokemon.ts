@@ -23,7 +23,7 @@ export default async function cb_registerPokemon(
     const starterPokemon = await pokeApi.generatePokemon(choice)
 
     // creates new user
-    const user = new User(userName, starterPokemon) // Create User and stores it into DB
+    const user = new User(userName, starterPokemon, newCtx.from.id) // Create User and stores it into DB
     await mongo.addUser(user)
 
     await ctx.deleteMessage()

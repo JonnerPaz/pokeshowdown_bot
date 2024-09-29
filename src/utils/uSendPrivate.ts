@@ -1,14 +1,21 @@
+import { InputMediaPhoto } from 'grammy/types'
 import { grammyContext } from '../types'
+import { InlineKeyboard } from 'grammy'
 
 export default async function uSendPrivate(
   ctx: grammyContext,
+  byUserId: number,
   msg: string,
-  media?: any
+  media?: InputMediaPhoto[] | InlineKeyboard
 ) {
-  const user = await ctx.getAuthor()
-  if (media) {
-    return await ctx.api.sendMessage(user.user.id, msg, { reply_markup: media })
+  if (Array.isArray(media)) {
+    await ctx.reply(msg)
+    return await ctx.api.sendMediaGroup(byUserId, media)
   }
 
-  return await ctx.api.sendMessage(user.user.id, msg)
+  if (media instanceof InlineKeyboard) {
+    return await ctx.api.sendMessage(byUserId, msg, { reply_markup: media })
+  }
+
+  return await ctx.api.sendMessage(byUserId, msg)
 }
