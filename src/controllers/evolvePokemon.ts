@@ -1,19 +1,21 @@
 import { CommandContext, Context } from 'grammy'
 import mongo from '../db/Mongo'
 import pokeApi from '../classes/PokeApi'
-import { EVOLVE_COUNTER } from '../constants'
 
 export default async function evolvePokemon(ctx: CommandContext<Context>) {
   try {
     const user = await mongo.findOneUser(ctx.msg.from?.username as string)
-    if (!user) throw Error('No user found!')
+    if (!user) return await ctx.reply('No User Found')
 
     const pokemonQuery = ctx.msg.text.split(' ').at(1)?.toLowerCase()
-    const pokemon = user.pokemonParty.find((el) => el.name === pokemonQuery)
-    console.log(pokemonQuery)
+    if (!pokemonQuery)
+      return await ctx.reply(
+        'You need to type your pokemon after the command. Like this way: /evolve charmander'
+      )
 
+    const pokemon = user.pokemonParty.find((el) => el.name === pokemonQuery)
     if (!pokemon)
-      throw Error(
+      return await ctx.reply(
         'Your choice does not match any of your pokemon or your pokemon cannot evolve yet. Type /pokemonsummary to access them'
       )
 
