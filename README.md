@@ -44,3 +44,7 @@ Control - It should both connect Pokemon and User class to work correctly
 - pokeBotPokemonSummary: Shows the stats of a given pokemon of the user
 - pokeBotTradePokemon: links a player to start a trading process
 - pokeBotBattleTrainer: Links a player to start a battle against a trainer
+
+
+trigger - name of the following routes
+

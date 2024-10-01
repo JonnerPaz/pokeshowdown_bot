@@ -1,9 +1,4 @@
-import {
-  EvolutionClient,
-  MainClient,
-  Pokemon,
-  PokemonClient,
-} from 'pokenode-ts'
+import { EvolutionClient, Pokemon, PokemonClient } from 'pokenode-ts'
 import { PokemonBuilder } from '../classes/PokemonBuilder'
 import { PokemonRegistered } from '../types'
 import { TOTAL_OF_POKEMON } from '../constants'

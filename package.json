@@ -21,6 +21,7 @@
   },
   "dependencies": {
     "@grammyjs/conversations": "^1.2.0",
+    "@grammyjs/router": "^2.0.0",
     "axios": "^1.6.5",
     "axios-cache-interceptor": "^1.4.1",
     "dotenv": "^16.4.5",

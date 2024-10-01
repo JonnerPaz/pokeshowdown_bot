@@ -2,20 +2,31 @@ import { InputMediaPhoto } from 'grammy/types'
 import { grammyContext } from '../types'
 import { InlineKeyboard } from 'grammy'
 
+/**
+ *
+ * Send a message to someone at his private chat
+ *
+ */
 export default async function uSendPrivate(
   ctx: grammyContext,
-  byUserId: number,
   msg: string,
-  media?: InputMediaPhoto[] | InlineKeyboard
+  inline_keyboard?: InlineKeyboard,
+  media?: InputMediaPhoto[]
 ) {
-  if (Array.isArray(media)) {
-    await ctx.reply(msg)
-    return await ctx.api.sendMediaGroup(byUserId, media)
+  const user = await ctx.getAuthor()
+  if (media && inline_keyboard) {
+    await ctx.api.sendMediaGroup(user.user.id, media)
+    await ctx.api.sendMessage(user.user.id, msg, {
+      reply_markup: inline_keyboard,
+    })
+  } else if (media) {
+    await ctx.api.sendMediaGroup(user.user.id, media)
+    return await ctx.api.sendMessage(user.user.id, msg)
+  } else if (inline_keyboard) {
+    return await ctx.api.sendMessage(user.user.id, msg, {
+      reply_markup: inline_keyboard,
+    })
+  } else {
+    return await ctx.api.sendMessage(user.user.id, msg)
   }
-
-  if (media instanceof InlineKeyboard) {
-    return await ctx.api.sendMessage(byUserId, msg, { reply_markup: media })
-  }
-
-  return await ctx.api.sendMessage(byUserId, msg)
 }

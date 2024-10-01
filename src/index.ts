@@ -1,4 +1,4 @@
-import { Bot, BotError, GrammyError, HttpError, webhookCallback } from 'grammy'
+import { Bot, webhookCallback } from 'grammy'
 import { events } from './events'
 import express from 'express'
 import { MainContext } from './types'
@@ -12,15 +12,17 @@ export const bot = new Bot<MainContext>(API_KEY)
 export default bot
 
 // Initialise Bot
-const server = express()
+export const server = express()
 server.use(express.json())
 server.use('/webhook', webhookCallback(bot, 'express'))
+server.use(`${RESOURCE}/webhook`, () => console.log('hola'))
 bot.use(events)
 
 bot.api.setWebhook(`${RESOURCE}/webhook`)
+
 server.listen(PORT || 8000)
 
-bot.catch(async (err) => {
+/* bot.catch(async (err) => {
   const ctx = err.ctx
   console.error(`Error while handling update ${ctx.update.update_id}:`)
   const e = err.error
@@ -40,4 +42,4 @@ bot.catch(async (err) => {
     console.error('Unknown error:', e)
     bot.start()
   }
-})
+}) */

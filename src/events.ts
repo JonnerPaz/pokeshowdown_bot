@@ -15,30 +15,37 @@ import { Composer, session } from 'grammy'
 import commands from './controllers/commands'
 import tradeRequest from './controllers/tradeRequest'
 import { conversations, createConversation } from '@grammyjs/conversations'
-import { MainContext } from './types'
+import { ISession, MainContext } from './types'
 import cb_tradeResponse from './controllers/cb_tradeResponse'
 
 export const events = new Composer<MainContext>()
+
 let counter = 0
 
-events.use(
-  session({
-    initial() {
-      return {}
-    },
-  })
-)
+// properties of session
+function initial(): ISession {
+  return {
+    users: [],
+    userCatchRequest: null,
+    route: '',
+    userCatch: null,
+    triggerPokemonPartyFull: null,
+    userParty: null,
+  }
+}
+
+events.use(session({ initial }))
 events.use(conversations())
-events.use(createConversation(cb_registerPokemon))
-events.use(createConversation(cb_pokemonPartyFull))
 events.use(createConversation(cb_catch))
+// events.use(createConversation(cb_pokemonPartyFull))
+events.use(createConversation(cb_registerPokemon))
 events.use(createConversation(cb_deleteAccount))
 events.use(createConversation(cb_tradeResponse))
 
 events.command('start', async (ctx) => {
   await ctx.api.setMyCommands(commands)
   return await ctx.reply(
-    'Welcome to PokeBotShowdown. This is a bot created to catch,' +
+    'Welcome to PokeBotShowdown. This is a bot created to catch, ' +
       'trade and battle against other player, like the original games and series'
   )
 })
@@ -48,7 +55,9 @@ events.command('pokemonsummary', async (ctx) => await pokemonSummary(ctx))
 events.command('register', async (ctx) => await registerPokemon(ctx))
 
 events.command('pokemongenerate', async (ctx) => {
-  if (ctx.from?.username === process.env.AUTHOR) await generatePokemon(ctx)
+  if (ctx.chat.type !== 'private')
+    return await ctx.reply('You can only use this command on private chats')
+  await generatePokemon(ctx)
   return
 })
 

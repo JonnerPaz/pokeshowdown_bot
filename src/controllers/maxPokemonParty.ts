@@ -1,21 +1,23 @@
 import { CallbackQueryContext, Context } from 'grammy'
 import { User } from '../classes/User'
-import uSendPrivate from '../utils/uSendPrivate'
-import customInlnKbdBtn from '../utils/customInlnKbdBtn'
+import createInlineKeyboard from '../utils/createInlineKeyboard'
 
-export default async function maxPokemonParty(
+export default function maxPokemonParty(
   ctx: CallbackQueryContext<Context>,
   user: User,
   pokemon: string
 ) {
   // inline_keyboard from user inputed pokemon
-  const keyboard = await customInlnKbdBtn(user, ctx)
-  await uSendPrivate(
-    ctx,
-    user.tlgID,
-    `You can't catch ${pokemon} as you have reached the total maximum of pokemon allowed. ` +
-      'Which pokemon would you like to let it go?',
-    keyboard
+  const keyboard = createInlineKeyboard(null, user.pokemonParty).text(
+    'cancel',
+    'cancel'
   )
-  return
+  const response = {
+    msg:
+      `You can't catch ${pokemon} as you have reached the total maximum of pokemon allowed. ` +
+      'Which pokemon would you like to let it go?' +
+      ' If you want to check your pokemon before select one, please use /pokemonsummary',
+    keyboard: { reply_markup: keyboard },
+  }
+  return response
 }

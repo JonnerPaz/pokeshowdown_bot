@@ -6,8 +6,11 @@ import uSendPrivate from '../utils/uSendPrivate'
 export default async function cb_tradeResponse(conv: ConversationCB) {
   try {
     const ctx = await conv.waitForCallbackQuery('tradeRequest')
-    await ctx.api.deleteMessage(ctx.chat?.id as number, ctx.msgId as number)
+    if (!ctx) return
+    const chat = await ctx.getChat()
+    await ctx.api.deleteMessage(chat.id, ctx.msgId as number)
 
+    // User validation
     const userReq = await mongo.findOneUser(
       ctx.callbackQuery.message?.text?.split(' ').at(1)?.slice(1) as string
     )
@@ -15,9 +18,9 @@ export default async function cb_tradeResponse(conv: ConversationCB) {
       ctx.callbackQuery.from.username as string
     )
 
-    if (userReq?.userName === userRes?.userName) {
+    /* if (userReq?.userName === userRes?.userName) {
       return await ctx.reply(`You can't trade with yourself`)
-    }
+    } */
 
     if (!userReq || !userRes) {
       const errMsg = `Error: One of the users are not registered. Blame: user1: ${
@@ -34,7 +37,9 @@ export default async function cb_tradeResponse(conv: ConversationCB) {
       )
 
       const msg = `Select pokemon to transfer (Beware: Once selected, there is no turning back)`
-      await uSendPrivate(ctx, user.tlgID, msg, pokemonImages)
+      // undefined: Not used param
+      await uSendPrivate(ctx, msg, undefined, pokemonImages)
+      return
     }
   } catch (error) {
     throw error

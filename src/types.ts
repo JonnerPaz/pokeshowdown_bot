@@ -37,9 +37,19 @@ export type grammyContext =
   | CallbackQueryContext<Context>
 
 // here goes all properties of a session
-interface ISession {}
+export interface ISession {
+  users: UserRegistered[]
+  userCatch: User | null
+  userCatchRequest: UserRegistered | null
+  route: string
+  triggerPokemonPartyFull: PokemonRegistered | null
+  userParty: PokemonRegistered | null
+}
 
 // necessary for session and conversations plugin to work
 export type MainContext = Context & SessionFlavor<ISession> & ConversationFlavor
+
+export type CBQueryContext = CallbackQueryContext<MainContext> &
+  SessionFlavor<ISession>
 
 export type ConversationCB = Conversation<MainContext>

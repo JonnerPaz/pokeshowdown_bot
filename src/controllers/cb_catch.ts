@@ -3,49 +3,52 @@ import { MAX_PKMN_PARTY } from '../constants'
 import generatePokemon from './pokemonGenerate'
 import { ConversationCB, MainContext, PokemonRegistered } from '../types'
 import updatePokemonCount from './pokemonInParty'
-import maxPokemonParty from './maxPokemonParty'
+import displayMaxPokemonParty from './maxPokemonParty'
+import cb_pokemonPartyFull from './cb_pokemonPartyFull'
 
 export default async function cb_catch(conv: ConversationCB, ctx: MainContext) {
   try {
-    const newCtx = await conv.waitForCallbackQuery('catch')
-    const user = await mongo.findOneUser(newCtx.from?.username as string)
+    const cbReply = await conv.waitForCallbackQuery('catch')
+    const user = await conv.external(
+      async () => await mongo.findOneUser(cbReply.from?.username as string)
+    )
     if (!user)
-      throw new Error(
+      return await ctx.reply(
         `Error Procesing the request. The pokemon may be missing or you're not registered`
       )
 
-    const pokemon = newCtx.callbackQuery.message?.caption
+    const chat = await ctx.getChat()
+    await ctx.api.deleteMessage(chat.id, cbReply.msgId as number)
+
+    const pokemon = cbReply.callbackQuery.message?.caption
       ?.split(' ')
       .at(2) as string
     const pokemonInParty =
       user.pokemonParty.find((el) => el.name === pokemon) ?? null
 
-    await ctx.api.deleteMessage(
-      newCtx.chat?.id as number,
-      newCtx.msgId as number
-    )
-
     if (pokemonInParty) {
-      await updatePokemonCount(newCtx, user, pokemonInParty, pokemon)
-      return
+      return await updatePokemonCount(cbReply, user, pokemonInParty, pokemon)
     }
 
     if (user.pokemonParty.length >= MAX_PKMN_PARTY) {
-      await maxPokemonParty(newCtx, user, pokemon)
-      await newCtx.conversation.enter('cb_pokemonPartyFull')
-      return
+      console.log('enter MAX_PKMN_PARTY')
+      const { msg, keyboard } = displayMaxPokemonParty(cbReply, user, pokemon)
+      await ctx.reply(msg, keyboard)
+      const res = await conv.waitFrom(user.tlgID)
+      if (res)
+        return await cb_pokemonPartyFull(
+          conv,
+          ctx,
+          user,
+          res.callbackQuery?.data as string
+        )
     }
 
     // Add new pokemon
     const choice = (await generatePokemon(pokemon)) as PokemonRegistered
     await mongo.addPokemon(user, choice)
-    await ctx.reply(`@${user.userName} has captured a ${choice.name}`)
-
-    return
+    return await ctx.reply(`@${user.userName} has captured a ${choice.name}`)
   } catch (err) {
-    await ctx.reply(
-      `Error while processing your capture. Try again or contact the author of this plugin`
-    )
     throw err
   }
 }
