@@ -44,6 +44,7 @@ export interface ISession {
   route: string
   triggerPokemonPartyFull: PokemonRegistered | null
   userParty: PokemonRegistered | null
+  messageToDelete: number
 }
 
 // necessary for session and conversations plugin to work

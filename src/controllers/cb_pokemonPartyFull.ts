@@ -1,41 +1,30 @@
+import { CallbackQueryContext } from 'grammy'
 import mongo from '../db/Mongo'
-import {
-  ConversationCB,
-  MainContext,
-  PokemonRegistered,
-  UserRegistered,
-} from '../types'
+import { MainContext, PokemonRegistered, UserRegistered } from '../types'
 import generatePokemon from './pokemonGenerate'
 
 export default async function cb_pokemonPartyFull(
-  conv: ConversationCB,
-  ctx: MainContext,
-  user: UserRegistered,
-  query: string
+  ctx: CallbackQueryContext<MainContext>,
+  user: UserRegistered
 ) {
   try {
-    const cbReply = await conv.waitForCallbackQuery(/choice[012345]/)
-    // const ctx = await conv.waitForCallbackQuery(/choice[012345]/)
+    await ctx.deleteMessages([ctx.session.messageToDelete])
 
-    const chat = await ctx.getChat()
-    await cbReply.api.deleteMessage(chat.id, cbReply.msgId as number)
-
-    const choiceToDelete = query.split('_').at(0) as string
+    const choiceToDelete = ctx.callbackQuery?.data.split('_').at(0) as string
     // gets pokemon to add thanks to inline keyboard text
-    const choiceToAdd = cbReply.callbackQuery.message?.text
-      ?.split(' ')
-      .at(3) as string
-    console.log('choiceToAdd:', choiceToAdd)
+    const choiceToAdd = ctx.callbackQuery.message?.text?.split(' ').at(3)
 
     const pokemonToDelete = user.pokemonParty.find(
       (el) => el.name === choiceToDelete
     ) as PokemonRegistered
-    const pokemon = (await generatePokemon(choiceToAdd)) as PokemonRegistered
+    const pokemonToAdd = (await generatePokemon(
+      choiceToAdd!
+    )) as PokemonRegistered
 
-    await conv.external(() => mongo.deletePokemon(user, pokemonToDelete))
-    await conv.external(() => mongo.addPokemon(user, pokemon))
+    await mongo.deletePokemon(user, pokemonToDelete)
+    await mongo.addPokemon(user, pokemonToAdd)
 
-    return await ctx.reply(`${pokemon.name} was added to your party!`)
+    return await ctx.reply(`${pokemonToAdd.name} was added to your party!`)
   } catch (error) {
     throw error
   }

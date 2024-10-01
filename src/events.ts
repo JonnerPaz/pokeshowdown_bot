@@ -31,13 +31,13 @@ function initial(): ISession {
     userCatch: null,
     triggerPokemonPartyFull: null,
     userParty: null,
+    messageToDelete: 0,
   }
 }
 
 events.use(session({ initial }))
 events.use(conversations())
 events.use(createConversation(cb_catch))
-// events.use(createConversation(cb_pokemonPartyFull))
 events.use(createConversation(cb_registerPokemon))
 events.use(createConversation(cb_deleteAccount))
 events.use(createConversation(cb_tradeResponse))

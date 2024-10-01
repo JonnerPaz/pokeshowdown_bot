@@ -1,12 +1,7 @@
-import { CallbackQueryContext, Context } from 'grammy'
 import { User } from '../classes/User'
 import createInlineKeyboard from '../utils/createInlineKeyboard'
 
-export default function maxPokemonParty(
-  ctx: CallbackQueryContext<Context>,
-  user: User,
-  pokemon: string
-) {
+export default function maxPokemonParty(user: User, pokemon: string) {
   // inline_keyboard from user inputed pokemon
   const keyboard = createInlineKeyboard(null, user.pokemonParty).text(
     'cancel',

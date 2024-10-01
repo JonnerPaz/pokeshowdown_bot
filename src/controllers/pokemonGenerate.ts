@@ -18,11 +18,12 @@ export default async function generatePokemon(ctx: MainContext | string) {
     // create message with pokemon
     const caption = `A wild ${pokemon.name} appeared. Tap "CATCH" to get it`
     const inlnKeyboard = new InlineKeyboard().text('CATCH', 'catch')
-    await ctx.replyWithPhoto(pokeApi.showPokemonPhoto(pokemon), {
+    const msg = await ctx.replyWithPhoto(pokeApi.showPokemonPhoto(pokemon), {
       reply_markup: inlnKeyboard,
       caption: caption,
     })
-    const conv = await ctx.conversation.enter('cb_catch')
+    ctx.session.messageToDelete = msg.message_id
+    await ctx.conversation.enter('cb_catch')
   } catch (err) {
     throw err
   }
