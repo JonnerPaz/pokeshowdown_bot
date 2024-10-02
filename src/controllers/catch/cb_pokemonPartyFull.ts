@@ -1,9 +1,9 @@
 import { CallbackQueryContext } from 'grammy'
-import mongo from '../db/Mongo'
-import { MainContext, PokemonRegistered, UserRegistered } from '../types'
-import generatePokemon from './pokemonGenerate'
+import mongo from '../../db/Mongo'
+import { MainContext, PokemonRegistered, UserRegistered } from '../../types'
+import generatePokemon from '../pokemonGenerate'
 
-export default async function cb_pokemonPartyFull(
+export default async function replacePokemonInParty(
   ctx: CallbackQueryContext<MainContext>,
   user: UserRegistered
 ) {

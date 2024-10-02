@@ -6,9 +6,8 @@ import uSendPrivate from '../utils/uSendPrivate'
 export default async function cb_tradeResponse(conv: ConversationCB) {
   try {
     const ctx = await conv.waitForCallbackQuery('tradeRequest')
-    if (!ctx) return
-    const chat = await ctx.getChat()
-    await ctx.api.deleteMessage(chat.id, ctx.msgId as number)
+    await ctx.deleteMessages([ctx.session.messageToDelete])
+    ctx.session.messageToDelete = 0
 
     // User validation
     const userReq = await mongo.findOneUser(

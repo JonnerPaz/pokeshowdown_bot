@@ -1,14 +1,13 @@
 import 'dotenv/config'
-import registerPokemon from './controllers/registerPokemon'
+import setupRegisterPokemon from './controllers/register/registerPokemon'
 import generatePokemon from './controllers/pokemonGenerate'
 import deleteAccount from './controllers/deleteAccount'
 import pokemonSummary from './controllers/pokemonSummary'
 import listenUpdates from './controllers/listenUpdates'
 import getHelp from './controllers/getHelp'
 import evolvePokemon from './controllers/evolvePokemon'
-import cb_registerPokemon from './controllers/cb_registerPokemon'
-import cb_catch from './controllers/cb_catch'
-import cb_pokemonPartyFull from './controllers/cb_pokemonPartyFull'
+import cb_registerPokemon from './controllers/register/cb_registerPokemon'
+import cb_catch from './controllers/catch/cb_catch'
 import cb_deleteAccount from './controllers/cb_deleteAccount'
 import { RESET_LOOP } from './constants'
 import { Composer, session } from 'grammy'
@@ -37,8 +36,8 @@ function initial(): ISession {
 
 events.use(session({ initial }))
 events.use(conversations())
-events.use(createConversation(cb_catch))
 events.use(createConversation(cb_registerPokemon))
+events.use(createConversation(cb_catch))
 events.use(createConversation(cb_deleteAccount))
 events.use(createConversation(cb_tradeResponse))
 
@@ -52,7 +51,7 @@ events.command('start', async (ctx) => {
 
 events.command('pokemonsummary', async (ctx) => await pokemonSummary(ctx))
 
-events.command('register', async (ctx) => await registerPokemon(ctx))
+events.command('register', async (ctx) => await setupRegisterPokemon(ctx))
 
 events.command('pokemongenerate', async (ctx) => {
   if (ctx.chat.type !== 'private')
