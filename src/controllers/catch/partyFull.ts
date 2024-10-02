@@ -1,6 +1,6 @@
 import { ConversationCB, MainContext, UserRegistered } from '../../types'
 import displayMaxPokemonParty from './maxPokemonParty'
-import replacePokemonInParty from './cb_pokemonPartyFull'
+import replacePokemonInParty from './replacePokemonInParty'
 
 export default async function partyFull(
   conv: ConversationCB,

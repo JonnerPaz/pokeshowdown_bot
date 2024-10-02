@@ -1,15 +1,14 @@
 import { CallbackQueryContext, Context } from 'grammy'
-import pokeApi from '../classes/PokeApi'
-import mongo from '../db/Mongo'
-import { PokemonRegistered } from '../types'
-import { User } from '../classes/User'
+import pokeApi from '../../classes/PokeApi'
+import mongo from '../../db/Mongo'
+import { UserRegistered, PokemonRegistered } from '../../types'
 
 /**
  * update pokemon counter if user already catched that pokemon
  * */
 export default async function updatePokemonCount(
   ctx: CallbackQueryContext<Context>,
-  user: User,
+  user: UserRegistered,
   pokemonInParty: PokemonRegistered,
   pokemonName: string
 ) {

@@ -1,7 +1,7 @@
 import { InlineKeyboard } from 'grammy'
-import { MainContext } from '../types'
+import { MainContext } from '../../types'
 
-export default async function deleteAccount(ctx: MainContext) {
+export default async function setupDeleteAccount(ctx: MainContext) {
   try {
     const inlnKeyboard = new InlineKeyboard()
       .text('YES', 'delete')

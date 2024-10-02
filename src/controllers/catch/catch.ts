@@ -2,10 +2,10 @@ import mongo from '../../db/Mongo'
 import { MAX_PKMN_PARTY } from '../../constants'
 import generatePokemon from '../pokemonGenerate'
 import { ConversationCB, PokemonRegistered } from '../../types'
-import updatePokemonCount from '../pokemonInParty'
+import updatePokemonCount from './updatePokemonCount'
 import partyFull from './partyFull'
 
-export default async function cb_catch(conv: ConversationCB) {
+export default async function catchPokemon(conv: ConversationCB) {
   try {
     const ctx = await conv.waitForCallbackQuery('catch')
     await ctx.deleteMessages([ctx.session.messageToDelete])

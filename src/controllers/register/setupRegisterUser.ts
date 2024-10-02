@@ -2,7 +2,7 @@ import mongo from '../../db/Mongo'
 import pokeApi from '../../classes/PokeApi'
 import { MainContext } from '../../types'
 
-export default async function registerPokemon(ctx: MainContext) {
+export default async function setupRegisterUser(ctx: MainContext) {
   try {
     const user = await mongo.findOneUser(ctx.from?.username as string)
     if (user) {
@@ -22,7 +22,7 @@ export default async function registerPokemon(ctx: MainContext) {
       reply_markup: options,
     })
 
-    const conv = await ctx.conversation.enter('cb_registerPokemon')
+    return await ctx.conversation.enter('cb_registerPokemon')
   } catch (err) {
     await ctx.reply(
       'Error at register. Check logs or contact the author of this bot'

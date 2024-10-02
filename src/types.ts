@@ -2,7 +2,6 @@ import {
   CallbackQueryContext,
   CommandContext,
   Context,
-  InlineKeyboard,
   SessionFlavor,
 } from 'grammy'
 import { User } from './classes/User'
@@ -25,11 +24,7 @@ export interface PokemonRegistered {
   counter: number
 }
 
-export type PokemonKeyboard = {
-  (pokemon: PokemonRegistered[]): InlineKeyboard
-  (pokemon: PokemonRegistered): InlineKeyboard
-}
-
+// Use this type instead of User class
 export interface UserRegistered extends User {}
 
 export type grammyContext =
@@ -38,12 +33,6 @@ export type grammyContext =
 
 // here goes all properties of a session
 export interface ISession {
-  users: UserRegistered[]
-  userCatch: User | null
-  userCatchRequest: UserRegistered | null
-  route: string
-  triggerPokemonPartyFull: PokemonRegistered | null
-  userParty: PokemonRegistered | null
   messageToDelete: number
 }
 

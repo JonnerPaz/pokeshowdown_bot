@@ -1,7 +1,7 @@
-import mongo from '../db/Mongo'
-import { ConversationCB, MainContext } from '../types'
+import mongo from '../../db/Mongo'
+import { ConversationCB, MainContext } from '../../types'
 
-export default async function cb_deleteAccount(
+export default async function deleteAccount(
   conv: ConversationCB,
   ctx: MainContext
 ) {

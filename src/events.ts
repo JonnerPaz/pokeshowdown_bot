@@ -1,14 +1,14 @@
 import 'dotenv/config'
-import setupRegisterPokemon from './controllers/register/registerPokemon'
 import generatePokemon from './controllers/pokemonGenerate'
-import deleteAccount from './controllers/deleteAccount'
 import pokemonSummary from './controllers/pokemonSummary'
 import listenUpdates from './controllers/listenUpdates'
 import getHelp from './controllers/getHelp'
 import evolvePokemon from './controllers/evolvePokemon'
-import cb_registerPokemon from './controllers/register/cb_registerPokemon'
-import cb_catch from './controllers/catch/cb_catch'
-import cb_deleteAccount from './controllers/cb_deleteAccount'
+import setupRegisterUser from './controllers/register/setupRegisterUser'
+import registerUser from './controllers/register/registerUser'
+import setupDeleteAccount from './controllers/delete/setupDeleteAccount'
+import deleteAccount from './controllers/delete/deleteAccount'
+import catchPokemon from './controllers/catch/catch'
 import { RESET_LOOP } from './constants'
 import { Composer, session } from 'grammy'
 import commands from './controllers/commands'
@@ -24,21 +24,15 @@ let counter = 0
 // properties of session
 function initial(): ISession {
   return {
-    users: [],
-    userCatchRequest: null,
-    route: '',
-    userCatch: null,
-    triggerPokemonPartyFull: null,
-    userParty: null,
     messageToDelete: 0,
   }
 }
 
 events.use(session({ initial }))
 events.use(conversations())
-events.use(createConversation(cb_registerPokemon))
-events.use(createConversation(cb_catch))
-events.use(createConversation(cb_deleteAccount))
+events.use(createConversation(registerUser))
+events.use(createConversation(catchPokemon))
+events.use(createConversation(deleteAccount))
 events.use(createConversation(cb_tradeResponse))
 
 events.command('start', async (ctx) => {
@@ -51,7 +45,7 @@ events.command('start', async (ctx) => {
 
 events.command('pokemonsummary', async (ctx) => await pokemonSummary(ctx))
 
-events.command('register', async (ctx) => await setupRegisterPokemon(ctx))
+events.command('register', async (ctx) => await setupRegisterUser(ctx))
 
 events.command('pokemongenerate', async (ctx) => {
   if (ctx.chat.type !== 'private')
@@ -60,7 +54,7 @@ events.command('pokemongenerate', async (ctx) => {
   return
 })
 
-events.command('deleteaccount', async (ctx) => await deleteAccount(ctx))
+events.command('deleteaccount', async (ctx) => await setupDeleteAccount(ctx))
 
 events.command('help', async (ctx) => await getHelp(ctx))
 

@@ -3,7 +3,7 @@ import { User } from '../../classes/User'
 import pokeApi from '../../classes/PokeApi'
 import { ConversationCB, MainContext } from '../../types'
 
-export default async function cb_registerPokemon(
+export default async function registerUser(
   conv: ConversationCB,
   ctx: MainContext
 ) {

@@ -1,5 +1,5 @@
 import { InputMediaPhoto } from 'grammy/types'
-import { grammyContext } from '../types'
+import { MainContext } from '../types'
 import { InlineKeyboard } from 'grammy'
 
 /**
@@ -8,7 +8,7 @@ import { InlineKeyboard } from 'grammy'
  *
  */
 export default async function uSendPrivate(
-  ctx: grammyContext,
+  ctx: MainContext,
   msg: string,
   inline_keyboard?: InlineKeyboard,
   media?: InputMediaPhoto[]
