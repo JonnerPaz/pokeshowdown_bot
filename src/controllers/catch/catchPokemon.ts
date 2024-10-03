@@ -13,6 +13,7 @@ export default async function catchPokemon(conv: ConversationCB) {
     const user = await conv.external(() =>
       mongo.findOneUser(ctx.from?.username as string)
     )
+
     if (!user)
       return await ctx.reply(
         `Error Procesing the request. The pokemon may be missing or you're not registered`

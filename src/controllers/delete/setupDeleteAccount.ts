@@ -14,7 +14,7 @@ export default async function setupDeleteAccount(ctx: MainContext) {
       reply_markup: inlnKeyboard,
     })
 
-    return await ctx.conversation.enter('cb_deleteAccount')
+    return await ctx.conversation.enter('deleteAccount')
   } catch (err) {
     await ctx.reply(
       'Error while deleting yout account. Contact the author of this plugin for issues'

@@ -23,7 +23,7 @@ export default async function generatePokemon(ctx: MainContext | string) {
       caption: caption,
     })
     ctx.session.messageToDelete = msg.message_id
-    await ctx.conversation.enter('cb_catch')
+    await ctx.conversation.enter('catchPokemon')
   } catch (err) {
     throw err
   }

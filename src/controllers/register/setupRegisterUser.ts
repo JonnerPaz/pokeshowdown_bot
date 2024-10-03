@@ -22,7 +22,7 @@ export default async function setupRegisterUser(ctx: MainContext) {
       reply_markup: options,
     })
 
-    return await ctx.conversation.enter('cb_registerPokemon')
+    return await ctx.conversation.enter('registerUser')
   } catch (err) {
     await ctx.reply(
       'Error at register. Check logs or contact the author of this bot'

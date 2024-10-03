@@ -8,7 +8,7 @@ import setupRegisterUser from './controllers/register/setupRegisterUser'
 import registerUser from './controllers/register/registerUser'
 import setupDeleteAccount from './controllers/delete/setupDeleteAccount'
 import deleteAccount from './controllers/delete/deleteAccount'
-import catchPokemon from './controllers/catch/catch'
+import catchPokemon from './controllers/catch/catchPokemon'
 import { RESET_LOOP } from './constants'
 import { Composer, session } from 'grammy'
 import commands from './controllers/commands'
@@ -30,8 +30,8 @@ function initial(): ISession {
 
 events.use(session({ initial }))
 events.use(conversations())
-events.use(createConversation(registerUser))
 events.use(createConversation(catchPokemon))
+events.use(createConversation(registerUser))
 events.use(createConversation(deleteAccount))
 events.use(createConversation(cb_tradeResponse))
 

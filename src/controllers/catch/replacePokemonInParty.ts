@@ -4,15 +4,15 @@ import { MainContext, PokemonRegistered, UserRegistered } from '../../types'
 import generatePokemon from '../pokemonGenerate'
 
 export default async function replacePokemonInParty(
-  ctx: CallbackQueryContext<MainContext>,
+  ctx: MainContext,
   user: UserRegistered
 ) {
   try {
     await ctx.deleteMessages([ctx.session.messageToDelete])
 
-    const choiceToDelete = ctx.callbackQuery?.data.split('_').at(0) as string
+    const choiceToDelete = ctx.callbackQuery?.data!.split('_').at(0) as string
     // gets pokemon to add thanks to inline keyboard text
-    const choiceToAdd = ctx.callbackQuery.message?.text?.split(' ').at(3)
+    const choiceToAdd = ctx.callbackQuery!.message?.text?.split(' ').at(3)
 
     const pokemonToDelete = user.pokemonParty.find(
       (el) => el.name === choiceToDelete
