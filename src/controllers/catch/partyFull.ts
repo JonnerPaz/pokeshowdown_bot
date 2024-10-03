@@ -1,5 +1,5 @@
 import { ConversationCB, MainContext, UserRegistered } from '../../types'
-import displayMaxPokemonParty from './maxPokemonParty'
+import maxPokemonParty from './maxPokemonParty'
 import replacePokemonInParty from './replacePokemonInParty'
 
 export default async function partyFull(
@@ -8,7 +8,7 @@ export default async function partyFull(
   user: UserRegistered,
   pokemonToAdd: string
 ) {
-  const { msg, keyboard } = displayMaxPokemonParty(user, pokemonToAdd)
+  const { msg, keyboard } = maxPokemonParty(user, pokemonToAdd)
   const messageToDelete = await ctx.reply(msg, keyboard)
   ctx.session.messageToDelete = messageToDelete.message_id
 

@@ -12,10 +12,10 @@ import catchPokemon from './controllers/catch/catchPokemon'
 import { RESET_LOOP } from './constants'
 import { Composer, session } from 'grammy'
 import commands from './controllers/commands'
-import tradeRequest from './controllers/tradeRequest'
+import tradeRequest from './controllers/trade/tradeRequest'
 import { conversations, createConversation } from '@grammyjs/conversations'
 import { ISession, MainContext } from './types'
-import cb_tradeResponse from './controllers/cb_tradeResponse'
+import cb_tradeResponse from './controllers/trade/cb_tradeResponse'
 
 export const events = new Composer<MainContext>()
 

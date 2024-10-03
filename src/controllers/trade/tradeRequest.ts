@@ -1,6 +1,6 @@
 import { InlineKeyboard } from 'grammy'
-import mongo from '../db/Mongo'
-import { MainContext } from '../types'
+import mongo from '../../db/Mongo'
+import { MainContext } from '../../types'
 
 export default async function tradeRequest(ctx: MainContext) {
   try {

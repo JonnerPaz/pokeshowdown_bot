@@ -16,7 +16,7 @@ export default async function updatePokemonCount(
     const counter = pokeApi.updateCounter(pokemonInParty)
     await mongo.updatePokemonCount(user, [pokemonName, counter])
     return await ctx.reply(
-      `You have catched a ${pokemonName}. You've cached ${pokemonName} ${pokemonInParty?.counter} times`
+      `@${user.userName} has captured a ${pokemonName}. You've captured ${pokemonName} ${pokemonInParty?.counter} times`
     )
   } catch (err) {
     throw err

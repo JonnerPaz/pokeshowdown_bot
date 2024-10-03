@@ -72,8 +72,6 @@ class Mongo {
       )
     } catch (error) {
       throw error
-    } finally {
-      this.client.close()
     }
   }
 

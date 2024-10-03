@@ -4,7 +4,7 @@ import mongo from '../db/Mongo'
 export default async function pokemonSummary(ctx: CommandContext<Context>) {
   try {
     const user = await mongo.findOneUser(ctx.from?.username as string)
-    if (!user) throw new Error('No user found')
+    if (!user) return await ctx.reply('No user found')
 
     const userPokemonImages = user.pokemonParty.map((el) =>
       InputMediaBuilder.photo(el.sprite.frontDefault)
