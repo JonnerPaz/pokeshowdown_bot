@@ -14,19 +14,13 @@ import { Composer, session } from 'grammy'
 import commands from './controllers/commands'
 import tradeRequest from './controllers/trade/tradeRequest'
 import { conversations, createConversation } from '@grammyjs/conversations'
-import { ISession, MainContext } from './types'
+import { MainContext } from './types'
 import cb_tradeResponse from './controllers/trade/cb_tradeResponse'
+import initial from './db/grammySession'
 
 export const events = new Composer<MainContext>()
 
 let counter = 0
-
-// properties of session
-function initial(): ISession {
-  return {
-    messageToDelete: 0,
-  }
-}
 
 events.use(session({ initial }))
 events.use(conversations())

@@ -12,17 +12,19 @@ export const bot = new Bot<MainContext>(API_KEY)
 export default bot
 
 // Initialise Bot
+// Comment this code block if using polling
 export const server = express()
 server.use(express.json())
 server.use('/webhook', webhookCallback(bot, 'express'))
 server.use(`${RESOURCE}/webhook`, () => console.log('hola'))
 bot.use(events)
-
 bot.api.setWebhook(`${RESOURCE}/webhook`)
-
 server.listen(PORT || 8000)
 
-/* bot.catch(async (err) => {
+// Uncomment this code if you're not using webhooks and decide to run this bot locally
+/* 
+  bot.start()
+  bot.catch(async (err) => {
   const ctx = err.ctx
   console.error(`Error while handling update ${ctx.update.update_id}:`)
   const e = err.error
@@ -42,4 +44,5 @@ server.listen(PORT || 8000)
     console.error('Unknown error:', e)
     bot.start()
   }
-}) */
+})
+*/

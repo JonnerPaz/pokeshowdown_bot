@@ -30,14 +30,12 @@ export default async function startTrade(
       await ctx.deleteMessages([messageToDelete.message_id])
       const pokemon = user.pokemonParty.find(
         (el) => el.name === proposal.callbackQuery?.data?.split('_').at(0)
-      )
+      ) as PokemonRegistered
 
       if (proposal.from.username === userReq.userName) {
-        pokemonFromUserReq = pokemon as PokemonRegistered
-        console.log('pokemonFromUserReq', pokemonFromUserReq)
+        pokemonFromUserReq = pokemon
       } else {
-        pokemonFromUserRes = pokemon as PokemonRegistered
-        console.log('pokemonFromUserRes', pokemonFromUserRes)
+        pokemonFromUserRes = pokemon
       }
     }
 

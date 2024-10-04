@@ -56,7 +56,7 @@ class Mongo {
       if (!result) return null
       return result
     } catch (err) {
-      console.error(err)
+      throw err
     }
   }
 
@@ -134,7 +134,7 @@ class Mongo {
         }
       )
     } catch (error) {
-      console.error(error)
+      throw error
     } finally {
       this.client.close()
     }
@@ -150,7 +150,7 @@ class Mongo {
       const result = (await this.usersCollection.deleteOne(user)) ?? null
       return result
     } catch (error) {
-      console.error(error)
+      throw error
     } finally {
       this.client.close()
     }
