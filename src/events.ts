@@ -5,18 +5,15 @@ import listenUpdates from './controllers/listenUpdates'
 import getHelp from './controllers/getHelp'
 import evolvePokemon from './controllers/evolvePokemon'
 import setupRegisterUser from './controllers/register/setupRegisterUser'
-import registerUser from './controllers/register/registerUser'
 import setupDeleteAccount from './controllers/delete/setupDeleteAccount'
-import deleteAccount from './controllers/delete/deleteAccount'
 import catchPokemon from './controllers/catch/catchPokemon'
 import { RESET_LOOP } from './constants'
 import { Composer, session } from 'grammy'
 import commands from './controllers/commands'
-import tradeRequest from './controllers/trade/tradeRequest'
 import { conversations, createConversation } from '@grammyjs/conversations'
 import { MainContext } from './types'
-import cb_tradeResponse from './controllers/trade/cb_tradeResponse'
 import initial from './db/grammySession'
+import tradeRequest from './controllers/trade/tradeRequest'
 
 export const events = new Composer<MainContext>()
 
@@ -25,9 +22,9 @@ let counter = 0
 events.use(session({ initial }))
 events.use(conversations())
 events.use(createConversation(catchPokemon))
-events.use(createConversation(registerUser))
-events.use(createConversation(deleteAccount))
-events.use(createConversation(cb_tradeResponse))
+events.use(createConversation(setupRegisterUser))
+events.use(createConversation(setupDeleteAccount))
+events.use(createConversation(tradeRequest))
 
 events.command('start', async (ctx) => {
   await ctx.api.setMyCommands(commands)
@@ -39,7 +36,10 @@ events.command('start', async (ctx) => {
 
 events.command('pokemonsummary', async (ctx) => await pokemonSummary(ctx))
 
-events.command('register', async (ctx) => await setupRegisterUser(ctx))
+events.command(
+  'register',
+  async (ctx) => await ctx.conversation.enter('setupRegisterUser')
+)
 
 events.command('pokemongenerate', async (ctx) => {
   if (ctx.chat.type !== 'private')
@@ -48,13 +48,19 @@ events.command('pokemongenerate', async (ctx) => {
   return
 })
 
-events.command('deleteaccount', async (ctx) => await setupDeleteAccount(ctx))
+events.command(
+  'deleteaccount',
+  async (ctx) => await ctx.conversation.enter('setupDeleteAccount')
+)
 
 events.command('help', async (ctx) => await getHelp(ctx))
 
 events.command('evolve', async (ctx) => await evolvePokemon(ctx))
 
-events.command('trade', async (ctx) => await tradeRequest(ctx))
+events.command(
+  'trade',
+  async (ctx) => await ctx.conversation.enter('tradeRequest')
+)
 
 events.command('cancel', async (ctx) => {
   await ctx.conversation.exit()

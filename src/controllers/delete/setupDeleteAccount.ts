@@ -1,7 +1,11 @@
 import { InlineKeyboard } from 'grammy'
-import { MainContext } from '../../types'
+import { ConversationCB, MainContext } from '../../types'
+import deleteAccount from './deleteAccount'
 
-export default async function setupDeleteAccount(ctx: MainContext) {
+export default async function setupDeleteAccount(
+  conv: ConversationCB,
+  ctx: MainContext
+) {
   try {
     const inlnKeyboard = new InlineKeyboard()
       .text('YES', 'delete')
@@ -14,7 +18,8 @@ export default async function setupDeleteAccount(ctx: MainContext) {
       reply_markup: inlnKeyboard,
     })
 
-    return await ctx.conversation.enter('deleteAccount')
+    const userCtx = await conv.waitFrom(ctx.from?.id as number)
+    return await deleteAccount(conv, userCtx)
   } catch (err) {
     await ctx.reply(
       'Error while deleting yout account. Contact the author of this plugin for issues'

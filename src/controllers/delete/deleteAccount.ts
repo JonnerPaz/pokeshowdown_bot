@@ -6,21 +6,15 @@ export default async function deleteAccount(
   ctx: MainContext
 ) {
   try {
-    const newCtx = await conv.waitForCallbackQuery('delete')
-
-    const user = await mongo.findOneUser(newCtx.from.username as string)
+    const user = await mongo.findOneUser(ctx.from?.username as string)
     if (!user)
       return await ctx.reply(
-        `You're not registered in @${newCtx.me.username}. Use /register to use this bot`
+        `You're not registered in @${ctx.me.username}. Use /register to use this bot`
       )
 
-    // deletes user from all storages
     await mongo.deleteUser(user.userName)
 
-    await ctx.api.deleteMessage(
-      newCtx.chat?.id as number,
-      newCtx.msgId as number
-    )
+    await ctx.api.deleteMessage(ctx.chat?.id as number, ctx.msgId as number)
 
     const msg = 'Your account has now been erased. Sad to see you go!'
     return await ctx.reply(msg)

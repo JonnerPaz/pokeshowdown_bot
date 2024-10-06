@@ -2,6 +2,7 @@ import { Bot, webhookCallback } from 'grammy'
 import { events } from './events'
 import express from 'express'
 import { MainContext } from './types'
+import 'dotenv/config'
 
 const PORT = process.env.PORT
 const RESOURCE = process.env.RESOURCE
@@ -16,15 +17,13 @@ export default bot
 export const server = express()
 server.use(express.json())
 server.use('/webhook', webhookCallback(bot, 'express'))
-server.use(`${RESOURCE}/webhook`, () => console.log('hola'))
 bot.use(events)
 bot.api.setWebhook(`${RESOURCE}/webhook`)
 server.listen(PORT || 8000)
 
 // Uncomment this code if you're not using webhooks and decide to run this bot locally
-/* 
-  bot.start()
-  bot.catch(async (err) => {
+/* bot.start()
+bot.catch(async (err) => {
   const ctx = err.ctx
   console.error(`Error while handling update ${ctx.update.update_id}:`)
   const e = err.error
@@ -44,5 +43,4 @@ server.listen(PORT || 8000)
     console.error('Unknown error:', e)
     bot.start()
   }
-})
-*/
+}) */
