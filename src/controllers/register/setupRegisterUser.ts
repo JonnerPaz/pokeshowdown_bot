@@ -1,11 +1,14 @@
 import mongo from '../../db/Mongo'
 import pokeApi from '../../classes/PokeApi'
-import { MainContext } from '../../types'
+import { ConversationCB, MainContext } from '../../types'
+import registerUser from './registerUser'
 
-export default async function setupRegisterUser(ctx: MainContext) {
+export default async function setupRegisterUser(
+  conv: ConversationCB,
+  ctx: MainContext
+) {
   try {
-    const user = await mongo.findOneUser(ctx.from?.username as string)
-    if (user) {
+    if (await mongo.findOneUser(ctx.from?.username as string)) {
       return await ctx.reply(
         'You are already registered. ' +
           'If you want to erase your data and start over, use /deleteaccount'
@@ -21,8 +24,10 @@ export default async function setupRegisterUser(ctx: MainContext) {
     await ctx.reply('Select the right choice for you', {
       reply_markup: options,
     })
+    const ctxUser = await conv.waitFrom(ctx.from?.id as number)
+    await ctx.deleteMessage()
 
-    return await ctx.conversation.enter('registerUser')
+    return await registerUser(conv, ctxUser)
   } catch (err) {
     await ctx.reply(
       'Error at register. Check logs or contact the author of this bot'

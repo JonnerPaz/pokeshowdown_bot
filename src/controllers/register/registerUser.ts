@@ -8,14 +8,9 @@ export default async function registerUser(
   ctx: MainContext
 ) {
   try {
-    const newCtx = await conv.waitForCallbackQuery(/starter[012]/)
-    await ctx.api.deleteMessage(
-      newCtx.chat?.id as number,
-      newCtx.msgId as number
-    )
-    const index = Number(newCtx.callbackQuery.data.at(-1) as string)
+    const index = Number(ctx.callbackQuery?.data?.at(-1) as string)
     const choice =
-      newCtx.callbackQuery.message?.reply_markup?.inline_keyboard[0][index].text
+      ctx.callbackQuery?.message?.reply_markup?.inline_keyboard[0][index].text
 
     if (!choice) throw new Error('Choice is not defined at cb_registerPokemon')
 
@@ -23,7 +18,7 @@ export default async function registerUser(
     const starterPokemon = await pokeApi.generatePokemon(choice)
 
     // creates new user
-    const user = new User(userName, starterPokemon, newCtx.from.id) // Create User and stores it into DB
+    const user = new User(userName, starterPokemon, ctx.from?.id as number) // Create User and stores it into DB
     await mongo.addUser(user)
 
     await ctx.deleteMessage()
