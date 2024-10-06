@@ -123,7 +123,9 @@ export class PokeApi {
     return pokemon.counter++
   }
 
-  async evolvePokemon(pokemon: PokemonRegistered) {
+  async evolvePokemon(
+    pokemon: PokemonRegistered
+  ): Promise<PokemonRegistered | string> {
     try {
       // input pokemon
       const pokemonToEvolve = await this.api.getPokemonSpeciesByName(
@@ -149,7 +151,7 @@ export class PokeApi {
       } else if (pokemon.name === evolutionChain.secondForm) {
         return await this.generatePokemon(evolutionChain.thirdForm)
       } else {
-        throw Error('This pokemon cannot evolve')
+        return 'This pokemon is as its maximum form'
       }
     } catch (error) {
       throw error

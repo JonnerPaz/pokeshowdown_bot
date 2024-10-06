@@ -4,7 +4,7 @@ import { MainContext } from '../types'
 
 export default async function listenUpdates(ctx: HearsContext<MainContext>) {
   try {
-    const pokemon = await pokeApi.generatePokemon('pikachu')
+    const pokemon = await pokeApi.generatePokemon()
 
     const caption = `A wild ${pokemon.name} appeared. Tap "CATCH" to get it`
     const inlnKeyboard = new InlineKeyboard().text('CATCH', 'catch')

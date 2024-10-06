@@ -20,6 +20,11 @@ export default async function evolvePokemon(ctx: CommandContext<Context>) {
       )
 
     const pokemonEvolved = await pokeApi.evolvePokemon(pokemon)
+
+    // Cannot evolve anymore
+    if (typeof pokemonEvolved === 'string')
+      return await ctx.reply(pokemonEvolved)
+
     await mongo.deletePokemon(user, pokemon)
     await mongo.addPokemon(user, pokemonEvolved)
     await ctx.reply(
