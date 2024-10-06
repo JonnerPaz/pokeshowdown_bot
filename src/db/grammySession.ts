@@ -4,5 +4,7 @@ import { ISession } from '../types'
 export default function initial(): ISession {
   return {
     messageToDelete: 0,
+    userReqId: 0,
+    userResId: 0,
   }
 }

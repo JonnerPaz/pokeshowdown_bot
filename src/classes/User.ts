@@ -10,4 +10,8 @@ export class User {
     this.pokemonParty = [starter]
     this.tlgID = tlgID
   }
+
+  set setId(id: number) {
+    this.tlgID = id
+  }
 }

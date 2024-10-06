@@ -34,6 +34,8 @@ export type grammyContext =
 // here goes all properties of a session
 export interface ISession {
   messageToDelete: number
+  userReqId: number
+  userResId: number
 }
 
 // necessary for session and conversations plugin to work

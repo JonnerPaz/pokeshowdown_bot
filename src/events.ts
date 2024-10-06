@@ -42,8 +42,8 @@ events.command(
 )
 
 events.command('pokemongenerate', async (ctx) => {
-  if (ctx.chat.type !== 'private')
-    return await ctx.reply('You can only use this command on private chats')
+  /* if (ctx.chat.type !== 'private')
+    return await ctx.reply('You can only use this command on private chats') */
   await generatePokemon(ctx)
   return
 })

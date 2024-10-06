@@ -1,14 +1,16 @@
-import { InputMediaBuilder } from 'grammy'
+import { User } from '@grammyjs/types'
 import mongo from '../../db/Mongo'
-import { ConversationCB, UserRegistered } from '../../types'
+import { ConversationCB, MainContext, UserRegistered } from '../../types'
 import startTrade from './startTrade'
+import { CallbackQueryContext } from 'grammy'
 
-export default async function cb_tradeResponse(conv: ConversationCB) {
+export default async function cb_tradeResponse(
+  conv: ConversationCB,
+  ctx: CallbackQueryContext<MainContext> & {
+    from: User
+  }
+) {
   try {
-    const ctx = await conv.waitForCallbackQuery('tradeRequest')
-    await ctx.deleteMessages([ctx.session.messageToDelete])
-    ctx.session.messageToDelete = 0
-
     const userReq = await mongo.findOneUser(
       ctx.callbackQuery.message?.text?.split(' ').at(1)?.slice(1) as string
     )
@@ -16,14 +18,10 @@ export default async function cb_tradeResponse(conv: ConversationCB) {
       ctx.callbackQuery.from.username as string
     )
 
-    /* if (userReq?.userName === userRes?.userName) {
-      return await ctx.reply(`You can't trade with yourself`)
-    } */
-
     if (!userReq || !userRes) {
       const errMsg = 'One of the users are not registered. Process Cancelled'
-      await ctx.reply(errMsg)
-      throw Error(errMsg)
+      return await ctx.reply(errMsg)
+      // throw Error(errMsg)
     }
     const users: UserRegistered[] = [userReq, userRes]
 
