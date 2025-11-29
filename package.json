@@ -1,0 +1,25 @@
+{
+  "name": "showdownbot",
+  "version": "0.0.1",
+  "description": "Awesome project developed with TypeORM.",
+  "type": "module",
+  "devDependencies": {
+    "nodemon": "^3.1.11",
+    "@types/node": "^22.13.10",
+    "ts-node": "^10.9.2",
+    "typescript": "^5.8.2"
+  },
+  "dependencies": {
+    "@grammyjs/commands": "^1.2.0",
+    "@grammyjs/conversations": "^2.1.1",
+    "express": "^5.1.0",
+    "grammy": "^1.38.4",
+    "reflect-metadata": "^0.2.2",
+    "sqlite3": "^5.1.7",
+    "typeorm": "0.3.27"
+  },
+  "scripts": {
+    "start": "nodemon --exec 'node --loader ts-node/esm' src/index.ts",
+    "typeorm": "typeorm-ts-node-esm"
+  }
+}

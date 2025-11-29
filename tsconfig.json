@@ -1,0 +1,20 @@
+{
+   "compilerOptions": {
+      "lib": [
+         "es2021"
+      ],
+      "target": "es2021",
+      "module": "esnext",
+      "moduleResolution": "node",
+      "baseUrl": "./src",
+      "allowSyntheticDefaultImports": true,
+      "outDir": "./build",
+      "emitDecoratorMetadata": true,
+      "experimentalDecorators": true,
+      "sourceMap": true,
+      "paths": {
+         "@/*": ["*"],
+         "@decorators/*": ["shared/decorators/*"]
+      }
+   }
+}
