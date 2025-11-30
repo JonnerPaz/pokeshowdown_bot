@@ -1,8 +1,9 @@
 {
-  "name": "showdownbot",
+  "name": "pokebotapi",
   "version": "0.0.1",
-  "description": "Awesome project developed with TypeORM.",
+  "description": "Telegram bot for pokemon battle and trade",
   "type": "module",
+  "license": "MIT",
   "devDependencies": {
     "nodemon": "^3.1.11",
     "@types/node": "^22.13.10",
