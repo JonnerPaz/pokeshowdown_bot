@@ -13,8 +13,7 @@
       "experimentalDecorators": true,
       "sourceMap": true,
       "paths": {
-         "@/*": ["*"],
-         "@decorators/*": ["shared/decorators/*"]
+         "@/*": ["*"]
       }
    }
 }

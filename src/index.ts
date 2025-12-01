@@ -2,29 +2,30 @@ import { loadEnvFile } from 'process'
 import 'reflect-metadata'
 import { AppDataSource } from './data-source.js'
 import { Bot, BotError, GrammyError, HttpError } from 'grammy'
-import { LoginController } from './controllers/display.controller.js'
 import { commands } from '@grammyjs/commands'
+import { controller as loginController } from './controllers/login.controller.js'
+import { controller as logoutController } from './controllers/logout.controller.js'
+import { GlobalContext } from './shared/types.js'
 
 loadEnvFile()
 
 const API_KEY = process.env.API_KEY as string
 const PORT = process.env.PORT
 // const RESOURCE = process.env.RESOURCE
-
-export const bot = new Bot(API_KEY)
-
-bot.use(commands())
-
-const loginController = new LoginController()
-
-bot.use(loginController)
-
-await loginController.init()
-await loginController.setCommands(bot)
+export const bot: Bot<GlobalContext> = new Bot(API_KEY)
 
 try {
+  bot.use(commands())
+
+  bot.use(loginController)
+  bot.use(logoutController)
+
+  await loginController.init()
+  await logoutController.init()
+
+  await loginController.setCommands(bot)
+
   await AppDataSource.initialize()
-  bot.use()
   await bot.start()
 } catch (err) {
   bot.catch(async (err) => {
