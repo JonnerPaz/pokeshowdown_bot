@@ -1,0 +1,3 @@
+export class PokeApiService {
+  constructor() {}
+}

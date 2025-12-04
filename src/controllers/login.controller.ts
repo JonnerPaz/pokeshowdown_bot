@@ -1,44 +1,52 @@
-import { CommandsGroupContext } from '../shared/types'
+import { AppContext } from '../shared/types'
 import { Command, LanguageCodes } from '@grammyjs/commands'
+import { Bot } from 'grammy'
 import { addCommand } from '../shared/decorators/addCommand.decorator.js'
 import { BaseCommandController } from '../shared/classes/BaseCommandController.js'
-import { getCommand, getDescription } from '../shared/commands.js'
-import { controller as logoutController } from './logout.controller.js'
+import { getCommandInfo } from '../shared/commands.js'
 
 export class LoginController<
-  T extends CommandsGroupContext,
+  T extends AppContext,
 > extends BaseCommandController<T> {
+  constructor(bot: Bot<T>) {
+    super(bot)
+  }
+
   @addCommand
-  public startBot(): Command<T> {
+  public start(): Command<T> {
     const msg =
       'Welcome to PokeBotShowdown. This is a bot for pokemon battle and trade. For more information, type /help'
+
+    const handler = async (ctx: T) => {
+      await ctx.reply(msg)
+    }
+
+    const { command, description } = getCommandInfo('START')
+    const { command: commandSpa, description: descriptionSpa } = getCommandInfo(
+      'START',
+      LanguageCodes.Spanish
+    )
     return super
-      .command(
-        getCommand('START'),
-        getDescription('START'),
-        async (ctx) => await ctx.reply(msg)
-      )
+      .command(command, description, async (ctx) => ctx.reply(msg))
       .addToScope({ type: 'all_group_chats' })
-      .localize(
-        LanguageCodes.Spanish,
-        getCommand('START', LanguageCodes.Spanish),
-        getDescription('START', LanguageCodes.Spanish)
-      )
+      .localize(LanguageCodes.Spanish, commandSpa, descriptionSpa)
   }
 
   @addCommand
   public register() {
-    return super.command(
-      getCommand('REGISTER'),
-      getDescription('REGISTER'),
-      async (ctx) => {
-        console.log('MY LOGOUT', logoutController)
-        await ctx.reply('Registered')
+    const handler = async (ctx: T) => {
+      try {
+        const logoutController = this.registry.get('logout')
+        if (!logoutController) {
+          throw new Error('Logout controller not set')
+        }
         await ctx.setMyCommands(logoutController)
+        await ctx.reply('Registered')
+      } catch (error) {
+        console.error(error)
+        ctx.reply('There was an error during request. Please report it')
       }
-    )
+    }
+    return this.cmdHandler('REGISTER', handler)
   }
 }
-
-const controller = new LoginController()
-export { controller }

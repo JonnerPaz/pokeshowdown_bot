@@ -5,11 +5,11 @@ export function addCommand(
 ) {
   const constructor = target.constructor
 
-  if (!constructor._loopableMethods) {
-    constructor._loopableMethods = new Set()
+  if (!constructor._controllerMethods) {
+    constructor._controllerMethods = new Set()
   }
 
-  constructor._loopableMethods.add(key)
+  constructor._controllerMethods.add(key)
 
   return descriptor
 }

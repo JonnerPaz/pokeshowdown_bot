@@ -1,4 +1,4 @@
-import { LanguageCodes } from '@grammyjs/commands'
+import { Command, LanguageCodes } from '@grammyjs/commands'
 
 export const commands = {
   START: {
@@ -98,6 +98,13 @@ export type Languages = keyof (typeof commands)[CommandKeys]
 
 export function getCommand(command: CommandKeys, language: Languages = 'en') {
   return commands[command][language].command
+}
+
+export function getCommandInfo(
+  command: CommandKeys,
+  language: Languages = 'en'
+) {
+  return commands[command][language]
 }
 
 export function getDescription(
