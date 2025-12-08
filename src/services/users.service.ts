@@ -1,9 +1,16 @@
-import { IUser } from '@/shared/dto/IUser.dto'
-import { Users } from '../entities/Users'
-import { Repository } from 'typeorm'
+import { IUser } from '../shared/dto/IUser.dto'
+import { Users } from '../entities/Users.js'
+import { DataSource, Repository } from 'typeorm'
+import { AppDataSource } from '../data-source.js'
 
 export class UsersService {
-  constructor(public userRepository: Repository<Users>) {}
+  private dataSource: DataSource
+  public userRepository: Repository<Users>
+
+  constructor() {
+    this.dataSource = AppDataSource
+    this.userRepository = this.dataSource.getRepository(Users)
+  }
 
   public async addUser(userDto: IUser) {
     try {
@@ -33,7 +40,7 @@ export class UsersService {
       })
       return user
     } catch (err) {
-      console.log(err)
+      console.error(err)
     }
   }
 }

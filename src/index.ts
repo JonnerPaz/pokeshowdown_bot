@@ -11,6 +11,9 @@ const API_KEY = process.env.API_KEY as string
 // const RESOURCE = process.env.RESOURCE
 
 try {
+  // DB connection
+  await AppDataSource.initialize()
+
   const app = new AppContainer(API_KEY)
 
   await app.setup()
@@ -37,8 +40,6 @@ try {
     }
   })
 
-  // DB connection
-  await AppDataSource.initialize()
   // start bot
   await app.bot.start()
 } catch (err) {

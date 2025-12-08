@@ -1,4 +1,4 @@
-import { Command, LanguageCodes } from '@grammyjs/commands'
+import { LanguageCodes } from '@grammyjs/commands'
 
 export const commands = {
   START: {

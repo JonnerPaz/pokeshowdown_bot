@@ -1,6 +1,6 @@
-import { GlobalContext } from '@/shared/types'
+import { GlobalContext } from '../shared/types'
 import { Bot } from 'grammy'
 
-export class ConversationService {
+export class RegisterConversation {
   constructor(private bot: Bot<GlobalContext>) {}
 }

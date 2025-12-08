@@ -1,15 +1,17 @@
 import { Bot } from 'grammy'
-import { ConversationService } from './services/conversations.service.js'
 import { CommandRegistry } from './shared/classes/commandRegistry.js'
 import { AppContext } from './shared/types.js'
 import { LoginController } from './controllers/login.controller.js'
 import { LogoutController } from './controllers/logout.controller.js'
 import { commands } from '@grammyjs/commands'
-import { conversations } from '@grammyjs/conversations'
+import { conversations, createConversation } from '@grammyjs/conversations'
+import { RegisterConvService } from './services/registerConversation.service.js'
+import { registerService } from './shared/decorators/injectable.decorator.js'
+import { UsersService } from './services/users.service.js'
 
 export class AppContainer {
   private commandRegistry: CommandRegistry
-  private conversationService: ConversationService
+  private conversationService: RegisterConvService
 
   public readonly bot: Bot<AppContext>
   public readonly loginController: LoginController<AppContext>
@@ -17,12 +19,14 @@ export class AppContainer {
 
   constructor(apiKey: string) {
     this.bot = new Bot<AppContext>(apiKey)
+    // create and register services
+    registerService(UsersService, new UsersService())
 
     // Setup core services
     this.bot.use(commands())
     this.bot.use(conversations())
 
-    this.conversationService = new ConversationService(this.bot)
+    this.conversationService = new RegisterConvService()
     this.commandRegistry = new CommandRegistry(this.bot)
 
     // Setup controllers
@@ -39,14 +43,13 @@ export class AppContainer {
   }
 
   async setup() {
-    this.loginController.init()
-    this.logoutController.init()
+    this.bot.use(createConversation(this.conversationService.register))
+
+    await this.loginController.init()
+    await this.logoutController.init()
     // insert controllers into bot
     this.bot.use(this.loginController)
     this.bot.use(this.logoutController)
-
-    // await this.logoutController.init()
-    console.log(this.commandRegistry.getAllCommands())
 
     return this
   }

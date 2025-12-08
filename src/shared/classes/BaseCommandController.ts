@@ -29,7 +29,9 @@ export abstract class BaseCommandController<
       const methodNames: string[] = Array.from(
         (this.constructor as any)._controllerMethods
       )
-      const methods = methodNames.map((key) => (this as any)[key]())
+      const methods = await Promise.all(
+        methodNames.map((key) => (this as any)[key]())
+      )
       this.add(methods)
       return
     } catch (err) {
@@ -37,10 +39,10 @@ export abstract class BaseCommandController<
     }
   }
 
-  protected cmdHandler(
+  protected async cmdHandler(
     cmdName: CommandKeys,
     handler: (ctx: T) => Promise<void>
-  ): Command<T> {
+  ): Promise<Command<T>> {
     const { command, description } = getCommandInfo(cmdName)
     const { command: commandSpa, description: descriptionSpa } = getCommandInfo(
       cmdName,
