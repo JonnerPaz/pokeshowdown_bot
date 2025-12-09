@@ -34,14 +34,15 @@ export class LoginController<
 
         await ctx.conversation.enter('register')
         await ctx.setMyCommands(logoutController)
-        // await ctx.reply('Registered')
       } catch (error) {
         console.error(error)
         ctx.reply('There was an error during request. Please report it')
       }
     }
-    return await this.cmdHandler('REGISTER', async (ctx: T) => {
-      return await handler(ctx)
-    })
+
+    return await this.cmdHandler(
+      'REGISTER',
+      async (ctx: T) => await handler(ctx)
+    )
   }
 }

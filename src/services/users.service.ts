@@ -41,6 +41,17 @@ export class UsersService {
       return user
     } catch (err) {
       console.error(err)
+      throw err
+    }
+  }
+
+  public async deleteUser(username: string) {
+    try {
+      const user = await this.userRepository.delete({ username })
+      return user
+    } catch (err) {
+      console.error(err)
+      throw err
     }
   }
 }

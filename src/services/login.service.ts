@@ -1,10 +1,11 @@
-import { AppContext } from '../shared/types'
+import { InlineKeyboard } from 'grammy'
 import { Conversation } from '@grammyjs/conversations'
+import { AppContext } from '../shared/types'
 import { UsersService } from './users.service.js'
 import { getService } from '../shared/decorators/injectable.decorator.js'
 import { addConversation } from '../shared/decorators/addConversation.decorator.js'
 
-export class RegisterConvService {
+export class LoginService {
   constructor() {}
 
   @addConversation
@@ -25,25 +26,34 @@ export class RegisterConvService {
 
       await userCtx.addUser({ username })
       await ctx.reply('You are now registered!')
-      return
     } catch (error) {
       ctx.reply('There was an error during request. Please report it')
       throw error
     }
   }
 
-  public async init() {
+  @addConversation
+  public async deleteAccount(conv: Conversation, ctx: AppContext) {
     try {
-      if (!(this.constructor as any)._conversations) {
-        throw new Error(`Error: No methods found in ${this.constructor.name}`)
+      const userCtx = getService(UsersService) as UsersService
+      const username = ctx.from?.username
+      const isUserRegistered = await userCtx.findOneUser(username)
+
+      const choice = new InlineKeyboard()
+        .text('Yes', 'delete-account')
+        .text('No', 'no')
+
+      if (!isUserRegistered) {
+        await ctx.reply('You are not registered!')
+        return
       }
-      const methodNames: string[] = Array.from(
-        (this.constructor as any)._conversations
-      )
-      const methods = methodNames.map((key) => (this as any)[key])
-      return methods
+
+      await ctx.reply('Are you sure you want to delete your account?', {
+        reply_markup: choice,
+      })
     } catch (err) {
-      console.error(err)
+      console.log(err)
+      throw err
     }
   }
 }

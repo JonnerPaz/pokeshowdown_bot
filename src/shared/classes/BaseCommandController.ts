@@ -32,6 +32,8 @@ export abstract class BaseCommandController<
       const methods = await Promise.all(
         methodNames.map((key) => (this as any)[key]())
       )
+
+      // register commands on bot
       this.add(methods)
       return
     } catch (err) {

@@ -2,20 +2,22 @@ import { Bot } from 'grammy'
 import { CommandRegistry } from './shared/classes/commandRegistry.js'
 import { AppContext } from './shared/types.js'
 import { LoginController } from './controllers/login.controller.js'
-import { LogoutController } from './controllers/logout.controller.js'
+import { LoggedController } from './controllers/logged.controller.js'
 import { commands } from '@grammyjs/commands'
 import { conversations, createConversation } from '@grammyjs/conversations'
-import { RegisterConvService } from './services/registerConversation.service.js'
+import { LoginService } from './services/login.service.js'
 import { registerService } from './shared/decorators/injectable.decorator.js'
 import { UsersService } from './services/users.service.js'
+import { CallbackService } from './services/CallbackService.js'
 
 export class AppContainer {
   private commandRegistry: CommandRegistry
-  private conversationService: RegisterConvService
+  private conversationService: LoginService
 
   public readonly bot: Bot<AppContext>
   public readonly loginController: LoginController<AppContext>
-  public readonly logoutController: LogoutController<AppContext>
+  public readonly loggedController: LoggedController<AppContext>
+  public readonly callbackService: CallbackService<AppContext>
 
   constructor(apiKey: string) {
     this.bot = new Bot<AppContext>(apiKey)
@@ -26,30 +28,37 @@ export class AppContainer {
     this.bot.use(commands())
     this.bot.use(conversations())
 
-    this.conversationService = new RegisterConvService()
+    this.callbackService = new CallbackService(this.bot)
+    this.conversationService = new LoginService()
     this.commandRegistry = new CommandRegistry(this.bot)
 
     // Setup controllers
     this.loginController = new LoginController(this.bot)
-    this.logoutController = new LogoutController(this.bot)
+    this.loggedController = new LoggedController(this.bot)
 
     // Register commands into registry
     this.commandRegistry.register('login', this.loginController)
-    this.commandRegistry.register('logout', this.logoutController)
+    this.commandRegistry.register('logout', this.loggedController)
 
     // Set registry into controllers
     this.loginController.setRegistry(this.commandRegistry)
-    this.logoutController.setRegistry(this.commandRegistry)
+    this.loggedController.setRegistry(this.commandRegistry)
   }
 
   async setup() {
+    // Setup conversations handlers
     this.bot.use(createConversation(this.conversationService.register))
+    this.bot.use(createConversation(this.conversationService.deleteAccount))
 
+    // Init controllers
     await this.loginController.init()
-    await this.logoutController.init()
+    await this.loggedController.init()
+
+    await this.callbackService.init()
+
     // insert controllers into bot
     this.bot.use(this.loginController)
-    this.bot.use(this.logoutController)
+    this.bot.use(this.loggedController)
 
     return this
   }
