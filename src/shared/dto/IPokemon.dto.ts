@@ -1,10 +1,10 @@
-import { ISpriteType } from "./ISpriteType.dto";
+import { ISpriteType } from './ISpriteType.dto.js'
 
 export interface IPokemon {
-  id: number;
-  sprite: ISpriteType;
-  name: string;
-  ability: string;
-  heldItem: string;
-  counter: number;
+  id: number
+  types: string[]
+  sprites: ISpriteType
+  name: string
+  ability: string
+  timesCaught: number
 }

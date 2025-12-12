@@ -32,8 +32,8 @@ export class LoginController<
           throw new Error('Logout controller not set')
         }
 
-        await ctx.conversation.enter('register')
         await ctx.setMyCommands(logoutController)
+        await ctx.conversation.enter('register')
       } catch (error) {
         console.error(error)
         ctx.reply('There was an error during request. Please report it')

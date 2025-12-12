@@ -37,7 +37,7 @@ export class LoggedController<
         return await ctx.conversation.enter('deleteAccount')
       } catch (error) {
         console.log(error)
-        ctx.reply('There was an error during request. Please report it')
+        await ctx.reply('There was an error during request. Please report it')
       }
     }
 

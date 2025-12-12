@@ -4,20 +4,21 @@ import {
   Column,
   OneToMany,
   Relation,
-} from "typeorm";
-import { Pokemons } from "./Pokemons.js";
+} from 'typeorm'
+import { Pokemons } from './Pokemons.js'
 
-@Entity({ name: "users" })
+@Entity({ name: 'users' })
 export class Users {
   @PrimaryGeneratedColumn()
-  id: number;
+  id: number
 
   @Column({ length: 20, unique: true })
-  username: string;
+  username: string
 
   @OneToMany(() => Pokemons, (pokemon) => pokemon.user, {
-    cascade: true,
+    cascade: ['insert', 'update'],
     nullable: true,
+    eager: true,
   })
-  pokeparty?: Relation<Pokemons[]>;
+  pokemons: Relation<Pokemons[]>
 }

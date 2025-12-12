@@ -1,35 +1,71 @@
-import { IUser } from '../shared/dto/IUser.dto'
 import { Users } from '../entities/Users.js'
 import { DataSource, Repository } from 'typeorm'
 import { AppDataSource } from '../data-source.js'
+import { Pokemons } from '../entities/Pokemons.js'
+import { Sprites } from '../entities/Sprites.js'
+import { IPokemon } from '../shared/dto/IPokemon.dto.js'
 
 export class UsersService {
   private dataSource: DataSource
-  public userRepository: Repository<Users>
+  private userRepository: Repository<Users>
+  private pokemonRepository: Repository<Pokemons>
+  private spritesRepository: Repository<Sprites>
 
   constructor() {
     this.dataSource = AppDataSource
     this.userRepository = this.dataSource.getRepository(Users)
+    this.pokemonRepository = this.dataSource.getRepository(Pokemons)
+    this.spritesRepository = this.dataSource.getRepository(Sprites)
   }
 
-  public async addUser(userDto: IUser) {
+  public async addUser(userName: string, starter: IPokemon) {
+    const queryRunner = this.dataSource.createQueryRunner()
+
+    await queryRunner.connect()
+    await queryRunner.startTransaction()
+
     try {
-      const user = await this.findOneUser(userDto.username)
+      const user = await this.findOneUser(userName)
 
       if (user) {
         throw new Error('User already exists')
       }
 
-      const { username } = userDto
-      const newUser = this.userRepository.create({
-        username,
-      })
+      const newUser = new Users()
+      // set user properties
+      newUser.username = userName
 
-      this.userRepository.save(newUser)
+      // set sprite properties
+      const sprites = new Sprites()
+      sprites.frontDefault = starter.sprites.frontDefault
+      sprites.frontShiny = starter.sprites.frontShiny
+      sprites.backDefault = starter.sprites.backDefault
+      sprites.backShiny = starter.sprites.backShiny
 
-      return newUser
+      // set pokemon properties
+      const pokemon = new Pokemons()
+      pokemon.name = starter.name
+      pokemon.types = starter.types
+      pokemon.ability = starter.ability
+      pokemon.timesCaught = 1
+      pokemon.user = newUser
+
+      // set relations
+      sprites.pokemon = pokemon
+
+      const pokemonArr = [pokemon]
+      const spritesArr = [sprites]
+
+      newUser.pokemons = pokemonArr
+      pokemon.sprites = spritesArr
+
+      const savedUser = await this.userRepository.save(newUser)
+      await queryRunner.commitTransaction()
+      return savedUser
     } catch (error) {
-      console.error(error)
+      await queryRunner.rollbackTransaction()
+      console.error('Error while adding user:', error)
+      throw error
     }
   }
 

@@ -5,31 +5,31 @@ import {
   ManyToOne,
   OneToMany,
   Relation,
-} from "typeorm";
-import { Users } from "./Users.js";
-import { Sprites } from "./Sprites.js";
+} from 'typeorm'
+import { Users } from './Users.js'
+import { Sprites } from './Sprites.js'
 
-@Entity("pokemons")
+@Entity('pokemons')
 export class Pokemons {
   @PrimaryGeneratedColumn()
-  id!: number;
+  id: number
 
-  @Column("text")
-  name: string;
+  @Column('text')
+  name: string
 
-  @Column("simple-array")
-  types: string[];
+  @Column('simple-array')
+  types: string[]
 
-  @Column("text")
-  ability: string;
+  @Column('text')
+  ability: string
 
   // how many times this pokemon has been caught
-  @Column({ type: "int", default: 1 })
-  timesCaught: number;
-
-  @ManyToOne(() => Users, (user) => user.pokeparty)
-  user: Relation<Users>;
+  @Column({ type: 'int', default: 1 })
+  timesCaught: number
 
   @OneToMany(() => Sprites, (sprite) => sprite.pokemon)
-  sprites: Relation<Sprites>;
+  sprites: Relation<Sprites[]>
+
+  @ManyToOne(() => Users, (user) => user.pokemons)
+  user: Relation<Users>
 }

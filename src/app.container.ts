@@ -6,9 +6,12 @@ import { LoggedController } from './controllers/logged.controller.js'
 import { commands } from '@grammyjs/commands'
 import { conversations, createConversation } from '@grammyjs/conversations'
 import { LoginService } from './services/login.service.js'
-import { registerService } from './shared/decorators/injectable.decorator.js'
+import {
+  getService,
+  registerService,
+} from './shared/decorators/injectable.decorator.js'
 import { UsersService } from './services/users.service.js'
-import { CallbackService } from './services/CallbackService.js'
+import { PokeApiService } from './services/pokeapi.service.js'
 
 export class AppContainer {
   private commandRegistry: CommandRegistry
@@ -17,19 +20,18 @@ export class AppContainer {
   public readonly bot: Bot<AppContext>
   public readonly loginController: LoginController<AppContext>
   public readonly loggedController: LoggedController<AppContext>
-  public readonly callbackService: CallbackService<AppContext>
 
   constructor(apiKey: string) {
     this.bot = new Bot<AppContext>(apiKey)
     // create and register services
     registerService(UsersService, new UsersService())
+    registerService(PokeApiService, new PokeApiService())
 
     // Setup core services
     this.bot.use(commands())
     this.bot.use(conversations())
 
-    this.callbackService = new CallbackService(this.bot)
-    this.conversationService = new LoginService()
+    this.conversationService = new LoginService(getService(PokeApiService))
     this.commandRegistry = new CommandRegistry(this.bot)
 
     // Setup controllers
@@ -53,8 +55,6 @@ export class AppContainer {
     // Init controllers
     await this.loginController.init()
     await this.loggedController.init()
-
-    await this.callbackService.init()
 
     // insert controllers into bot
     this.bot.use(this.loginController)
