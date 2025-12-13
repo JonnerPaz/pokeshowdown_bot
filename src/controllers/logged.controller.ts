@@ -46,4 +46,21 @@ export class LoggedController<
       async (ctx: T) => await handler(ctx)
     )
   }
+
+  @addCommand
+  public async pokemons() {
+    const handler = async (ctx: T) => {
+      try {
+        return await ctx.conversation.enter('pokemons')
+      } catch (error) {
+        console.log(error)
+        await ctx.reply('There was an error during request. Please report it')
+      }
+    }
+
+    return await this.cmdHandler(
+      'MY_POKEMONS',
+      async (ctx: T) => await handler(ctx)
+    )
+  }
 }

@@ -1,4 +1,7 @@
-export function addConversation(
+/**
+ * @description - This decorator is used to add a conversation to the bot
+ */
+export function conversation(
   target: any,
   key: string,
   descriptor: PropertyDescriptor

@@ -31,7 +31,10 @@ export class AppContainer {
     this.bot.use(commands())
     this.bot.use(conversations())
 
-    this.conversationService = new LoginService(getService(PokeApiService))
+    this.conversationService = new LoginService(
+      getService(UsersService),
+      getService(PokeApiService)
+    )
     this.commandRegistry = new CommandRegistry(this.bot)
 
     // Setup controllers
@@ -51,6 +54,7 @@ export class AppContainer {
     // Setup conversations handlers
     this.bot.use(createConversation(this.conversationService.register))
     this.bot.use(createConversation(this.conversationService.deleteAccount))
+    this.bot.use(createConversation(this.conversationService.pokemons))
 
     // Init controllers
     await this.loginController.init()

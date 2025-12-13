@@ -9,18 +9,17 @@ export class UsersService {
   private dataSource: DataSource
   private userRepository: Repository<Users>
   private pokemonRepository: Repository<Pokemons>
-  private spritesRepository: Repository<Sprites>
+  private spriteRepository: Repository<Sprites>
 
   constructor() {
     this.dataSource = AppDataSource
     this.userRepository = this.dataSource.getRepository(Users)
     this.pokemonRepository = this.dataSource.getRepository(Pokemons)
-    this.spritesRepository = this.dataSource.getRepository(Sprites)
+    this.spriteRepository = this.dataSource.getRepository(Sprites)
   }
 
   public async addUser(userName: string, starter: IPokemon) {
     const queryRunner = this.dataSource.createQueryRunner()
-
     await queryRunner.connect()
     await queryRunner.startTransaction()
 
@@ -31,9 +30,8 @@ export class UsersService {
         throw new Error('User already exists')
       }
 
-      const newUser = new Users()
-      // set user properties
-      newUser.username = userName
+      // insertions
+      // first must be inserted the many side, and then the one side
 
       // set sprite properties
       const sprites = new Sprites()
@@ -42,22 +40,23 @@ export class UsersService {
       sprites.backDefault = starter.sprites.backDefault
       sprites.backShiny = starter.sprites.backShiny
 
+      await this.spriteRepository.save(sprites)
+
       // set pokemon properties
       const pokemon = new Pokemons()
       pokemon.name = starter.name
       pokemon.types = starter.types
       pokemon.ability = starter.ability
       pokemon.timesCaught = 1
-      pokemon.user = newUser
+      // set sprite-pokemon relation
+      pokemon.sprites = [sprites]
+      await this.pokemonRepository.save(pokemon)
 
-      // set relations
-      sprites.pokemon = pokemon
-
-      const pokemonArr = [pokemon]
-      const spritesArr = [sprites]
-
-      newUser.pokemons = pokemonArr
-      pokemon.sprites = spritesArr
+      // set user properties
+      const newUser = new Users()
+      newUser.username = userName
+      newUser.pokemons = [pokemon]
+      await this.userRepository.save(newUser)
 
       const savedUser = await this.userRepository.save(newUser)
       await queryRunner.commitTransaction()
@@ -66,6 +65,8 @@ export class UsersService {
       await queryRunner.rollbackTransaction()
       console.error('Error while adding user:', error)
       throw error
+    } finally {
+      await queryRunner.release()
     }
   }
 
@@ -73,6 +74,11 @@ export class UsersService {
     try {
       const user = await this.userRepository.findOne({
         where: { username },
+        relations: {
+          pokemons: {
+            sprites: true,
+          },
+        },
       })
       return user
     } catch (err) {
@@ -83,8 +89,11 @@ export class UsersService {
 
   public async deleteUser(username: string) {
     try {
-      const user = await this.userRepository.delete({ username })
-      return user
+      const user = await this.findOneUser(username)
+      if (!user) {
+        throw new Error('User not found')
+      }
+      await this.userRepository.delete({ username })
     } catch (err) {
       console.error(err)
       throw err

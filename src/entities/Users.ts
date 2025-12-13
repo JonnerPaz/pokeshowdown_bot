@@ -16,7 +16,6 @@ export class Users {
   username: string
 
   @OneToMany(() => Pokemons, (pokemon) => pokemon.user, {
-    cascade: ['insert', 'update'],
     nullable: true,
     eager: true,
   })

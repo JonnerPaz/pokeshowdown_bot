@@ -3,14 +3,19 @@ import { Conversation } from '@grammyjs/conversations'
 import { AppContext } from '../shared/types'
 import { UsersService } from './users.service.js'
 import { getService } from '../shared/decorators/injectable.decorator.js'
-import { addConversation } from '../shared/decorators/addConversation.decorator.js'
+import { conversation } from '../shared/decorators/conversation.decorator.js'
 import { PokeApiService } from './pokeapi.service.js'
 import { InputMediaPhoto } from 'grammy/types'
 
 export class LoginService {
-  constructor(private readonly pokemonService: PokeApiService) {
+  constructor(
+    // services
+    private readonly userService: UsersService,
+    private readonly pokemonService: PokeApiService
+  ) {
     this.register = this.register.bind(this)
     this.deleteAccount = this.deleteAccount.bind(this)
+    this.pokemons = this.pokemons.bind(this)
     Object.entries(this).forEach(([key, value]) => {
       Object.defineProperty(value, 'name', {
         value: key,
@@ -20,9 +25,9 @@ export class LoginService {
   }
 
   /**
-   * Generates images of pokemon's starters and its keyboard options
+   * @description - Generates images of pokemon's starters and its keyboard options
    */
-  public async getStarterKeyboard(): Promise<
+  private async getStarterKeyboard(): Promise<
     [InputMediaPhoto[], InlineKeyboard]
   > {
     // create starters
@@ -40,12 +45,11 @@ export class LoginService {
     return [photos, keyboard]
   }
 
-  @addConversation
+  @conversation
   public async register(conv: Conversation, ctx: AppContext) {
     try {
-      const userService = getService(UsersService) as UsersService
       const user = await conv.external((ctx) =>
-        userService.findOneUser(ctx.from.username)
+        this.userService.findOneUser(ctx.from.username)
       )
 
       if (user) {
@@ -71,6 +75,7 @@ export class LoginService {
         .andFrom(ctx.from)
 
       let pokemonName: string | null
+
       const selectedPokemon = keyboard.inline_keyboard.flat().find((_, idx) => {
         const selectedIdx = Number(startedSelected.callbackQuery.data.at(-1))
         return (
@@ -90,7 +95,15 @@ export class LoginService {
       pokemonName = selectedPokemon.text
 
       const starter = await pokeApiService.createPokemon(pokemonName)
-      await conv.external(() => userService.addUser(ctx.from.username, starter))
+      await conv.external(() =>
+        this.userService.addUser(ctx.from.username, starter)
+      )
+      await conv.external(async () =>
+        console.log(
+          'user: ',
+          await this.userService.findOneUser(ctx.from.username)
+        )
+      )
       await ctx.reply('You are now registered!')
       // await userService.addUser({ ctx.from })
       // await ctx.reply('You are now registered!')
@@ -100,12 +113,33 @@ export class LoginService {
     }
   }
 
-  @addConversation
+  @conversation
+  public async pokemons(conv: Conversation, ctx: AppContext) {
+    try {
+      const user = await conv.external((ctx) =>
+        this.userService.findOneUser(ctx.from.username)
+      )
+
+      if (!user) {
+        await ctx.reply('You are not registered!')
+        return
+      }
+
+      const pokemonPhotos = user.pokemons.map((el) =>
+        InputMediaBuilder.photo(el.sprites.at(0).frontDefault)
+      )
+      console.log('POKEMON PHOTOS', pokemonPhotos)
+      await ctx.reply('Your pokemons are:')
+      await ctx.api.sendMediaGroup(ctx.from.id, pokemonPhotos)
+      return
+    } catch (err) {}
+  }
+
+  @conversation
   public async deleteAccount(conv: Conversation, ctx: AppContext) {
     try {
-      const userCtx = getService(UsersService) as UsersService
       const username = ctx.from?.username
-      const isUserRegistered = await userCtx.findOneUser(username)
+      const isUserRegistered = await this.userService.findOneUser(username)
 
       if (!isUserRegistered) {
         await ctx.reply('You are not registered!')
@@ -134,7 +168,7 @@ export class LoginService {
         return
       }
 
-      await userCtx.deleteUser(username)
+      await conv.external(() => this.userService.deleteUser(username))
 
       const msg = 'Your account was deleted'
       await ctx.api.deleteMessage(choice.chat.id, choice.message_id)

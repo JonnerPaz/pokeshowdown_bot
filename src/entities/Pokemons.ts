@@ -27,9 +27,13 @@ export class Pokemons {
   @Column({ type: 'int', default: 1 })
   timesCaught: number
 
-  @OneToMany(() => Sprites, (sprite) => sprite.pokemon)
+  @OneToMany(() => Sprites, (sprite) => sprite.pokemon, {
+    cascade: true,
+    onDelete: 'CASCADE',
+  })
   sprites: Relation<Sprites[]>
 
-  @ManyToOne(() => Users, (user) => user.pokemons)
+  // cascades are used on the many side
+  @ManyToOne(() => Users, (user) => user.pokemons, { onDelete: 'CASCADE' })
   user: Relation<Users>
 }
