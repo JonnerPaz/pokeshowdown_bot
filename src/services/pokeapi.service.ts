@@ -65,8 +65,10 @@ export class PokeApiService {
   }
 
   private buildPokemon(pokemon: Pokemon): IPokemon {
+    console.log(pokemon.types)
     return this.builder
       .setName(pokemon.name)
+      .setTypes(pokemon.types.map((type) => type.type.name))
       .setId(pokemon.id)
       .setAbility(pokemon.abilities[0].ability.name)
       .setHeldItem(null)

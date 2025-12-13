@@ -2,7 +2,6 @@ import { InlineKeyboard, InputMediaBuilder } from 'grammy'
 import { Conversation } from '@grammyjs/conversations'
 import { AppContext } from '../shared/types'
 import { UsersService } from './users.service.js'
-import { getService } from '../shared/decorators/injectable.decorator.js'
 import { conversation } from '../shared/decorators/conversation.decorator.js'
 import { PokeApiService } from './pokeapi.service.js'
 import { InputMediaPhoto } from 'grammy/types'
@@ -58,9 +57,6 @@ export class LoginService {
       }
 
       await ctx.reply('Welcome to ShowdownBot!. Please select your starter!')
-
-      const pokeApiService = getService(PokeApiService) as PokeApiService
-
       const [photos, keyboard] = await conv.external(() =>
         this.getStarterKeyboard()
       )
@@ -79,7 +75,7 @@ export class LoginService {
       const selectedPokemon = keyboard.inline_keyboard.flat().find((_, idx) => {
         const selectedIdx = Number(startedSelected.callbackQuery.data.at(-1))
         return (
-          Number(idx) === selectedIdx &&
+          +idx === selectedIdx &&
           selectedIdx >= 0 &&
           selectedIdx <= keyboard.inline_keyboard.flat().length
         )
@@ -94,19 +90,11 @@ export class LoginService {
 
       pokemonName = selectedPokemon.text
 
-      const starter = await pokeApiService.createPokemon(pokemonName)
+      const starter = await this.pokemonService.createPokemon(pokemonName)
       await conv.external(() =>
         this.userService.addUser(ctx.from.username, starter)
       )
-      await conv.external(async () =>
-        console.log(
-          'user: ',
-          await this.userService.findOneUser(ctx.from.username)
-        )
-      )
       await ctx.reply('You are now registered!')
-      // await userService.addUser({ ctx.from })
-      // await ctx.reply('You are now registered!')
     } catch (error) {
       ctx.reply('There was an error during request. Please report it')
       throw error
@@ -132,7 +120,10 @@ export class LoginService {
       await ctx.reply('Your pokemons are:')
       await ctx.api.sendMediaGroup(ctx.from.id, pokemonPhotos)
       return
-    } catch (err) {}
+    } catch (err) {
+      ctx.reply('There was an error during request. Please report it')
+      throw err
+    }
   }
 
   @conversation
@@ -174,6 +165,7 @@ export class LoginService {
       await ctx.api.deleteMessage(choice.chat.id, choice.message_id)
       return await data.reply(msg)
     } catch (err) {
+      await ctx.reply('There was an error during request. Please report it')
       throw err
     }
   }
