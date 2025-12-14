@@ -70,6 +70,54 @@ export class UsersService {
     }
   }
 
+  public async addPokemonToUser(userName: string, pokemonDto: IPokemon) {
+    const queryRunner = this.dataSource.createQueryRunner()
+    await queryRunner.connect()
+    await queryRunner.startTransaction()
+    try {
+      const user = await this.findOneUser(userName)
+
+      const isPokemonRegistered = user.pokemons.find(
+        (pokemon) => pokemon.name === pokemonDto.name
+      )
+
+      if (isPokemonRegistered) {
+        isPokemonRegistered.timesCaught++
+        await this.pokemonRepository.save(isPokemonRegistered)
+        await queryRunner.commitTransaction()
+        return
+      }
+
+      const sprites = new Sprites()
+      sprites.frontDefault = pokemonDto.sprites.frontDefault
+      sprites.frontShiny = pokemonDto.sprites.frontShiny
+      sprites.backDefault = pokemonDto.sprites.backDefault
+      sprites.backShiny = pokemonDto.sprites.backShiny
+      await this.spriteRepository.save(sprites)
+
+      // set pokemon properties
+      const pokemon = new Pokemons()
+      pokemon.name = pokemonDto.name
+      pokemon.types = pokemonDto.types
+      pokemon.ability = pokemonDto.ability
+      pokemon.timesCaught = 1
+      pokemon.sprites = [sprites]
+
+      await this.pokemonRepository.save(pokemon)
+
+      // update pokemon list of user
+      user.pokemons.push(pokemon)
+      await this.userRepository.save(user)
+      await queryRunner.commitTransaction()
+      return
+    } catch (err) {
+      console.error(err)
+      throw err
+    } finally {
+      await queryRunner.release()
+    }
+  }
+
   public async findOneUser(username: string): Promise<Users> | null {
     try {
       const user = await this.userRepository.findOne({

@@ -15,6 +15,7 @@ export class LoginService {
     this.register = this.register.bind(this)
     this.deleteAccount = this.deleteAccount.bind(this)
     this.pokemons = this.pokemons.bind(this)
+    this.generatePokemon = this.generatePokemon.bind(this)
     Object.entries(this).forEach(([key, value]) => {
       Object.defineProperty(value, 'name', {
         value: key,
@@ -44,6 +45,15 @@ export class LoginService {
     return [photos, keyboard]
   }
 
+  private async generateWildPokemon(): Promise<
+    [InputMediaPhoto, InlineKeyboard]
+  > {
+    const pokemon = await this.pokemonService.createPokemon()
+    this.pokemonService.setCurrentPokemon = pokemon
+    const keyboard = new InlineKeyboard().text('Catch', 'catch')
+    return [InputMediaBuilder.photo(pokemon.sprites.frontDefault), keyboard]
+  }
+
   @conversation
   public async register(conv: Conversation, ctx: AppContext) {
     try {
@@ -61,7 +71,7 @@ export class LoginService {
         this.getStarterKeyboard()
       )
 
-      await ctx.api.sendMediaGroup(ctx.from.id, photos)
+      await ctx.api.sendMediaGroup(ctx.chat.id, photos)
       await ctx.reply('Please select one of the following:', {
         reply_markup: keyboard,
       })
@@ -116,7 +126,6 @@ export class LoginService {
       const pokemonPhotos = user.pokemons.map((el) =>
         InputMediaBuilder.photo(el.sprites.at(0).frontDefault)
       )
-      console.log('POKEMON PHOTOS', pokemonPhotos)
       await ctx.reply('Your pokemons are:')
       await ctx.api.sendMediaGroup(ctx.from.id, pokemonPhotos)
       return
@@ -164,6 +173,54 @@ export class LoginService {
       const msg = 'Your account was deleted'
       await ctx.api.deleteMessage(choice.chat.id, choice.message_id)
       return await data.reply(msg)
+    } catch (err) {
+      await ctx.reply('There was an error during request. Please report it')
+      throw err
+    }
+  }
+
+  @conversation
+  public async generatePokemon(conv: Conversation, ctx: AppContext) {
+    try {
+      const [pokemonPhoto, keyboard] = await conv.external(() =>
+        this.generateWildPokemon()
+      )
+
+      await ctx.api.sendMediaGroup(ctx.chat.id, [pokemonPhoto])
+      await ctx.reply(
+        'A wild pokemon has appeared! Touch the buttom to catch it!',
+        { reply_markup: keyboard }
+      )
+
+      const choice = await conv.waitForCallbackQuery('catch', {
+        otherwise: async () => await ctx.deleteMessage(),
+      })
+
+      console.log('CHOICE', choice.callbackQuery.from.username)
+      const user = await conv.external((_) =>
+        this.userService.findOneUser(choice.callbackQuery.from.username)
+      )
+
+      await ctx.api.deleteMessage(
+        choice.chat.id,
+        choice.callbackQuery.message.message_id
+      )
+
+      if (user.pokemons.length === 6) {
+        await ctx.reply('Your pokemon bag is full!')
+        return
+      }
+
+      await conv.external(() =>
+        this.userService.addPokemonToUser(
+          choice.callbackQuery.from.username,
+          this.pokemonService.getCurrentPokemon
+        )
+      )
+
+      return await ctx.reply(
+        `@${user.username} has caught a ${this.pokemonService.getCurrentPokemon.name}`
+      )
     } catch (err) {
       await ctx.reply('There was an error during request. Please report it')
       throw err

@@ -1,4 +1,3 @@
-import { Pokemons } from '@/entities/Pokemons.js'
 import { PokemonBuilder } from '../shared/classes/PokemonBuilder.js'
 import { TOTAL_OF_POKEMON } from '../shared/constants.js'
 import { IPokemon } from '../shared/dto/IPokemon.dto'
@@ -8,6 +7,7 @@ export class PokeApiService {
   private api: PokemonClient
   private builder: PokemonBuilder
   private evolution: EvolutionClient
+  private currentPokemon: IPokemon
 
   constructor() {
     this.api = new PokemonClient()
@@ -65,7 +65,6 @@ export class PokeApiService {
   }
 
   private buildPokemon(pokemon: Pokemon): IPokemon {
-    console.log(pokemon.types)
     return this.builder
       .setName(pokemon.name)
       .setTypes(pokemon.types.map((type) => type.type.name))
@@ -81,6 +80,14 @@ export class PokeApiService {
         backDefault: String(pokemon.sprites.back_default),
       })
       .build()
+  }
+
+  public set setCurrentPokemon(pokemon: IPokemon) {
+    this.currentPokemon = pokemon
+  }
+
+  public get getCurrentPokemon() {
+    return this.currentPokemon
   }
 
   /**
