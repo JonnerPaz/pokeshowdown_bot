@@ -5,6 +5,7 @@ import { UsersService } from './users.service.js'
 import { conversation } from '../shared/decorators/conversation.decorator.js'
 import { PokeApiService } from './pokeapi.service.js'
 import { InputMediaPhoto } from 'grammy/types'
+import { EVOLVE_CAP } from '../shared/constants.js'
 
 export class LoginService {
   constructor(
@@ -16,6 +17,7 @@ export class LoginService {
     this.deleteAccount = this.deleteAccount.bind(this)
     this.pokemons = this.pokemons.bind(this)
     this.generatePokemon = this.generatePokemon.bind(this)
+    this.evolvePokemon = this.evolvePokemon.bind(this)
     Object.entries(this).forEach(([key, value]) => {
       Object.defineProperty(value, 'name', {
         value: key,
@@ -48,7 +50,7 @@ export class LoginService {
   private async generateWildPokemon(): Promise<
     [InputMediaPhoto, InlineKeyboard]
   > {
-    const pokemon = await this.pokemonService.createPokemon()
+    const pokemon = await this.pokemonService.createPokemon('mudkip')
     this.pokemonService.setCurrentPokemon = pokemon
     const keyboard = new InlineKeyboard().text('Catch', 'catch')
     return [InputMediaBuilder.photo(pokemon.sprites.frontDefault), keyboard]
@@ -196,7 +198,6 @@ export class LoginService {
         otherwise: async () => await ctx.deleteMessage(),
       })
 
-      console.log('CHOICE', choice.callbackQuery.from.username)
       const user = await conv.external((_) =>
         this.userService.findOneUser(choice.callbackQuery.from.username)
       )
@@ -218,9 +219,68 @@ export class LoginService {
         )
       )
 
-      return await ctx.reply(
-        `@${user.username} has caught a ${this.pokemonService.getCurrentPokemon.name}`
+      const currentPokemon = user.pokemons.find(
+        (el) => el.name === this.pokemonService.getCurrentPokemon.name
       )
+      return await ctx.reply(
+        `@${user.username} has caught a ${currentPokemon.name}. He has caught ${currentPokemon.name} ${currentPokemon.timesCaught} time${currentPokemon.timesCaught === 1 ? '' : 's'}`
+      )
+    } catch (err) {
+      await ctx.reply('There was an error during request. Please report it')
+      throw err
+    }
+  }
+
+  @conversation
+  public async evolvePokemon(conv: Conversation, ctx: AppContext) {
+    try {
+      const user = await conv.external((ctx) =>
+        this.userService.findOneUser(ctx.from.username)
+      )
+
+      if (!user) {
+        await ctx.reply('You are not registered!')
+        return
+      }
+
+      const pokemonPhotos = user.pokemons.map((el) =>
+        InputMediaBuilder.photo(el.sprites.at(0).frontDefault)
+      )
+      const pokemonNames = user.pokemons.map((el) => el.name)
+
+      await ctx.api.sendMediaGroup(ctx.chat.id, pokemonPhotos)
+      await ctx.reply(
+        `Which pokemon do you want to evolve? send a message with the name of the pokemon you want to evolve. Your pokemons: ${pokemonNames.join(', ')}`
+      )
+
+      const choice = await conv.waitFrom(ctx.from.id).andFor(':text')
+      const pokemon = user.pokemons.find(
+        (el) => el.name.toLowerCase() === choice.message.text.toLowerCase()
+      )
+
+      if (!pokemon || pokemon.timesCaught < EVOLVE_CAP) {
+        await ctx.reply(
+          "Unsuccessful evolution. Wether you haven't caught that pokemon or you haven't caught it enough times, you can't evolve it now."
+        )
+        return
+      }
+
+      const evolvedPokemon = await this.pokemonService.evolvePokemon(pokemon)
+
+      // Can't evolve anymore
+      if (typeof evolvedPokemon === 'string') {
+        await ctx.reply(evolvedPokemon)
+        return
+      }
+
+      await this.userService.evolvePokemon(
+        choice.from.username,
+        pokemon.name,
+        evolvedPokemon
+      )
+
+      await ctx.reply(`Your ${pokemon.name} evolved to ${evolvedPokemon.name}`)
+      return
     } catch (err) {
       await ctx.reply('There was an error during request. Please report it')
       throw err

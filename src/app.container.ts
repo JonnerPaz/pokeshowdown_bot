@@ -52,10 +52,11 @@ export class AppContainer {
 
   async setup() {
     // Setup conversations handlers
-    this.bot.use(createConversation(this.conversationService.generatePokemon))
     this.bot.use(createConversation(this.conversationService.register))
     this.bot.use(createConversation(this.conversationService.deleteAccount))
     this.bot.use(createConversation(this.conversationService.pokemons))
+    this.bot.use(createConversation(this.conversationService.generatePokemon))
+    this.bot.use(createConversation(this.conversationService.evolvePokemon))
 
     // Init controllers
     await this.loginController.init()

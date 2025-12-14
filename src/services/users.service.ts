@@ -118,6 +118,48 @@ export class UsersService {
     }
   }
 
+  public async evolvePokemon(
+    userName: string,
+    prevPokemonName: string,
+    newPokemon: IPokemon
+  ) {
+    const queryRunner = this.dataSource.createQueryRunner()
+    await queryRunner.connect()
+    await queryRunner.startTransaction()
+    try {
+      const user = await this.findOneUser(userName)
+
+      const sprites = new Sprites()
+      sprites.frontDefault = newPokemon.sprites.frontDefault
+      sprites.frontShiny = newPokemon.sprites.frontShiny
+      sprites.backDefault = newPokemon.sprites.backDefault
+      sprites.backShiny = newPokemon.sprites.backShiny
+      await this.spriteRepository.save(sprites)
+
+      const pokemonToUpdate = new Pokemons()
+      pokemonToUpdate.name = newPokemon.name
+      pokemonToUpdate.types = newPokemon.types
+      pokemonToUpdate.ability = newPokemon.ability
+      pokemonToUpdate.timesCaught = 1
+      pokemonToUpdate.sprites = [sprites]
+      await this.pokemonRepository.save(pokemonToUpdate)
+
+      const pokemonToDelete = user.pokemons.find(
+        (pokemon) => pokemon.name === prevPokemonName
+      )
+      await this.pokemonRepository.remove(pokemonToDelete)
+
+      user.pokemons.push(pokemonToUpdate)
+      await this.userRepository.save(user)
+      await queryRunner.commitTransaction()
+    } catch (err) {
+      console.error(err)
+      throw err
+    } finally {
+      await queryRunner.release()
+    }
+  }
+
   public async findOneUser(username: string): Promise<Users> | null {
     try {
       const user = await this.userRepository.findOne({

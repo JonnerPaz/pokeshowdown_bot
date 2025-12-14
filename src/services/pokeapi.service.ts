@@ -1,3 +1,4 @@
+import { Pokemons } from '@/entities/Pokemons.js'
 import { PokemonBuilder } from '../shared/classes/PokemonBuilder.js'
 import { TOTAL_OF_POKEMON } from '../shared/constants.js'
 import { IPokemon } from '../shared/dto/IPokemon.dto'
@@ -128,7 +129,7 @@ export class PokeApiService {
     return pokemon.sprites.frontDefault
   }
 
-  public async evolvePokemon(pokemon: IPokemon): Promise<IPokemon | string> {
+  public async evolvePokemon(pokemon: Pokemons): Promise<IPokemon | string> {
     try {
       // input pokemon
       const pokemonToEvolve = await this.api.getPokemonSpeciesByName(
