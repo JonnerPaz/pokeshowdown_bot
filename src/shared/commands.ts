@@ -91,6 +91,16 @@ export const commands = {
       description: 'Intercambia pokemons con tus amigos',
     },
   },
+  SUMMARY: {
+    [LanguageCodes.English]: {
+      command: 'summary',
+      description: 'Get a summary of your pokemons',
+    },
+    [LanguageCodes.Spanish]: {
+      command: 'resumen',
+      description: 'Obtener un resumen de tus pokemons',
+    },
+  },
 } as const
 
 export type CommandKeys = keyof typeof commands
