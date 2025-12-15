@@ -129,7 +129,7 @@ export class LoginService {
         InputMediaBuilder.photo(el.sprites.at(0).frontDefault)
       )
       await ctx.reply('Your pokemons are:')
-      await ctx.api.sendMediaGroup(ctx.from.id, pokemonPhotos)
+      await ctx.api.sendMediaGroup(ctx.chat.id, pokemonPhotos)
       return
     } catch (err) {
       ctx.reply('There was an error during request. Please report it')
