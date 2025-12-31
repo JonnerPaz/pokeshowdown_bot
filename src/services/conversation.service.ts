@@ -18,8 +18,7 @@ export class ConversationService {
     this.pokemons = this.pokemons.bind(this)
     this.generatePokemon = this.generatePokemon.bind(this)
     this.evolvePokemon = this.evolvePokemon.bind(this)
-    // This is needed to get the name of the method, and not "bound_<methodName>"
-    // so it can be used as a decorator
+    this.trade = this.trade.bind(this)
     Object.entries(this).forEach(([key, value]) => {
       Object.defineProperty(value, 'name', {
         value: key,
@@ -52,7 +51,7 @@ export class ConversationService {
   private async generateWildPokemon(): Promise<
     [InputMediaPhoto, InlineKeyboard]
   > {
-    const pokemon = await this.pokemonService.createPokemon('mudkip')
+    const pokemon = await this.pokemonService.createPokemon()
     this.pokemonService.setCurrentPokemon = pokemon
     const keyboard = new InlineKeyboard().text('Catch', 'catch')
     return [InputMediaBuilder.photo(pokemon.sprites.frontDefault), keyboard]
@@ -196,9 +195,7 @@ export class ConversationService {
         { reply_markup: keyboard }
       )
 
-      const choice = await conv.waitForCallbackQuery('catch', {
-        otherwise: async () => await ctx.deleteMessage(),
-      })
+      const choice = await conv.waitForCallbackQuery('catch').andFrom(ctx.from)
 
       const user = await conv.external((_) =>
         this.userService.findOneUser(choice.callbackQuery.from.username)
@@ -221,9 +218,8 @@ export class ConversationService {
         )
       )
 
-      const currentPokemon = user.pokemons.find(
-        (el) => el.name === this.pokemonService.getCurrentPokemon.name
-      )
+      const currentPokemon = this.pokemonService.getCurrentPokemon
+
       return await ctx.reply(
         `@${user.username} has caught a ${currentPokemon.name}. He has caught ${currentPokemon.name} ${currentPokemon.timesCaught} time${currentPokemon.timesCaught === 1 ? '' : 's'}`
       )
@@ -283,6 +279,133 @@ export class ConversationService {
 
       await ctx.reply(`Your ${pokemon.name} evolved to ${evolvedPokemon.name}`)
       return
+    } catch (err) {
+      await ctx.reply('There was an error during request. Please report it')
+      throw err
+    }
+  }
+
+  @conversation
+  public async trade(conv: Conversation, ctx: AppContext) {
+    try {
+      const userRequest = await conv.external((ctx) =>
+        this.userService.findOneUser(ctx.from.username)
+      )
+
+      if (!userRequest) {
+        await ctx.reply('You are not registered!')
+        return
+      }
+
+      const userRequestpokemonPhotos = userRequest.pokemons.map((el) =>
+        InputMediaBuilder.photo(el.sprites.at(0).frontDefault)
+      )
+      const userRequestpokemonNames = userRequest.pokemons.map((el) => el.name)
+
+      await ctx.api.sendMediaGroup(ctx.chat.id, userRequestpokemonPhotos)
+      await ctx.reply(
+        `Which pokemon do you want to trade? send a message with the name of the pokemon you want to trade. Your pokemons: ${userRequestpokemonNames.join(', ')}`
+      )
+
+      const choice = await conv.waitFrom(ctx.from.id).andFor(':text')
+
+      console.log(choice)
+      const userRequestpokemon = userRequest.pokemons.find(
+        (el) => el.name.toLowerCase() === choice.message.text.toLowerCase()
+      )
+
+      if (!userRequestpokemon) {
+        await ctx.reply("You don't have that pokemon. Please try again")
+        return
+      }
+
+      await ctx.reply(
+        `@${userRequest.username} wants to trade ${userRequestpokemon.name}. Click the button below to accept the trade.`,
+        {
+          reply_markup: new InlineKeyboard().text('Accept', 'trade-accept'),
+        }
+      )
+
+      const userCallback = await conv.waitForCallbackQuery(/trade-accept/, {
+        otherwise(ctx) {
+          ctx.api.deleteMessage(
+            ctx.chat.id,
+            ctx.callbackQuery.message.message_id
+          )
+        },
+      })
+
+      const userResponse = await conv.external((_) =>
+        this.userService.findOneUser(userCallback.callbackQuery.from.username)
+      )
+      const userResponsePokemonPhotos = userResponse.pokemons.map((el) =>
+        InputMediaBuilder.photo(el.sprites.at(0).frontDefault)
+      )
+      const userResponsePokemonNames = userResponse.pokemons.map(
+        (el) => el.name
+      )
+
+      await ctx.api.sendMediaGroup(ctx.chat.id, userResponsePokemonPhotos)
+      await ctx.reply(
+        `@${userResponse.username}, select the pokemon you want to trade. Your pokemons: ${userResponsePokemonNames.join(', ')}`,
+        {
+          reply_markup: new InlineKeyboard().text('Accept', 'trade-accept'),
+        }
+      )
+
+      const userResponseChoice = await conv
+        .waitForCallbackQuery(/trade-accept/)
+        .andFrom(userCallback.callbackQuery.from)
+
+      const userResponsepokemon = userResponse.pokemons.find(
+        (el) =>
+          el.name.toLowerCase() ===
+          userResponseChoice.callbackQuery.data.toLowerCase()
+      )
+
+      if (!userResponsepokemon) {
+        await ctx.reply(
+          "You don't have that pokemon. Please try again. Trade cancelled!"
+        )
+        return
+      }
+
+      await ctx.reply(
+        `@${userResponse.username}, would you like to trade ${userRequestpokemon.name}?`,
+        {
+          reply_markup: new InlineKeyboard()
+            .text('Accept', 'trade-accept')
+            .text('Reject', 'trade-reject'),
+        }
+      )
+
+      const tradeResult = await conv
+        .waitForCallbackQuery(/trade-accept|trade-reject/)
+        .andFrom(userCallback.callbackQuery.from)
+
+      if (tradeResult.callbackQuery.data === 'trade-reject') {
+        await ctx.reply('Trade cancelled!')
+        return
+      }
+
+      await ctx.reply(
+        `@${userRequest.username}, would you like to trade ${userRequestpokemon.name}?`,
+        {
+          reply_markup: new InlineKeyboard()
+            .text('Accept', 'trade-accept')
+            .text('Reject', 'trade-reject'),
+        }
+      )
+      const userRequestChoice = await conv
+        .waitForCallbackQuery(/trade-accept|trade-reject/)
+        .andFrom(ctx.from)
+
+      if (userRequestChoice.callbackQuery.data === 'trade-reject') {
+        await ctx.reply('Trade cancelled!')
+        return
+      }
+
+      await ctx.reply('Trade successful!')
     } catch (err) {
       await ctx.reply('There was an error during request. Please report it')
       throw err

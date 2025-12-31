@@ -12,31 +12,17 @@ export class LoggedController<
   }
 
   @addCommand
-  public async logout(): Promise<Command<T>> {
+  public async deleteAccount() {
     const handler = async (ctx: T) => {
       try {
         const loginController = this.registry.get('login')
         if (!loginController) {
           throw new Error('Login controller not set')
         }
+        await ctx.conversation.enter('deleteAccount')
         await ctx.setMyCommands(loginController)
-        await ctx.reply('Bye')
       } catch (error) {
         console.error(error)
-        ctx.reply('There was an error during request. Please report it')
-      }
-    }
-
-    return await this.cmdHandler('LOGOUT', handler)
-  }
-
-  @addCommand
-  public async deleteAccount() {
-    const handler = async (ctx: T) => {
-      try {
-        return await ctx.conversation.enter('deleteAccount')
-      } catch (error) {
-        console.log(error)
         await ctx.reply('There was an error during request. Please report it')
       }
     }
@@ -53,7 +39,7 @@ export class LoggedController<
       try {
         return await ctx.conversation.enter('pokemons')
       } catch (error) {
-        console.log(error)
+        console.error(error)
         await ctx.reply('There was an error during request. Please report it')
       }
     }
@@ -70,7 +56,7 @@ export class LoggedController<
       try {
         return await ctx.conversation.enter('generatePokemon')
       } catch (error) {
-        console.log(error)
+        console.error(error)
         await ctx.reply('There was an error during request. Please report it')
       }
     }
@@ -86,10 +72,24 @@ export class LoggedController<
       try {
         return await ctx.conversation.enter('evolvePokemon')
       } catch (error) {
-        console.log(error)
+        console.error(error)
         await ctx.reply('There was an error during request. Please report it')
       }
     }
     return await this.cmdHandler('EVOLVE', async (ctx: T) => await handler(ctx))
+  }
+
+  @addCommand
+  public async trade() {
+    const handler = async (ctx: T) => {
+      try {
+        return await ctx.conversation.enter('trade')
+      } catch (error) {
+        console.error(error)
+        await ctx.reply('There was an error during request. Please report it')
+      }
+    }
+
+    return await this.cmdHandler('TRADE', async (ctx: T) => await handler(ctx))
   }
 }

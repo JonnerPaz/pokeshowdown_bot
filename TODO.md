@@ -1,12 +1,9 @@
 # TODO
 
-* Connect User class to a database (mongoDB)
-* Add evolve mechanic 
-* Add options when selecting `/pokemonsummary` like stats, abilities, etc.
+* Update `/pokemonsummary` to show all pokemon stats and abilities, using a context menu
+* Add trade mechanic
+* Add battle mechanic
 
 # Fix
 
-* Refactor catch command
-* Refactor createInlineKeyboard
-* Validate that users can't interfere in other's option when using commands
-    * if a user press 'catch', only that user can terminate the process, not other people
+* When a pokemon is caught of the same evolution chain and user decide to evolve it, it should be updated the timesCaught, not adding the same pokemon twice   

@@ -1,11 +1,11 @@
 import { Bot } from 'grammy'
+import { commands } from '@grammyjs/commands'
+import { conversations, createConversation } from '@grammyjs/conversations'
 import { CommandRegistry } from './shared/classes/commandRegistry.js'
 import { AppContext } from './shared/types.js'
 import { LoginController } from './controllers/login.controller.js'
 import { LoggedController } from './controllers/logged.controller.js'
-import { commands } from '@grammyjs/commands'
-import { conversations, createConversation } from '@grammyjs/conversations'
-import { LoginService } from './services/login.service.js'
+import { ConversationService } from './services/conversation.service.js'
 import {
   getService,
   registerService,
@@ -15,7 +15,7 @@ import { PokeApiService } from './services/pokeapi.service.js'
 
 export class AppContainer {
   private commandRegistry: CommandRegistry
-  private conversationService: LoginService
+  private conversationService: ConversationService
 
   public readonly bot: Bot<AppContext>
   public readonly loginController: LoginController<AppContext>
@@ -31,7 +31,7 @@ export class AppContainer {
     this.bot.use(commands())
     this.bot.use(conversations())
 
-    this.conversationService = new LoginService(
+    this.conversationService = new ConversationService(
       getService(UsersService),
       getService(PokeApiService)
     )
@@ -57,6 +57,7 @@ export class AppContainer {
     this.bot.use(createConversation(this.conversationService.pokemons))
     this.bot.use(createConversation(this.conversationService.generatePokemon))
     this.bot.use(createConversation(this.conversationService.evolvePokemon))
+    this.bot.use(createConversation(this.conversationService.trade))
 
     // Init controllers
     await this.loginController.init()

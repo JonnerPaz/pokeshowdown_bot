@@ -21,16 +21,6 @@ export const commands = {
       description: 'registrarse en el bot',
     },
   },
-  LOGOUT: {
-    [LanguageCodes.English]: {
-      command: 'logout',
-      description: 'Logout of the bot',
-    },
-    [LanguageCodes.Spanish]: {
-      command: 'cerrar_sesion',
-      description: 'Cerrar sesion del bot',
-    },
-  },
   DELETE_ACCOUNT: {
     [LanguageCodes.English]: {
       command: 'delete_account',
@@ -91,14 +81,15 @@ export const commands = {
       description: 'Intercambia pokemons con tus amigos',
     },
   },
-  SUMMARY: {
+
+  NEGRO: {
     [LanguageCodes.English]: {
-      command: 'summary',
-      description: 'Get a summary of your pokemons',
+      command: 'negro',
+      description: 'Castro negro',
     },
     [LanguageCodes.Spanish]: {
-      command: 'resumen',
-      description: 'Obtener un resumen de tus pokemons',
+      command: 'negro',
+      description: 'castro negro',
     },
   },
 } as const
