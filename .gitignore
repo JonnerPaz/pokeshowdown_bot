@@ -7,3 +7,5 @@ temp/
 .env
 *.sqlite
 database*
+
+/generated/prisma

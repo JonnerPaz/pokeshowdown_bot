@@ -1,8 +1,5 @@
-import { CommandsFlavor } from '@grammyjs/commands'
-import { Context } from 'grammy'
-import { ConversationFlavor } from '@grammyjs/conversations'
+import type { CommandsFlavor } from "@grammyjs/commands";
+import type { ConversationFlavor } from "@grammyjs/conversations";
+import { Context } from "grammy";
 
-export type GlobalContext = Context
-
-export type AppContext = CommandsFlavor<GlobalContext> &
-  ConversationFlavor<GlobalContext>
+export type AppContext = CommandsFlavor<Context> & ConversationFlavor<Context>;
