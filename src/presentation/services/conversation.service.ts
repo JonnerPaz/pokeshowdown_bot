@@ -5,10 +5,8 @@ import type { InputMediaPhoto } from "grammy/types";
 import { EVOLVE_CAP } from "../../domain/data/constants.js";
 import type { Context } from "grammy";
 import { addConversation } from "./addConversation.decorator.js";
-import { CreateUserDto } from "../../domain/dto/user/create-user.dto.js";
+import { UserEntity } from "../../domain/entities/users.entity.js";
 import type { DBService } from "./db.service.js";
-import { UpdatePokemonDto } from "../../domain/dto/pokemon/update-pokemon.dto.js";
-import { UpdateUserDto } from "../../domain/dto/user/update-user.dto.js";
 
 export class ConversationService<T extends AppContext> {
   public botConversations = new Map<string, Conversation<AppContext>>();
@@ -73,7 +71,8 @@ export class ConversationService<T extends AppContext> {
 
       const createdUser = await conv.external(() =>
         this.dbService.createUser(
-          CreateUserDto.fromObject({
+          new UserEntity({
+            id: null,
             username: ctx.from!.username as string,
             createdAt: new Date(),
             updatedAt: new Date(),

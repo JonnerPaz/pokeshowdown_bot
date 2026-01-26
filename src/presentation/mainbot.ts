@@ -5,10 +5,8 @@ import { conversations, createConversation } from "@grammyjs/conversations";
 import { LoginController } from "./controllers/login.controller.js";
 import { ConversationService } from "./services/conversation.service.js";
 import { PokeApiService } from "./services/pokeapi.service.js";
-import { UserRepositoryImpl } from "../infrastructure/repositories/user.repository.impl.js";
 import { UserDataSourceImpl } from "../infrastructure/datasource/user.datasource.impl.js";
 import { PokemonDataSourceImpl } from "../infrastructure/datasource/pokemon.datasource.impl.js";
-import { PokemonRepositoryImpl } from "../infrastructure/repositories/pokemon.repository.impl.js";
 import { botConversations } from "./services/addConversation.decorator.js";
 import { DBService } from "./services/db.service.js";
 
@@ -21,12 +19,10 @@ export class MainBot {
   private constructor(apiKey: string = process.env.API_KEY as string) {
     this.bot = new Bot<AppContext>(apiKey);
     const userDatasource = new UserDataSourceImpl();
-    const userRepository = new UserRepositoryImpl(userDatasource);
     const pokemonDatasource = new PokemonDataSourceImpl();
-    const pokemonRepository = new PokemonRepositoryImpl(pokemonDatasource);
 
-    const pokeApi = new PokeApiService(pokemonRepository);
-    const dbService = new DBService(userRepository, pokemonRepository, pokeApi);
+    const pokeApi = new PokeApiService(pokemonDatasource);
+    const dbService = new DBService(userDatasource, pokemonDatasource, pokeApi);
     const conversationService = new ConversationService(dbService);
 
     // Setup core services

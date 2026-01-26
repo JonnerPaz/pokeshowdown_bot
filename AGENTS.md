@@ -33,14 +33,13 @@
 
 ---
 
-## 3. Project Structure Expectations
-- `src/index.ts` only calls `AppContainer.setup()`; do not instantiate bots/servers elsewhere.
-- `AppContainer` spins up `MainBot` (token, repositories, conversations) first, then passes the configured bot into Express `Server` to own `bot.start()`.
-- Layers are now explicit: `src/domain` (entities, DTOs, repository contracts, constants) → `src/infrastructure` (Prisma-backed datasources + repositories) → `src/presentation` (controllers, services, bot, server). Keep PRs scoped to the correct layer.
+- `AppContainer` spins up `MainBot` (token, datasources, conversations) first, then passes the configured bot into Express `Server` to own `bot.start()`.
+- Layers are now explicit: `src/domain` (entities/contracts/constants) → `src/infrastructure` (Prisma-backed datasources) → `src/presentation` (controllers, services, bot, server). Keep PRs scoped to the correct layer.
 - Controllers live under `src/presentation/controllers`. `LoginController` currently handles onboarding plus logged-in flows using its private `useCommand` helper (CommandGroup). New controllers should extend `BaseCommandController` to inherit the same localization/scope behavior.
-- `MainBot` wires `UserRepositoryImpl` + `PokemonRepositoryImpl`, instantiates `PokeApiService` + `ConversationService`, registers controllers, then installs `conversations()` + `commands()` middleware.
+- `MainBot` wires `UserDataSourceImpl` + `PokemonDataSourceImpl`, instantiates `PokeApiService` + `ConversationService`, registers controllers, then installs `conversations()` + `commands()` middleware.
 - Conversations stay inside `ConversationService` with the `@addConversation` decorator (`src/presentation/services/addConversation.decorator.ts`). Controllers trigger them with `ctx.conversation.enter("name")`; only register conversations through `botConversations`.
-- Domain entities (`PokemonEntity`, `UserEntity`) enforce invariants. DTOs such as `CreateUserDto` / `UpdateUserDto` validate inbound data. Repositories should always return these types rather than raw Prisma models.
+- Domain entities (`PokemonEntity`, `UserEntity`) enforce invariants end-to-end. Datasources and services now construct these entities directly (no DTO layer). Always return domain entities from persistence.
+- When persisting user-owned pokémon (starters, catches, trades, evolutions), include the owning `userId` in the Prisma insert/connect and wrap the pokémon create + user update in a single transaction so `pokemonIds` stay in sync.
 - `Server` (`src/presentation/server.ts`) is a thin Express wrapper: mount JSON middleware, optional webhook endpoint, log registered commands, then start the bot. Avoid starting the bot anywhere else to prevent double polling.
 
 ---

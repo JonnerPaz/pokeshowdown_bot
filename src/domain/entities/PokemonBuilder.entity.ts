@@ -1,6 +1,5 @@
-import { PokemonEntity } from "../../domain/entities/pokemon.entity.js";
-import type { Sprites } from "../../domain/entities/sprites.interface.js";
-import { CreatePokemonDto } from "../dto/pokemon/create-pokemon.dto.js";
+import { PokemonEntity } from "./pokemon.entity.js";
+import type { Sprites } from "./sprites.interface.js";
 
 export class PokemonBuilder {
   private id: number | null = null;

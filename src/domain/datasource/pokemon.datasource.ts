@@ -1,4 +1,3 @@
-import type { CreatePokemonDto } from "../dto/pokemon/create-pokemon.dto.js";
 import type { PokemonEntity } from "../entities/pokemon.entity.js";
 import type { UserEntity } from "../entities/users.entity.js";
 
@@ -11,7 +10,7 @@ export abstract class PokemonDataSource {
     data: Partial<PokemonEntity>,
   ): Promise<PokemonEntity>;
   abstract createPokemon(
-    pokemon: CreatePokemonDto,
+    pokemon: PokemonEntity,
     user?: UserEntity,
   ): Promise<PokemonEntity>;
   abstract deletePokemonById(id: number): Promise<void>;

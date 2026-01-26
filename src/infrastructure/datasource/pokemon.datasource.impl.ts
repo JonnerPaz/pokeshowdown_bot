@@ -1,9 +1,7 @@
 import type { PokemonDataSource } from "../../domain/datasource/pokemon.datasource.js";
+import type { UserEntity } from "../../domain/entities/users.entity.js";
 import { PokemonEntity } from "../../domain/entities/pokemon.entity.js";
 import { prisma } from "../../data/postgres/index.js";
-import type { CreatePokemonDto } from "../../domain/dto/pokemon/create-pokemon.dto.js";
-import type { UpdatePokemonDto } from "../../domain/dto/pokemon/update-pokemon.dto.js";
-import type { UserEntity } from "../../domain/entities/users.entity.js";
 
 export class PokemonDataSourceImpl implements PokemonDataSource {
   async findPokemonById(id: number): Promise<PokemonEntity> {
@@ -70,7 +68,7 @@ export class PokemonDataSourceImpl implements PokemonDataSource {
 
   async updatePokemon(
     pokemon: PokemonEntity,
-    data: UpdatePokemonDto,
+    data: Partial<PokemonEntity>,
   ): Promise<PokemonEntity> {
     const dbPokemon = await prisma.pokemon.findUnique({
       where: { name: pokemon.name },
@@ -78,9 +76,30 @@ export class PokemonDataSourceImpl implements PokemonDataSource {
 
     if (!dbPokemon) throw new Error("Pokemon not found in db");
 
+    const updateData: {
+      name?: string;
+      types?: string[];
+      ability?: string;
+      sprites?: PokemonEntity["sprites"];
+      timesCaught?: number;
+    } = {};
+
+    if (typeof data.name === "string") updateData.name = data.name;
+    if (Array.isArray(data.types)) updateData.types = data.types;
+    if (typeof data.ability === "string") updateData.ability = data.ability;
+    if (data.sprites) updateData.sprites = data.sprites;
+    if (typeof data.timesCaught === "number") {
+      updateData.timesCaught = data.timesCaught;
+    }
+
+    if (Object.keys(updateData).length === 0) {
+      const sprites = JSON.parse(JSON.stringify(dbPokemon.sprites));
+      return PokemonEntity.fromObject({ ...dbPokemon, sprites });
+    }
+
     const updatedPokemon = await prisma.pokemon.update({
       where: { id: dbPokemon.id },
-      data,
+      data: updateData,
     });
 
     if (!updatedPokemon) throw new Error("Pokemon not found in db");
@@ -94,7 +113,7 @@ export class PokemonDataSourceImpl implements PokemonDataSource {
   }
 
   async createPokemon(
-    pokemon: CreatePokemonDto,
+    pokemon: PokemonEntity,
     user?: UserEntity,
   ): Promise<PokemonEntity> {
     const { name, types, ability, sprites, timesCaught } = pokemon;

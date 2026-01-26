@@ -2,7 +2,7 @@ import { PokemonBuilder } from "../../domain/entities/PokemonBuilder.entity.js";
 import { TOTAL_OF_POKEMON } from "../../domain/data/constants.js";
 import { EvolutionClient, type Pokemon, PokemonClient } from "pokenode-ts";
 import { PokemonEntity } from "../../domain/entities/pokemon.entity.js";
-import type { PokemonRepository } from "../../domain/repositories/pokemon.repository.js";
+import type { PokemonDataSource } from "../../domain/datasource/pokemon.datasource.js";
 
 export class PokeApiService {
   private api: PokemonClient;
@@ -10,7 +10,7 @@ export class PokeApiService {
   private evolution: EvolutionClient;
   private currentPokemon: PokemonEntity | null = null;
 
-  constructor(public readonly repository: PokemonRepository) {
+  constructor(public readonly repository: PokemonDataSource) {
     this.api = new PokemonClient();
     this.builder = new PokemonBuilder();
     this.evolution = new EvolutionClient();

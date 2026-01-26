@@ -1,42 +1,40 @@
-import type { CreateUserDto } from "../../domain/dto/user/create-user.dto.js";
-import type { UpdateUserDto } from "../../domain/dto/user/update-user.dto.js";
+import type { PokemonDataSource } from "../../domain/datasource/pokemon.datasource.js";
+import type { UserDataSource } from "../../domain/datasource/user.datasource.js";
 import type { PokemonEntity } from "../../domain/entities/pokemon.entity.js";
 import type { UserEntity } from "../../domain/entities/users.entity.js";
-import { PokemonRepository } from "../../domain/repositories/pokemon.repository.js";
-import { UserRepository } from "../../domain/repositories/user.repository.js";
 import { PokeApiService } from "./pokeapi.service.js";
 
 export class DBService {
   currentPokemon: PokemonEntity | null = null;
 
   constructor(
-    private readonly userRepository: UserRepository,
-    private readonly pokemonRepository: PokemonRepository,
+    private readonly userDataSource: UserDataSource,
+    private readonly pokemonDataSource: PokemonDataSource,
     private readonly pokemonService: PokeApiService,
   ) {}
 
-  async createUser(user: CreateUserDto) {
-    return await this.userRepository.createUser(user);
+  async createUser(user: UserEntity) {
+    return await this.userDataSource.createUser(user);
   }
 
   async findUserById(id: number) {
-    return await this.userRepository.findUserById(id);
+    return await this.userDataSource.findUserById(id);
   }
 
   async findUserByUsername(username: string) {
-    return await this.userRepository.findUserByUsername(username);
+    return await this.userDataSource.findUserByUsername(username);
   }
 
   async findPokemonById(id: number) {
-    return await this.pokemonRepository.findPokemonById(id);
+    return await this.pokemonDataSource.findPokemonById(id);
   }
 
   async findPokemons(ids: number[]) {
-    return await this.pokemonRepository.findPokemons(ids);
+    return await this.pokemonDataSource.findPokemons(ids);
   }
 
   async findPokemonByName(name: string) {
-    return await this.pokemonRepository.findPokemonByName(name);
+    return await this.pokemonDataSource.findPokemonByName(name);
   }
 
   async createPokemon(pokemon?: string): Promise<PokemonEntity> {
@@ -46,19 +44,19 @@ export class DBService {
   }
 
   async insertPokemonIntoDB(pokemon: PokemonEntity, user?: UserEntity) {
-    return await this.pokemonRepository.createPokemon(pokemon, user);
+    return await this.pokemonDataSource.createPokemon(pokemon, user);
   }
 
   async updatePokemon(pokemon: PokemonEntity, data: Partial<PokemonEntity>) {
-    return await this.pokemonRepository.updatePokemon(pokemon, data);
+    return await this.pokemonDataSource.updatePokemon(pokemon, data);
   }
 
-  async updateUser(user: UserEntity, data: UpdateUserDto) {
-    return await this.userRepository.updateUser(user, data);
+  async updateUser(user: UserEntity, data: Partial<UserEntity>) {
+    return await this.userDataSource.updateUser(user, data);
   }
 
   async deleteUserByUsername(username: string) {
-    return await this.userRepository.deleteUserByUsername(username);
+    return await this.userDataSource.deleteUserByUsername(username);
   }
 
   get getCurrentPokemon() {

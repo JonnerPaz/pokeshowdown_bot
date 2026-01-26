@@ -13,9 +13,9 @@ I want to build fun stuff and that's it.
 > For security purposes, keep this to yourself.
 
 1. Clone this repository
-1. Inside the project folder, Run `npm i` command
+2. Inside the project folder, run `pnpm install` (Node 22 + Corepack)
 3. Setup your `.env` file. A sample file is provided `env-sample.env`
-3. Run `npm start` command
+4. Run `pnpm dev` for watch mode or `pnpm start` for a single run
     - **API_KEY:** The token that [@BotFather](https://telegram.me/BotFather) gives you.
     - **PORT:** Port on which the bot will run
     - **Resource:** URL where webhooks are handled

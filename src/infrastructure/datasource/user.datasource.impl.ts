@@ -3,8 +3,6 @@ import { UserDataSource } from "../../domain/datasource/user.datasource.js";
 import { UserEntity } from "../../domain/entities/users.entity.js";
 import { ErrorEntity } from "../../domain/entities/error.entity.js";
 import { PokemonEntity } from "../../domain/entities/pokemon.entity.js";
-import type { CreateUserDto } from "../../domain/dto/user/create-user.dto.js";
-import type { UpdateUserDto } from "../../domain/dto/user/update-user.dto.js";
 
 export class UserDataSourceImpl implements UserDataSource {
   constructor(
@@ -37,7 +35,7 @@ export class UserDataSourceImpl implements UserDataSource {
     return new UserEntity({ ...user, pokemons });
   }
 
-  public async createUser(user: CreateUserDto): Promise<UserEntity> {
+  public async createUser(user: UserEntity): Promise<UserEntity> {
     const { pokemons, updatedAt, createdAt, username } = user;
 
     const pokemonData = pokemons.map((pokemon) => {
@@ -68,7 +66,7 @@ export class UserDataSourceImpl implements UserDataSource {
 
   public async updateUser(
     user: UserEntity,
-    data: UpdateUserDto,
+    data: Partial<UserEntity>,
   ): Promise<UserEntity> {
     const { id } = user;
     if (!id) throw new Error("Id not found");
