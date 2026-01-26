@@ -1,6 +1,7 @@
 import { PokemonRepository } from "../../domain/repositories/pokemon.repository.js";
 import { PokemonEntity } from "../../domain/entities/pokemon.entity.js";
 import type { PokemonDataSource } from "../../domain/datasource/pokemon.datasource.js";
+import type { UserEntity } from "../../domain/entities/users.entity.js";
 
 export class PokemonRepositoryImpl implements PokemonRepository {
   constructor(private readonly datasource: PokemonDataSource) {}
@@ -13,7 +14,7 @@ export class PokemonRepositoryImpl implements PokemonRepository {
     return await this.datasource.findPokemons(ids);
   }
 
-  async findPokemonByName(name: string): Promise<PokemonEntity> {
+  async findPokemonByName(name: string): Promise<PokemonEntity | null> {
     return await this.datasource.findPokemonByName(name);
   }
 
@@ -24,8 +25,11 @@ export class PokemonRepositoryImpl implements PokemonRepository {
     return await this.datasource.updatePokemon(pokemon, data);
   }
 
-  async createPokemon(pokemon: any): Promise<PokemonEntity> {
-    return await this.datasource.createPokemon(pokemon);
+  async createPokemon(
+    pokemon: PokemonEntity,
+    user?: UserEntity,
+  ): Promise<PokemonEntity> {
+    return await this.datasource.createPokemon(pokemon, user);
   }
 
   async deletePokemonById(id: number): Promise<void> {

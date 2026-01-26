@@ -19,8 +19,8 @@ export class UserDataSourceImpl implements UserDataSource {
 
     if (!user) return null;
 
-    const pokemonIds = user.pokemons.map((pokemon) => pokemon.id);
-    return new UserEntity({ ...user, pokemonIds });
+    const pokemons = JSON.parse(JSON.stringify(user.pokemons));
+    return new UserEntity({ ...user, pokemons });
   }
 
   public async findUserByUsername(
@@ -33,8 +33,8 @@ export class UserDataSourceImpl implements UserDataSource {
 
     if (!user) return null;
 
-    const pokemonIds = user.pokemons.map((pokemon) => pokemon.id);
-    return new UserEntity({ ...user, pokemonIds });
+    const pokemons = JSON.parse(JSON.stringify(user.pokemons));
+    return new UserEntity({ ...user, pokemons });
   }
 
   public async createUser(user: CreateUserDto): Promise<UserEntity> {
@@ -63,9 +63,7 @@ export class UserDataSourceImpl implements UserDataSource {
       include: { pokemons: true },
     });
 
-    const pokemonIds = createdUser.pokemons.map((pokemon) => pokemon.id);
-
-    return new UserEntity({ ...createdUser, pokemonIds });
+    return new UserEntity({ ...createdUser, pokemons });
   }
 
   public async updateUser(
@@ -73,31 +71,45 @@ export class UserDataSourceImpl implements UserDataSource {
     data: UpdateUserDto,
   ): Promise<UserEntity> {
     const { id } = user;
+    if (!id) throw new Error("Id not found");
+
     const authUser = await this.findUserById(id);
     if (!authUser) throw new Error("Username not found");
 
-    const pokemonToUpdate = data.pokemons.find((pokemon) =>
-      authUser.pokemonIds.includes(pokemon.id as number),
-    );
+    const validPokemonUpdates = data.pokemons
+      ? data.pokemons.filter(
+          (p) => p.id && authUser.pokemons.map((p) => p.id).includes(p.id),
+        )
+      : [];
 
-    if (!pokemonToUpdate || pokemonToUpdate.id === null)
-      throw new Error("Pokemon not found");
+    const pokemonUpdateOperations = validPokemonUpdates.map((pokemon) => ({
+      where: { id: pokemon.id! },
+      data: { timesCaught: pokemon.timesCaught },
+    }));
 
-    const { username, pokemonIds } = authUser;
-    const updatedUser = await prisma.user.update({
-      where: { username },
+    const updatedUserFromDb = await prisma.user.update({
+      where: { id },
       data: {
-        ...user,
+        ...(data.username && { username: data.username }),
+
+        // Update the relations
         pokemons: {
-          update: {
-            where: { id: pokemonToUpdate.id },
-            data: { timesCaught: pokemonToUpdate.timesCaught },
-          },
+          update: pokemonUpdateOperations,
+        },
+      },
+
+      // Include pokemons so we can reconstruct the Entity's pokemonIds array accurately
+      include: {
+        pokemons: {
+          select: { id: true },
         },
       },
     });
 
-    return new UserEntity({ ...updatedUser, pokemonIds });
+    return new UserEntity({
+      ...updatedUserFromDb,
+      pokemons: JSON.parse(JSON.stringify(updatedUserFromDb.pokemons)),
+    });
   }
 
   public async deleteUserById(id: number): Promise<void> {

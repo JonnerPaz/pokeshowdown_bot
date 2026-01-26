@@ -37,14 +37,21 @@ export class PokemonEntity {
 
   public static fromObject(props: Partial<PokemonEntity>): PokemonEntity {
     try {
-      const { name, types, ability, sprites, timesCaught = 1 } = props;
+      const {
+        id = null,
+        name,
+        types,
+        ability,
+        sprites,
+        timesCaught = 1,
+      } = props;
       if (!name) throw new Error("Name is required");
       if (!types) throw new Error("Types are required");
       if (!ability) throw new Error("Ability is required");
       if (!sprites) throw new Error("Sprites are required");
 
       return new PokemonEntity({
-        id: null,
+        id,
         name,
         types,
         ability,

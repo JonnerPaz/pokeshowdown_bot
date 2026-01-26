@@ -7,6 +7,8 @@ import type { Context } from "grammy";
 import { addConversation } from "./addConversation.decorator.js";
 import { CreateUserDto } from "../../domain/dto/user/create-user.dto.js";
 import type { DBService } from "./db.service.js";
+import { UpdatePokemonDto } from "../../domain/dto/pokemon/update-pokemon.dto.js";
+import { UpdateUserDto } from "../../domain/dto/user/update-user.dto.js";
 
 export class ConversationService<T extends AppContext> {
   public botConversations = new Map<string, Conversation<AppContext>>();
@@ -99,49 +101,12 @@ export class ConversationService<T extends AppContext> {
         return;
       }
 
-      console.log("user.pokemonIds: ", user.pokemonIds);
-      const userPokemons = await this.dbService.findPokemons(user.pokemonIds);
-
-      const pokemonPhotos = userPokemons.map((el) =>
+      const pokemonPhotos = user.pokemons.map((el) =>
         InputMediaBuilder.photo(el.sprites.frontDefault),
       );
 
       await ctx.reply("Your pokemons are:");
       await ctx.api.sendMediaGroup(ctx.chat!.id, pokemonPhotos);
-      return;
-    } catch (err) {
-      ctx.reply("There was an error during request. Please report it");
-      throw err;
-    }
-  }
-
-  public async getMyPokemons(conv: Conversation<T>, ctx: AppContext) {
-    try {
-      const { findPokemons, findUserByUsername } = this.dbService;
-
-      const user = await conv.external((ctx) =>
-        findUserByUsername(ctx.from!.username!),
-      );
-
-      if (!user) {
-        await ctx.reply("You are not registered!");
-        return;
-      }
-
-      const userPokemons = await findPokemons(user.pokemonIds);
-
-      if (userPokemons.length === 0) {
-        await ctx.reply("You have no pokemons!");
-        return;
-      }
-
-      const pokemonPhotos = userPokemons.map((el) =>
-        InputMediaBuilder.photo(el.sprites.frontDefault),
-      );
-
-      await ctx.reply("Your pokemons are:");
-      await ctx.api.sendMediaGroup(ctx.chat!.id, pokemonPhotos);
-
       return;
     } catch (err) {
       ctx.reply("There was an error during request. Please report it");
@@ -192,6 +157,7 @@ export class ConversationService<T extends AppContext> {
     }
   }
 
+  @addConversation
   public async generatePokemon(conv: Conversation<T>, ctx: AppContext) {
     try {
       const [pokemonPhoto, keyboard] = await conv.external(() =>
@@ -212,7 +178,7 @@ export class ConversationService<T extends AppContext> {
         this.dbService.findUserByUsername(choice.callbackQuery.from.username!),
       );
 
-      if (!user) {
+      if (!user || !user.id) {
         await ctx.reply("You are not registered!");
         return;
       }
@@ -222,32 +188,49 @@ export class ConversationService<T extends AppContext> {
         choice.callbackQuery.message!.message_id,
       );
 
-      const pokemons = await this.dbService.findPokemons(user.pokemonIds);
-
+      const { pokemons } = user;
       if (pokemons.length === 6) {
-        await ctx.reply("Your pokemon bag is full!");
+        await ctx.reply(
+          `Your pokemon bag is full! You can't catch ${this.dbService.getCurrentPokemon?.name}`,
+        );
         return;
       }
 
-      await conv.external(() => this.dbService.updateUser({ ...user }));
-
-      const currentPokemon = this.dbService.getCurrentPokemon;
-
-      if (!currentPokemon) {
-        console.error("No current pokemon");
+      if (!this.dbService.getCurrentPokemon) {
         await ctx.reply("There was an error during request. Please report it");
-        throw new Error("There was an error during request. Please report it");
+        throw new Error("NO CURRENT POKEMON");
       }
 
-      return await ctx.reply(
-        `@${user.username} has caught a ${currentPokemon.name}. He has caught ${currentPokemon.name} ${currentPokemon.timesCaught} time${currentPokemon.timesCaught === 1 ? "" : "s"}`,
+      const doesPokemonExist = await this.dbService.findPokemonByName(
+        this.dbService.getCurrentPokemon.name,
       );
+
+      doesPokemonExist
+        ? await conv.external(() =>
+            this.dbService.updatePokemon(this.dbService.getCurrentPokemon!, {
+              timesCaught: this.dbService.getCurrentPokemon!.timesCaught + 1,
+            }),
+          )
+        : // pokemon doesn't exist, create it
+          await conv.external(() =>
+            this.dbService.insertPokemonIntoDB(
+              this.dbService.getCurrentPokemon!,
+              user,
+            ),
+          );
+      await ctx.reply(
+        `@${user.username} has caught a ${this.dbService.getCurrentPokemon.name}.`,
+      );
+
+      this.dbService.setCurrentPokemon = null;
+      return;
     } catch (err) {
       await ctx.reply("There was an error during request. Please report it");
       throw err;
     }
   }
 
+  @addConversation
   public async evolvePokemon(
     conv: Conversation<Context, AppContext>,
     ctx: AppContext,
@@ -267,9 +250,8 @@ export class ConversationService<T extends AppContext> {
         return;
       }
 
-      const userPokemons = await this.dbService.findPokemons(user.pokemonIds);
-      const pokemonNames = userPokemons.map((el) => el.name);
-      const pokemonPhotos = userPokemons.map((el) =>
+      const pokemonNames = user.pokemons.map((el) => el.name);
+      const pokemonPhotos = user.pokemons.map((el) =>
         InputMediaBuilder.photo(el.sprites.frontDefault),
       );
 
@@ -280,7 +262,7 @@ export class ConversationService<T extends AppContext> {
 
       const choice = await conv.waitFrom(ctx.from.id).andFor(":text");
 
-      const pokemon = userPokemons.find(
+      const pokemon = user.pokemons.find(
         (el) => el.name.toLowerCase() === choice!.message!.text.toLowerCase(),
       );
 
@@ -306,6 +288,7 @@ export class ConversationService<T extends AppContext> {
     }
   }
 
+  @addConversation
   public async trade(conv: Conversation, ctx: AppContext) {
     try {
       const userRequest = await conv.external((ctx) =>
@@ -317,14 +300,10 @@ export class ConversationService<T extends AppContext> {
         return;
       }
 
-      const userRequestPokemons = await this.dbService.findPokemons(
-        userRequest.pokemonIds,
-      );
-
-      const userRequestpokemonPhotos = userRequestPokemons.map((el) =>
+      const userRequestpokemonPhotos = userRequest.pokemons.map((el) =>
         InputMediaBuilder.photo(el.sprites.frontDefault),
       );
-      const userRequestpokemonNames = userRequestPokemons.map((el) => el.name);
+      const userRequestpokemonNames = userRequest.pokemons.map((el) => el.name);
 
       await ctx.api.sendMediaGroup(ctx.chat!.id, userRequestpokemonPhotos);
       await ctx.reply(
@@ -333,7 +312,7 @@ export class ConversationService<T extends AppContext> {
 
       const choice = await conv.waitFrom(ctx.from!.id).andFor(":text");
 
-      const userRequestpokemon = userRequestPokemons.find(
+      const userRequestpokemon = userRequest.pokemons.find(
         (el) => el.name.toLowerCase() === choice?.message?.text.toLowerCase(),
       );
 
@@ -369,14 +348,10 @@ export class ConversationService<T extends AppContext> {
         return;
       }
 
-      const userResponsePokemons = await this.dbService.findPokemons(
-        userResponse.pokemonIds,
-      );
-
-      const userResponsePokemonPhotos = userResponsePokemons.map((el) =>
+      const userResponsePokemonPhotos = userResponse.pokemons.map((el) =>
         InputMediaBuilder.photo(el.sprites.frontDefault),
       );
-      const userResponsePokemonNames = userResponsePokemons.map(
+      const userResponsePokemonNames = userResponse.pokemons.map(
         (el) => el.name,
       );
 
@@ -392,7 +367,7 @@ export class ConversationService<T extends AppContext> {
         .waitForCallbackQuery(/trade-accept/)
         .andFrom(userCallback.callbackQuery.from);
 
-      const userResponsepokemon = userResponsePokemons.find(
+      const userResponsepokemon = userResponse.pokemons.find(
         (el) =>
           el.name.toLowerCase() ===
           userResponseChoice.callbackQuery.data.toLowerCase(),
@@ -469,7 +444,6 @@ export class ConversationService<T extends AppContext> {
     [InputMediaPhoto, InlineKeyboard]
   > {
     const pokemon = await this.dbService.createPokemon();
-    this.dbService.setCurrentPokemon = pokemon;
     const keyboard = new InlineKeyboard().text("Catch", "catch");
     return [InputMediaBuilder.photo(pokemon.sprites.frontDefault), keyboard];
   }

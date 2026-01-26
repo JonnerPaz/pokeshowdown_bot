@@ -15,59 +15,65 @@ export class DBService {
     private readonly pokemonService: PokeApiService,
   ) {}
 
-  createUser(user: CreateUserDto) {
-    return this.userRepository.createUser(user);
+  async createUser(user: CreateUserDto) {
+    return await this.userRepository.createUser(user);
   }
 
-  findUserById(id: number) {
-    return this.userRepository.findUserById(id);
+  async findUserById(id: number) {
+    return await this.userRepository.findUserById(id);
   }
 
-  findUserByUsername(username: string) {
-    return this.userRepository.findUserByUsername(username);
+  async findUserByUsername(username: string) {
+    return await this.userRepository.findUserByUsername(username);
   }
 
-  findPokemonById(id: number) {
-    return this.pokemonRepository.findPokemonById(id);
+  async findPokemonById(id: number) {
+    return await this.pokemonRepository.findPokemonById(id);
   }
 
-  findPokemons(ids: number[]) {
-    return this.pokemonRepository.findPokemons(ids);
+  async findPokemons(ids: number[]) {
+    return await this.pokemonRepository.findPokemons(ids);
   }
 
-  findPokemonByName(name: string) {
-    return this.pokemonRepository.findPokemonByName(name);
+  async findPokemonByName(name: string) {
+    return await this.pokemonRepository.findPokemonByName(name);
   }
 
-  createPokemon(pokemon?: string): Promise<PokemonEntity> {
-    return this.pokemonService.createPokemon(pokemon);
+  async createPokemon(pokemon?: string): Promise<PokemonEntity> {
+    const newPokemon = await this.pokemonService.createPokemon(pokemon);
+    this.setCurrentPokemon = newPokemon;
+    return newPokemon;
   }
 
-  updatePokemon(pokemon: PokemonEntity, data: Partial<PokemonEntity>) {
-    return this.pokemonRepository.updatePokemon(pokemon, data);
+  async insertPokemonIntoDB(pokemon: PokemonEntity, user?: UserEntity) {
+    return await this.pokemonRepository.createPokemon(pokemon, user);
   }
 
-  updateUser(user: UserEntity, data: UpdateUserDto) {
-    return this.userRepository.updateUser(user, data);
+  async updatePokemon(pokemon: PokemonEntity, data: Partial<PokemonEntity>) {
+    return await this.pokemonRepository.updatePokemon(pokemon, data);
   }
 
-  deleteUserByUsername(username: string) {
-    return this.userRepository.deleteUserByUsername(username);
+  async updateUser(user: UserEntity, data: UpdateUserDto) {
+    return await this.userRepository.updateUser(user, data);
+  }
+
+  async deleteUserByUsername(username: string) {
+    return await this.userRepository.deleteUserByUsername(username);
   }
 
   get getCurrentPokemon() {
     return this.pokemonService.getCurrentPokemon;
   }
 
-  set setCurrentPokemon(pokemon: PokemonEntity) {
+  set setCurrentPokemon(pokemon: PokemonEntity | null) {
     this.pokemonService.setCurrentPokemon = pokemon;
   }
 
-  evolvePokemon(pokemon: PokemonEntity) {
-    return this.pokemonService.evolvePokemon(pokemon);
+  async evolvePokemon(pokemon: PokemonEntity) {
+    return await this.pokemonService.evolvePokemon(pokemon);
   }
 
-  createStarterPokemon() {
-    return this.pokemonService.createStarterPokemon();
+  async createStarterPokemon() {
+    return await this.pokemonService.createStarterPokemon();
   }
 }

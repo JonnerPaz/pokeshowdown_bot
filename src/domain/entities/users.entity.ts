@@ -1,33 +1,35 @@
+import type { PokemonEntity } from "./pokemon.entity.js";
+
 export interface UserEntityProps {
-  id: number;
+  id: number | null;
   username: string;
   createdAt: Date;
   updatedAt: Date;
-  pokemonIds: number[];
+  pokemons: PokemonEntity[];
 }
 
 export class UserEntity {
-  id: number;
+  id: number | null = null;
   username: string;
   readonly createdAt: Date;
   updatedAt: Date;
 
   // Use an array to store pokemon ids,
   // not the actual instance which will be stored in the database
-  pokemonIds: number[];
+  pokemons: PokemonEntity[];
 
   constructor(props: UserEntityProps) {
     const {
-      id,
+      id = null,
       username,
       createdAt = new Date(),
       updatedAt,
-      pokemonIds,
+      pokemons,
     } = props;
     this.id = id;
     this.username = username;
     this.createdAt = createdAt;
     this.updatedAt = updatedAt;
-    this.pokemonIds = pokemonIds;
+    this.pokemons = pokemons;
   }
 }

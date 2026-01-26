@@ -3,6 +3,7 @@ import { PokemonEntity } from "../../domain/entities/pokemon.entity.js";
 import { prisma } from "../../data/postgres/index.js";
 import type { CreatePokemonDto } from "../../domain/dto/pokemon/create-pokemon.dto.js";
 import type { UpdatePokemonDto } from "../../domain/dto/pokemon/update-pokemon.dto.js";
+import type { UserEntity } from "../../domain/entities/users.entity.js";
 
 export class PokemonDataSourceImpl implements PokemonDataSource {
   async findPokemonById(id: number): Promise<PokemonEntity> {
@@ -48,13 +49,13 @@ export class PokemonDataSourceImpl implements PokemonDataSource {
     }
   }
 
-  async findPokemonByName(name: string): Promise<PokemonEntity> {
+  async findPokemonByName(name: string): Promise<PokemonEntity | null> {
     try {
       const pokemon = await prisma.pokemon.findUnique({ where: { name } });
-      if (!pokemon) throw new Error("Pokemon not found in db");
-      const pokemonSprites = JSON.parse(pokemon.sprites?.toString() as string);
+      if (!pokemon) return null;
 
-      console.log("Coming from datasource", "pokemonSprites: ", pokemonSprites);
+      const pokemonSprites = JSON.parse(JSON.stringify(pokemon.sprites));
+
       return PokemonEntity.fromObject({ ...pokemon, sprites: pokemonSprites });
     } catch (error) {
       if (error instanceof Error)
@@ -92,7 +93,10 @@ export class PokemonDataSourceImpl implements PokemonDataSource {
     });
   }
 
-  async createPokemon(pokemon: CreatePokemonDto): Promise<PokemonEntity> {
+  async createPokemon(
+    pokemon: CreatePokemonDto,
+    user?: UserEntity,
+  ): Promise<PokemonEntity> {
     const { name, types, ability, sprites, timesCaught } = pokemon;
 
     const createdPokemon = await prisma.pokemon.create({
@@ -105,9 +109,20 @@ export class PokemonDataSourceImpl implements PokemonDataSource {
       },
     });
 
-    const pokemonSprites = JSON.parse(
-      createdPokemon.sprites?.toString() as string,
-    );
+    if (user && user.id) {
+      await prisma.user.update({
+        where: { id: user.id },
+        data: {
+          pokemons: {
+            connect: {
+              id: createdPokemon.id,
+            },
+          },
+        },
+      });
+    }
+
+    const pokemonSprites = JSON.parse(JSON.stringify(createdPokemon.sprites));
 
     return PokemonEntity.fromObject({
       ...createdPokemon,

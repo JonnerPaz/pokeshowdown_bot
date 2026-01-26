@@ -90,7 +90,7 @@ export class PokeApiService {
       .build();
   }
 
-  public set setCurrentPokemon(pokemon: PokemonEntity) {
+  public set setCurrentPokemon(pokemon: PokemonEntity | null) {
     this.currentPokemon = pokemon;
   }
 

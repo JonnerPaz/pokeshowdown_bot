@@ -23,7 +23,7 @@ export class UpdateUserDto {
     this.pokemons = props.pokemons;
   }
 
-  static fromObject(props: UpdateUserDto): UpdateUserDto {
+  static fromObject(props: { [key: string]: any }): UpdateUserDto {
     const { id, username, createdAt, updatedAt, pokemons } = props;
     if (!id) throw new Error("Id is required");
     if (!username) throw new Error("Username is required");

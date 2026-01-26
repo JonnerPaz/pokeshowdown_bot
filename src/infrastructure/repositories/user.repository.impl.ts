@@ -1,6 +1,7 @@
 import type { UserRepository } from "../../domain/repositories/user.repository.js";
 import { UserEntity } from "../../domain/entities/users.entity.js";
 import { UserDataSource } from "../../domain/datasource/user.datasource.js";
+import type { UpdateUserDto } from "../../domain/dto/user/update-user.dto.js";
 
 export class UserRepositoryImpl implements UserRepository {
   constructor(public dataSource: UserDataSource) {}
@@ -17,7 +18,7 @@ export class UserRepositoryImpl implements UserRepository {
 
   public async updateUser(
     user: UserEntity,
-    data: Partial<UserEntity>,
+    data: UpdateUserDto,
   ): Promise<UserEntity> {
     return await this.dataSource.updateUser(user, data);
   }
