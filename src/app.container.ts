@@ -1,10 +1,17 @@
-import { MainBot } from "./presentation/bot.container.js";
+import { Server } from "./presentation/server.js";
+import { MainBot } from "./presentation/mainbot.js";
 
 export class AppContainer {
-  public static async setup(): Promise<MainBot> {
-    const apiKey = process.env.API_KEY;
-    if (!apiKey) return new Error("API_KEY is not defined");
+  public static async setup() {
+    const apiKey = process.env.API_KEY as string;
+    const botController = await MainBot.getInstance(apiKey);
 
-    return new MainBot({ apiKey }).setup();
+    await botController.setup();
+    const server = new Server({
+      port: +process.env.PORT! || 3000,
+      bot: botController.bot,
+    });
+
+    await server.setup();
   }
 }

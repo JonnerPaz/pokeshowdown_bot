@@ -1,4 +1,4 @@
-export interface ISpriteType {
+export interface Sprites {
   frontDefault: string;
   frontShiny: string;
   backDefault: string;

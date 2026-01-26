@@ -1,0 +1,31 @@
+generator client {
+  provider = "prisma-client"
+  output   = "../generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+model User {
+  id        Int       @id @default(autoincrement())
+  username  String    @unique
+  createdAt DateTime  @default(now()) @db.Timestamp(6)
+  updatedAt DateTime  @updatedAt @default(now()) @db.Timestamp(6)
+
+  pokemons  Pokemon[]
+}
+
+model Pokemon {
+  id        Int           @id @default(autoincrement())
+  name      String        @unique
+  types     String[]
+  ability   String
+  sprites   Json          @db.Json
+  createdAt DateTime      @default(now()) @db.Timestamp(6)
+  timesCaught Int         @default(1)
+  userId    Int?          @map("user_id")
+
+  user      User?         @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
