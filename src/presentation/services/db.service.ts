@@ -68,7 +68,11 @@ export class DBService {
   }
 
   async evolvePokemon(pokemon: PokemonEntity) {
-    return await this.pokemonService.evolvePokemon(pokemon);
+    const evolvedPokemon = await this.pokemonService.evolvePokemon(pokemon);
+    const updatedPokemon = await this.updatePokemon(pokemon, {
+      ...evolvedPokemon,
+    });
+    return updatedPokemon;
   }
 
   async createStarterPokemon() {

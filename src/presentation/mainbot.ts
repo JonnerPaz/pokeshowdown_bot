@@ -49,6 +49,8 @@ export class MainBot {
     ]);
 
     this.bot.use(this.loginController.middleware());
+
+    await this.loginController.registerBotMenuCommands();
   }
 
   private registerConversations() {

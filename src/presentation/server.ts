@@ -29,8 +29,6 @@ export class Server {
         console.log(`Server running on port ${this.port}`);
       });
 
-      console.log("COMMANDS REGISTERED", await this.bot.api.getMyCommands());
-
       this.bot.start();
 
       // this.bot.api.setWebhook(`https://jonner.loca.lt/bot/webhook`);

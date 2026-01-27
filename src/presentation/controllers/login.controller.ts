@@ -141,4 +141,12 @@ export class LoginController<T extends AppContext> {
 
     return this.useCommand("TRADE", async (ctx: T) => await handler(ctx));
   }
+
+  public async registerBotMenuCommands(): Promise<void> {
+    await this.bot.api.setMyCommands(getAllCommands(LanguageCodes.English));
+
+    await this.bot.api.setMyCommands(getAllCommands(LanguageCodes.Spanish), {
+      language_code: LanguageCodes.Spanish,
+    });
+  }
 }

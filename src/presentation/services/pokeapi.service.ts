@@ -145,12 +145,11 @@ export class PokeApiService {
       const evoQuery = +pokemonToEvolve.evolution_chain.url.split("/").at(-2)!;
 
       // evolution chain
-      const evolution = await this.evolution.getEvolutionChainById(evoQuery);
+      const { chain } = await this.evolution.getEvolutionChainById(evoQuery);
       const evolutionChain = {
-        firstForm: evolution.chain.species.name,
-        secondForm: evolution.chain.evolves_to.at(0)?.species.name,
-        thirdForm: evolution.chain.evolves_to.at(0)?.evolves_to.at(0)?.species
-          .name,
+        firstForm: chain.species.name,
+        secondForm: chain.evolves_to.at(0)?.species.name,
+        thirdForm: chain.evolves_to.at(0)?.evolves_to.at(0)?.species.name,
       };
 
       // evolution resolver

@@ -163,7 +163,8 @@ export class ConversationService<T extends AppContext> {
         this.generateWildPokemon(),
       );
 
-      await ctx.api.sendMediaGroup(ctx.chat!.id, [pokemonPhoto]);
+      const media = await ctx.api.sendMediaGroup(ctx.chat!.id, [pokemonPhoto]);
+
       await ctx.reply(
         "A wild pokemon has appeared! Touch the buttom to catch it!",
         { reply_markup: keyboard },
@@ -176,19 +177,22 @@ export class ConversationService<T extends AppContext> {
       const user = await conv.external((_) =>
         this.dbService.findUserByUsername(choice.callbackQuery.from.username!),
       );
-
       if (!user || !user.id) {
         await ctx.reply("You are not registered!");
         return;
       }
 
+      // delete message and photos
+      for (const photo of media) {
+        await ctx.api.deleteMessage(choice.chat!.id, photo.message_id);
+      }
       await ctx.api.deleteMessage(
         choice.chat!.id,
         choice.callbackQuery.message!.message_id,
       );
 
       const { pokemons } = user;
-      if (pokemons.length === 6) {
+      if (pokemons.length >= 6) {
         await ctx.reply(
           `Your pokemon bag is full! You can't catch ${this.dbService.getCurrentPokemon?.name}`,
         );
@@ -206,8 +210,8 @@ export class ConversationService<T extends AppContext> {
 
       doesPokemonExist
         ? await conv.external(() =>
-            this.dbService.updatePokemon(this.dbService.getCurrentPokemon!, {
-              timesCaught: this.dbService.getCurrentPokemon!.timesCaught + 1,
+            this.dbService.updatePokemon(doesPokemonExist, {
+              timesCaught: doesPokemonExist.timesCaught + 1,
             }),
           )
         : // pokemon doesn't exist, create it
@@ -235,19 +239,8 @@ export class ConversationService<T extends AppContext> {
     ctx: AppContext,
   ) {
     try {
-      if (!ctx.from?.username) {
-        await ctx.reply("Error: User not found");
-        return;
-      }
-
-      const user = await conv.external((ctx) =>
-        this.dbService.findUserByUsername(ctx.from!.username as string),
-      );
-
-      if (!user) {
-        await ctx.reply("You are not registered!");
-        return;
-      }
+      const user = await this.checkUser(ctx.from!.username!, ctx);
+      if (!user) return;
 
       const pokemonNames = user.pokemons.map((el) => el.name);
       const pokemonPhotos = user.pokemons.map((el) =>
@@ -259,8 +252,7 @@ export class ConversationService<T extends AppContext> {
         `Which pokemon do you want to evolve? send a message with the name of the pokemon you want to evolve. Your pokemons: ${pokemonNames.join(", ")}`,
       );
 
-      const choice = await conv.waitFrom(ctx.from.id).andFor(":text");
-
+      const choice = await conv.waitFrom(ctx.from!.id).andFor(":text");
       const pokemon = user.pokemons.find(
         (el) => el.name.toLowerCase() === choice!.message!.text.toLowerCase(),
       );
@@ -442,8 +434,17 @@ export class ConversationService<T extends AppContext> {
   private async generateWildPokemon(): Promise<
     [InputMediaPhoto, InlineKeyboard]
   > {
-    const pokemon = await this.dbService.createPokemon();
+    const pokemon = await this.dbService.createPokemon("pikachu");
     const keyboard = new InlineKeyboard().text("Catch", "catch");
     return [InputMediaBuilder.photo(pokemon.sprites.frontDefault), keyboard];
+  }
+
+  private async checkUser(userName: string, ctx: AppContext) {
+    const user = await this.dbService.findUserByUsername(userName);
+    if (!user) {
+      await ctx.reply("You are not registered!");
+      return null;
+    }
+    return user;
   }
 }
