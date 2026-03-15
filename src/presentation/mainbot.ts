@@ -16,7 +16,7 @@ export class MainBot {
   public readonly bot: Bot<AppContext>;
   public static instance: MainBot;
 
-  private constructor(apiKey: string = process.env.API_KEY as string) {
+  constructor(apiKey: string = process.env.API_KEY as string) {
     this.bot = new Bot<AppContext>(apiKey);
     const userDatasource = new UserDataSourceImpl();
     const pokemonDatasource = new PokemonDataSourceImpl();
@@ -56,24 +56,6 @@ export class MainBot {
   private registerConversations() {
     for (const [name, conversation] of botConversations.entries()) {
       this.bot.use(createConversation(conversation, name));
-    }
-  }
-
-  public static async getInstance(apiKey?: string) {
-    if (!apiKey) throw new Error("API_KEY is not defined");
-
-    if (!MainBot.instance) {
-      MainBot.instance = new MainBot(apiKey);
-    }
-
-    return MainBot.instance;
-  }
-
-  public async setup() {
-    try {
-      return this.bot;
-    } catch (error) {
-      throw new Error(error as string);
     }
   }
 }
