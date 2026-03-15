@@ -12,25 +12,58 @@ I want to build fun stuff and that's it.
 > This file mentions some configurations that, in case you decide to run your own instance of this bot, you CAN'T share with anyone, including your bot token, the database password, nor any data that goes inside the .env file.
 > For security purposes, keep this to yourself.
 
-1. Clone this repository
-2. Inside the project folder, run `pnpm install` (Node 22 + Corepack)
-3. Setup your `.env` file. A sample file is provided `env-sample.env`
-4. Run `pnpm dev` for watch mode or `pnpm start` for a single run
-    - **API_KEY:** The token that [@BotFather](https://telegram.me/BotFather) gives you.
-    - **PORT:** Port on which the bot will run
-    - **Resource:** URL where webhooks are handled
-    - **AUTHOR:** Author of the bot. Mine is used by default, but you can leave yours
+### Prerequisites
 
-> To run this bot using webhooks, you must use a website that supports webhooks. I use [localhost.run](https://localhost.run/) when testing the bot locally.
+- **Node.js** v22+
+- **pnpm** (Package manager)
+- **Docker** (For local PostgreSQL database)
+
+### Installation & Setup
+
+1. **Clone the repository**
+
+2. **Install dependencies**
+   ```bash
+   pnpm install
+   ```
+
+3. **Configure Environment**
+   - Copy `env-sample.env` to `.env`.
+   - Fill in your `API_KEY` (from @BotFather).
+   - The default database settings in `env-sample.env` work out-of-the-box with the provided Docker setup.
+
+4. **Start the Database**
+   Start the PostgreSQL container in the background:
+   ```bash
+   docker compose up -d
+   ```
+
+5. **Initialize Database Schema**
+   Generate the Prisma client and run migrations to create the database tables:
+   ```bash
+   pnpm run prisma:generate
+   pnpm run prisma:migrate
+   ```
+
+6. **Run the Bot**
+   - **Development (Watch Mode):**
+     ```bash
+     pnpm dev
+     ```
+   - **Production (Single Run):**
+     ```bash
+     pnpm start
+     ```
+
+> **Note:** To test webhooks locally, you'll need a tunneling service like [localhost.run](https://localhost.run/) or ngrok to expose your local port.
 
 ## 👤 Core Commands
 
-- `/register:` Register a user into the bot. Note that if you're not registered into the bot.
-- `/delete_account:` This deletes your user (and all your pokemons) from the bot.
-- `/pokemongenerate:` Generate random pokemons.
-- `/pokemonsummary:` Shows a brief explanation of your pokemons.
-- `/deleteaccount:` Delete your account from PokeBotShowdown
-- `/evolve:` Evolve your pokemon once it reachs certain limit
-- `/help:` Show all commands
+- `/register` - Register a user into the bot.
+- `/pokemongenerate` - Generate random pokemons.
+- `/pokemonsummary` - Shows a brief summary of your captured pokemons.
+- `/evolve` - Evolve your pokemon once it reaches certain criteria.
+- `/delete_account` - Delete your user and all data from the bot.
+- `/help` - Show all available commands.
 
-All commands are case sensitive and must start with `/`. To see more commands, type `/help` or check `/src/shared/commands.ts`
+All commands are case sensitive and must start with `/`.
