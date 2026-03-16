@@ -2,7 +2,6 @@ import type { AppContext } from "./data/types.js";
 import { Bot } from "grammy";
 import { commands, LanguageCodes } from "@grammyjs/commands";
 import { conversations, createConversation } from "@grammyjs/conversations";
-import { ConversationService } from "./services/conversation.service.js";
 import { PokeApiService } from "./services/pokeapi.service.js";
 import { UserDataSourceImpl } from "../infrastructure/datasource/user.datasource.impl.js";
 import { PokemonDataSourceImpl } from "../infrastructure/datasource/pokemon.datasource.impl.js";
@@ -12,6 +11,8 @@ import { AuthController } from "./controllers/Auth.controller.js";
 import { PokemonController } from "./controllers/Pokemon.controller.js";
 import { getAllCommands } from "./controllers/commands.js";
 import { SystemController } from "./controllers/System.controller.js";
+import { AuthConversation } from "./services/Auth.conversation.service.js";
+import { PokemonConversation } from "./services/Pokemon.conversation.service.js";
 
 export class MainBot {
   private authController: AuthController;
@@ -28,8 +29,8 @@ export class MainBot {
 
     const pokeApi = new PokeApiService(pokemonDatasource);
     const dbService = new DBService(userDatasource, pokemonDatasource, pokeApi);
-    const conversationService = new ConversationService(dbService);
-
+    const authConversation = new AuthConversation(dbService);
+    const pokemonConversation = new PokemonConversation(dbService);
     // Setup core services
     this.bot.use(commands());
     this.bot.use(conversations());
