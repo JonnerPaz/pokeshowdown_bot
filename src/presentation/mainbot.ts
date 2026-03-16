@@ -11,7 +11,7 @@ import { botConversations } from "./services/addConversation.decorator.js";
 import { DBService } from "./services/db.service.js";
 
 export class MainBot {
-  private loginController: LoginController<AppContext>;
+  private loginController: LoginController;
 
   public readonly bot: Bot<AppContext>;
   public static instance: MainBot;

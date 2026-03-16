@@ -1,33 +1,16 @@
 import type { AppContext } from "../data/types.js";
 import { Bot } from "grammy";
-import {
-  getAllCommands,
-  getCommandInfo,
-  type CommandKeys,
-} from "./commands.js";
+import { getAllCommands } from "./commands.js";
 import { CommandGroup, LanguageCodes } from "@grammyjs/commands";
-import { Command } from "@grammyjs/commands";
+import { BaseCommandController } from "./BaseCommandController.js";
 
-export class LoginController<T extends AppContext> {
+type T = AppContext;
+
+export class LoginController extends BaseCommandController<AppContext> {
   public botCommands = new CommandGroup();
 
-  public middleware() {
-    return this.botCommands.middleware();
-  }
-
-  constructor(public bot: Bot<T>) {}
-
-  private useCommand(cmdName: CommandKeys, handler: any): Command<T> {
-    const { command, description } = getCommandInfo(cmdName);
-    const { command: commandSpa, description: descriptionSpa } = getCommandInfo(
-      cmdName,
-      LanguageCodes.Spanish,
-    );
-
-    return this.botCommands
-      .command(command, description, handler)
-      .addToScope({ type: "all_group_chats" })
-      .localize(LanguageCodes.Spanish, commandSpa, descriptionSpa);
+  constructor(public bot: Bot<T>) {
+    super(bot);
   }
 
   public async start() {
