@@ -15,7 +15,7 @@ export abstract class BaseCommandController<T extends AppContext> {
     return this.botCommands.middleware();
   }
 
-  protected async useCommand(
+  protected async registerCommand(
     cmdName: CommandKeys,
     handler: (ctx: T) => Promise<void>,
   ): Promise<Command<T>> {
@@ -28,5 +28,12 @@ export abstract class BaseCommandController<T extends AppContext> {
       .command(command, description, handler)
       .addToScope({ type: "all_group_chats" })
       .localize(LanguageCodes.Spanish, commandSpa, descriptionSpa);
+  }
+
+  protected async displayError(e: Error, ctx: T, msg?: string) {
+    console.error(e);
+    return msg
+      ? ctx.reply(msg)
+      : ctx.reply("There was an error during request. Please report it");
   }
 }

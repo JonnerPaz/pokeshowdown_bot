@@ -1,17 +1,22 @@
 import type { AppContext } from "./data/types.js";
 import { Bot } from "grammy";
-import { commands } from "@grammyjs/commands";
+import { commands, LanguageCodes } from "@grammyjs/commands";
 import { conversations, createConversation } from "@grammyjs/conversations";
-import { LoginController } from "./controllers/login.controller.js";
 import { ConversationService } from "./services/conversation.service.js";
 import { PokeApiService } from "./services/pokeapi.service.js";
 import { UserDataSourceImpl } from "../infrastructure/datasource/user.datasource.impl.js";
 import { PokemonDataSourceImpl } from "../infrastructure/datasource/pokemon.datasource.impl.js";
 import { botConversations } from "./services/addConversation.decorator.js";
 import { DBService } from "./services/db.service.js";
+import { AuthController } from "./controllers/Auth.controller.js";
+import { PokemonController } from "./controllers/Pokemon.controller.js";
+import { getAllCommands } from "./controllers/commands.js";
+import { SystemController } from "./controllers/System.controller.js";
 
 export class MainBot {
-  private loginController: LoginController;
+  private authController: AuthController;
+  private pokemonController: PokemonController;
+  private systemController: SystemController;
 
   public readonly bot: Bot<AppContext>;
   public static instance: MainBot;
@@ -30,7 +35,9 @@ export class MainBot {
     this.bot.use(conversations());
 
     // Setup controllers
-    this.loginController = new LoginController(this.bot);
+    this.authController = new AuthController(this.bot);
+    this.pokemonController = new PokemonController(this.bot);
+    this.systemController = new SystemController(this.bot);
 
     this.registerControllers();
     this.registerConversations();
@@ -38,19 +45,29 @@ export class MainBot {
 
   private async registerControllers() {
     await Promise.all([
-      this.loginController.start(),
-      this.loginController.register(),
-      this.loginController.help(),
-      this.loginController.deleteAccount(),
-      this.loginController.pokemons(),
-      this.loginController.generatePokemon(),
-      this.loginController.evolve(),
-      this.loginController.trade(),
+      this.authController.start(),
+      this.authController.register(),
+      this.systemController.help(),
+      this.authController.deleteAccount(),
+      this.pokemonController.pokemons(),
+      this.pokemonController.generatePokemon(),
+      this.pokemonController.evolve(),
+      this.pokemonController.trade(),
     ]);
 
-    this.bot.use(this.loginController.middleware());
+    this.bot.use(this.authController.middleware());
+    this.bot.use(this.pokemonController.middleware());
+    this.bot.use(this.systemController.middleware());
 
-    await this.loginController.registerBotMenuCommands();
+    await this.registerBotMenuCommands();
+  }
+
+  public async registerBotMenuCommands(): Promise<void> {
+    await this.bot.api.setMyCommands(getAllCommands(LanguageCodes.English));
+
+    await this.bot.api.setMyCommands(getAllCommands(LanguageCodes.Spanish), {
+      language_code: LanguageCodes.Spanish,
+    });
   }
 
   private registerConversations() {
