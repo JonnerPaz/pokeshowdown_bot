@@ -8,8 +8,6 @@ export class PokeApiService {
   private api: PokemonClient;
   private builder: PokemonBuilder;
   private evolution: EvolutionClient;
-  private currentPokemon: PokemonEntity | null = null;
-
   constructor(public readonly repository: PokemonDataSource) {
     this.api = new PokemonClient();
     this.builder = new PokemonBuilder();
@@ -90,17 +88,6 @@ export class PokeApiService {
       .build();
   }
 
-  public set setCurrentPokemon(pokemon: PokemonEntity | null) {
-    this.currentPokemon = pokemon;
-  }
-
-  public get getCurrentPokemon() {
-    return this.currentPokemon;
-  }
-
-  /**
-   * @description Generates a random pokemon
-   */
   public async createPokemon(
     pokemon?: string | number,
   ): Promise<PokemonEntity> {

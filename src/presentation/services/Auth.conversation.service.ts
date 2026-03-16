@@ -63,7 +63,7 @@ export class AuthConversation {
 
       pokemonName = selectedPokemon.text;
 
-      const starter = await this.dbService.createPokemon(pokemonName);
+      const starter = await this.dbService.createPokemon(ctx.from!.id, pokemonName);
 
       const createdUser = await conv.external(() =>
         this.dbService.createUser(

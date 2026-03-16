@@ -41,7 +41,7 @@ export class PokemonConversation {
   ) {
     try {
       const [pokemonPhoto, keyboard] = await conv.external(() =>
-        this.generateWildPokemon(),
+        this.generateWildPokemon(ctx.from!.id),
       );
 
       const media = await ctx.api.sendMediaGroup(ctx.chat!.id, [pokemonPhoto]);
@@ -72,21 +72,23 @@ export class PokemonConversation {
         choice.callbackQuery.message!.message_id,
       );
 
+      const currentPokemon = this.dbService.getCurrentEncounter(ctx.from!.id);
+
       const { pokemons } = user;
       if (pokemons.length >= 6) {
         await ctx.reply(
-          `Your pokemon bag is full! You can't catch ${this.dbService.getCurrentPokemon?.name}`,
+          `Your pokemon bag is full! You can't catch ${currentPokemon?.name}`,
         );
         return;
       }
 
-      if (!this.dbService.getCurrentPokemon) {
+      if (!currentPokemon) {
         await ctx.reply("There was an error during request. Please report it");
         throw new Error("NO CURRENT POKEMON");
       }
 
       const doesPokemonExist = await this.dbService.findPokemonByName(
-        this.dbService.getCurrentPokemon.name,
+        currentPokemon.name,
       );
 
       doesPokemonExist
@@ -98,15 +100,15 @@ export class PokemonConversation {
         : // pokemon doesn't exist, create it
           await conv.external(() =>
             this.dbService.insertPokemonIntoDB(
-              this.dbService.getCurrentPokemon!,
+              currentPokemon!,
               user,
             ),
           );
       await ctx.reply(
-        `@${user.username} has caught a ${this.dbService.getCurrentPokemon.name}.`,
+        `@${user.username} has caught a ${currentPokemon.name}.`,
       );
 
-      this.dbService.setCurrentPokemon = null;
+      this.dbService.setCurrentEncounter(ctx.from!.id, null);
       return;
     } catch (err) {
       await ctx.reply("There was an error during request. Please report it");
@@ -303,10 +305,10 @@ export class PokemonConversation {
     return user;
   }
 
-  private async generateWildPokemon(): Promise<
-    [InputMediaPhoto, InlineKeyboard]
-  > {
-    const pokemon = await this.dbService.createPokemon("pikachu");
+  private async generateWildPokemon(
+    userId: number,
+  ): Promise<[InputMediaPhoto, InlineKeyboard]> {
+    const pokemon = await this.dbService.createPokemon(userId);
     const keyboard = new InlineKeyboard().text("Catch", "catch");
     return [InputMediaBuilder.photo(pokemon.sprites.frontDefault), keyboard];
   }

@@ -24,22 +24,27 @@ export class MainBot {
 
   constructor(apiKey: string = process.env.API_KEY as string) {
     this.bot = new Bot<AppContext>(apiKey);
+
+    // Setup core services
+    this.bot.use(commands());
+    this.bot.use(conversations());
+
     const userDatasource = new UserDataSourceImpl();
     const pokemonDatasource = new PokemonDataSourceImpl();
 
     const pokeApi = new PokeApiService(pokemonDatasource);
     const dbService = new DBService(userDatasource, pokemonDatasource, pokeApi);
+
+    // Setup conversations
     const authConversation = new AuthConversation(dbService);
     const pokemonConversation = new PokemonConversation(dbService);
-    // Setup core services
-    this.bot.use(commands());
-    this.bot.use(conversations());
 
     // Setup controllers
     this.authController = new AuthController(this.bot);
     this.pokemonController = new PokemonController(this.bot);
     this.systemController = new SystemController(this.bot);
 
+    // init controllers and conversations
     this.registerControllers();
     this.registerConversations();
   }

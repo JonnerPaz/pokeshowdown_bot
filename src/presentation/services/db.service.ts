@@ -5,7 +5,7 @@ import type { UserEntity } from "../../domain/entities/users.entity.js";
 import { PokeApiService } from "./pokeapi.service.js";
 
 export class DBService {
-  currentPokemon: PokemonEntity | null = null;
+  private currentEncounters = new Map<number, PokemonEntity>();
 
   constructor(
     private readonly userDataSource: UserDataSource,
@@ -37,10 +37,22 @@ export class DBService {
     return await this.pokemonDataSource.findPokemonByName(name);
   }
 
-  async createPokemon(pokemon?: string): Promise<PokemonEntity> {
+  async createPokemon(userId: number, pokemon?: string): Promise<PokemonEntity> {
     const newPokemon = await this.pokemonService.createPokemon(pokemon);
-    this.setCurrentPokemon = newPokemon;
+    this.currentEncounters.set(userId, newPokemon);
     return newPokemon;
+  }
+
+  getCurrentEncounter(userId: number): PokemonEntity | undefined {
+    return this.currentEncounters.get(userId);
+  }
+
+  setCurrentEncounter(userId: number, pokemon: PokemonEntity | null) {
+    if (pokemon === null) {
+      this.currentEncounters.delete(userId);
+    } else {
+      this.currentEncounters.set(userId, pokemon);
+    }
   }
 
   async insertPokemonIntoDB(pokemon: PokemonEntity, user?: UserEntity) {
@@ -57,14 +69,6 @@ export class DBService {
 
   async deleteUserByUsername(username: string) {
     return await this.userDataSource.deleteUserByUsername(username);
-  }
-
-  get getCurrentPokemon() {
-    return this.pokemonService.getCurrentPokemon;
-  }
-
-  set setCurrentPokemon(pokemon: PokemonEntity | null) {
-    this.pokemonService.setCurrentPokemon = pokemon;
   }
 
   async evolvePokemon(pokemon: PokemonEntity) {
