@@ -18,7 +18,7 @@ model User {
 
 model Pokemon {
   id        Int           @id @default(autoincrement())
-  name      String        @unique
+  name      String        
   types     String[]
   ability   String
   sprites   Json          @db.Json
