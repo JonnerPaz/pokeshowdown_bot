@@ -59,6 +59,7 @@ export class MainBot {
       this.pokemonController.generatePokemon(),
       this.pokemonController.evolve(),
       this.pokemonController.trade(),
+      this.pokemonController.nickname(),
     ]);
 
     this.bot.use(this.authController.middleware());

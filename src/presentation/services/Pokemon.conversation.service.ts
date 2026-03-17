@@ -222,6 +222,62 @@ export class PokemonConversation {
     }
   }
 
+  @addConversation
+  public async nickname(conv: Conversation, ctx: AppContext) {
+    try {
+      const user = await this.checkUser(ctx.from!.username!, ctx);
+      if (!user) return;
+
+      const pokemonNames = user.pokemons.map((el) => el.name);
+      const pokemonPhotos = user.pokemons.map((el) =>
+        InputMediaBuilder.photo(el.sprites.frontDefault),
+      );
+
+      await ctx.api.sendMediaGroup(ctx.chat!.id, pokemonPhotos);
+      await ctx.reply(
+        `Which pokemon do you want to give a nickname? (${pokemonNames.join(", ")}):`,
+      );
+
+      const choice = await conv.waitFrom(ctx.from!.id).andFor(":text");
+      const pokemon = user.pokemons.find(
+        (el) => el.name.toLowerCase() === choice!.message!.text.toLowerCase(),
+      );
+
+      if (!pokemon) {
+        await ctx.reply("You don't have that pokemon");
+        return;
+      }
+
+      await ctx.reply(
+        `Enter the nickname you want to give to ${pokemon.name}:`,
+      );
+      const nickname = await conv.waitFrom(ctx.from!.id).andFor(":text");
+
+      await ctx.reply(
+        `Are you sure you want to give ${pokemon.name} the nickname "${nickname.message!.text}"? (yes/no):`,
+      );
+
+      const confirm = await conv.waitFrom(ctx.from!.id).andFor(":text");
+      if (confirm.message!.text.toLowerCase() !== "yes") {
+        await ctx.reply("Nickname not changed!");
+        return;
+      }
+
+      await conv.external(() =>
+        this.dbService.updatePokemon(pokemon, {
+          nickname: nickname.message!.text,
+        }),
+      );
+
+      await ctx.reply(
+        `Success! ${pokemon.name} is now known as ${nickname.message!.text}.`,
+      );
+    } catch (error) {
+      await ctx.reply("There was an error during request. Please report it");
+      throw error;
+    }
+  }
+
   private async prepareUserTrade(
     userName: string,
     userId: number,

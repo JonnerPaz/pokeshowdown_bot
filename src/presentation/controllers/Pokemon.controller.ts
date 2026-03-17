@@ -64,4 +64,19 @@ export class PokemonController extends BaseCommandController<AppContext> {
       async (ctx: AppContext) => await handler(ctx),
     );
   }
+
+  public async nickname() {
+    const handler = async (ctx: AppContext) => {
+      try {
+        return await ctx.conversation.enter("nickname");
+      } catch (error) {
+        super.displayError(error as Error, ctx);
+      }
+    };
+
+    return this.registerCommand(
+      "NICKNAME",
+      async (ctx: AppContext) => await handler(ctx),
+    );
+  }
 }

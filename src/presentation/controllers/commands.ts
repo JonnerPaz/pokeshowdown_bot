@@ -81,6 +81,16 @@ export const commands = {
       description: "Intercambia pokemons con tus amigos",
     },
   },
+  NICKNAME: {
+    [LanguageCodes.English]: {
+      command: "nickname",
+      description: "Add a nickname to your pokemon",
+    },
+    [LanguageCodes.Spanish]: {
+      command: "nickname",
+      description: "Añade un nickname a tu pokemon",
+    },
+  },
 } as const;
 
 export type CommandKeys = keyof typeof commands;
