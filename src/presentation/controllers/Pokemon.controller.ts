@@ -50,6 +50,21 @@ export class PokemonController extends BaseCommandController<AppContext> {
     );
   }
 
+  public async shiny() {
+    const handler = async (ctx: AppContext) => {
+      try {
+        return await ctx.conversation.enter("shinyPokemon");
+      } catch (error) {
+        this.displayError(error as Error, ctx);
+      }
+    };
+
+    return this.registerCommand(
+      "SHINY",
+      async (ctx: AppContext) => await handler(ctx),
+    );
+  }
+
   public async trade() {
     const handler = async (ctx: AppContext) => {
       try {

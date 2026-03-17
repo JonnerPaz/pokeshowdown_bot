@@ -71,6 +71,16 @@ export const commands = {
       description: "Evoluciona uno de tus pokemons!",
     },
   },
+  SHINY: {
+    [LanguageCodes.English]: {
+      command: "shiny",
+      description: "Make one of your pokemons shiny",
+    },
+    [LanguageCodes.Spanish]: {
+      command: "brillante",
+      description: "Haz brillante a uno de tus pokemons",
+    },
+  },
   TRADE: {
     [LanguageCodes.English]: {
       command: "trade",

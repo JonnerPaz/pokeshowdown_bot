@@ -6,6 +6,7 @@ export class PokemonBuilder {
   private pokemonName: string | null = null;
   private types: string[] | null = [];
   private ability: string | null = null;
+  private isShiny = false;
   private sprite: Sprites | null = null;
   private timesCaught = 1;
 
@@ -26,6 +27,11 @@ export class PokemonBuilder {
 
   setAbility(ability: string) {
     this.ability = ability;
+    return this;
+  }
+
+  setShiny(isShiny: boolean) {
+    this.isShiny = isShiny;
     return this;
   }
 
@@ -50,6 +56,7 @@ export class PokemonBuilder {
       name: this.pokemonName,
       types: this.types,
       ability: this.ability,
+      isShiny: this.isShiny,
       sprites: this.sprite,
       timesCaught: this.timesCaught,
     });

@@ -5,6 +5,11 @@ export abstract class PokemonDataSource {
   abstract findPokemonById(id: number): Promise<PokemonEntity>;
   abstract findPokemons(ids: number[]): Promise<PokemonEntity[]>;
   abstract findPokemonByName(name: string): Promise<PokemonEntity | null>;
+  abstract findUserPokemonByNameAndVariant(
+    userId: number,
+    name: string,
+    isShiny: boolean,
+  ): Promise<PokemonEntity | null>;
   abstract updatePokemon(
     pokemon: PokemonEntity,
     data: Partial<PokemonEntity>,

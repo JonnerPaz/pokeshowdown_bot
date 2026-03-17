@@ -23,6 +23,7 @@ model Pokemon {
   types     String[]
   ability   String
   sprites   Json          @db.Json
+  isShiny   Boolean       @default(false)
   createdAt DateTime      @default(now()) @db.Timestamp(6)
   timesCaught Int         @default(1)
   nickname    String?
@@ -30,4 +31,3 @@ model Pokemon {
 
   user      User?         @relation(fields: [userId], references: [id], onDelete: Cascade)
 }
-

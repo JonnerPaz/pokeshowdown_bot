@@ -58,6 +58,7 @@ export class MainBot {
       this.pokemonController.pokemons(),
       this.pokemonController.generatePokemon(),
       this.pokemonController.evolve(),
+      this.pokemonController.shiny(),
       this.pokemonController.trade(),
       this.pokemonController.nickname(),
     ]);

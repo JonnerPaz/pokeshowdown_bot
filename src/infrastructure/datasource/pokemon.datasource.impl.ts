@@ -82,6 +82,31 @@ export class PokemonDataSourceImpl implements PokemonDataSource {
     }
   }
 
+  async findUserPokemonByNameAndVariant(
+    userId: number,
+    name: string,
+    isShiny: boolean,
+  ): Promise<PokemonEntity | null> {
+    const pokemon = await prisma.pokemon.findFirst({
+      where: {
+        userId,
+        name,
+        isShiny,
+      },
+    });
+
+    if (!pokemon) return null;
+
+    const { nickname, ...pokemonData } = pokemon;
+    const pokemonSprites = JSON.parse(JSON.stringify(pokemon.sprites));
+
+    return PokemonEntity.fromObject({
+      ...pokemonData,
+      sprites: pokemonSprites,
+      ...(nickname && { nickname }),
+    });
+  }
+
   async updatePokemon(
     pokemon: PokemonEntity,
     data: Partial<PokemonEntity>,
@@ -109,6 +134,7 @@ export class PokemonDataSourceImpl implements PokemonDataSource {
       sprites?: PokemonEntity["sprites"];
       timesCaught?: number;
       nickname?: string | null;
+      isShiny?: boolean;
     } = {};
 
     if (typeof data.name === "string") updateData.name = data.name;
@@ -120,6 +146,9 @@ export class PokemonDataSourceImpl implements PokemonDataSource {
     }
     if (typeof data.nickname === "string") {
       updateData.nickname = data.nickname;
+    }
+    if (typeof data.isShiny === "boolean") {
+      updateData.isShiny = data.isShiny;
     }
 
     if (Object.keys(updateData).length === 0) {
@@ -153,31 +182,38 @@ export class PokemonDataSourceImpl implements PokemonDataSource {
     pokemon: PokemonEntity,
     user?: UserEntity,
   ): Promise<PokemonEntity> {
-    const { name, types, ability, sprites, timesCaught, nickname } = pokemon;
+    const { name, types, ability, sprites, timesCaught, nickname, isShiny } =
+      pokemon;
 
-    const createdPokemon = await prisma.pokemon.create({
-      data: {
-        name,
-        types,
-        ability,
-        sprites,
-        timesCaught,
-        nickname: nickname ?? null,
-      },
-    });
-
-    if (user && user.id) {
-      await prisma.user.update({
-        where: { id: user.id },
+    const createdPokemon = await prisma.$transaction(async (tx) => {
+      const created = await tx.pokemon.create({
         data: {
-          pokemons: {
-            connect: {
-              id: createdPokemon.id,
-            },
-          },
+          name,
+          types,
+          ability,
+          sprites,
+          timesCaught,
+          isShiny,
+          nickname: nickname ?? null,
+          ...(user?.id && { userId: user.id }),
         },
       });
-    }
+
+      if (user?.id) {
+        await tx.user.update({
+          where: { id: user.id },
+          data: {
+            pokemons: {
+              connect: {
+                id: created.id,
+              },
+            },
+          },
+        });
+      }
+
+      return created;
+    });
 
     const { nickname: createdNickname, ...createdPokemonData } = createdPokemon;
     const pokemonSprites = JSON.parse(JSON.stringify(createdPokemon.sprites));

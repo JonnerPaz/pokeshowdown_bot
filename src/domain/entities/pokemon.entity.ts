@@ -4,6 +4,7 @@ interface PokemonEntityProps {
   nickname?: string;
   types: string[];
   ability: string;
+  isShiny?: boolean;
   sprites: {
     frontDefault: string;
     backDefault: string;
@@ -18,6 +19,7 @@ export class PokemonEntity {
   public name: string;
   public types: string[];
   public ability: string;
+  public isShiny: boolean;
   public sprites: {
     frontDefault: string;
     backDefault: string;
@@ -33,6 +35,7 @@ export class PokemonEntity {
       name,
       types,
       ability,
+      isShiny = false,
       sprites,
       timesCaught = 1,
       nickname,
@@ -41,6 +44,7 @@ export class PokemonEntity {
     this.name = name;
     this.types = types;
     this.ability = ability;
+    this.isShiny = isShiny;
     this.sprites = sprites;
     this.timesCaught = timesCaught;
     if (nickname) {
@@ -55,6 +59,7 @@ export class PokemonEntity {
         name,
         types,
         ability,
+        isShiny = false,
         sprites,
         timesCaught = 1,
         nickname,
@@ -69,6 +74,7 @@ export class PokemonEntity {
         name,
         types,
         ability,
+        isShiny,
         sprites,
         timesCaught,
         ...(nickname && { nickname }),

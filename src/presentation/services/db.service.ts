@@ -37,6 +37,18 @@ export class DBService {
     return await this.pokemonDataSource.findPokemonByName(name);
   }
 
+  async findUserPokemonByNameAndVariant(
+    userId: number,
+    name: string,
+    isShiny: boolean,
+  ) {
+    return await this.pokemonDataSource.findUserPokemonByNameAndVariant(
+      userId,
+      name,
+      isShiny,
+    );
+  }
+
   async createPokemon(
     userId: number,
     pokemon?: string,
@@ -77,7 +89,12 @@ export class DBService {
   async evolvePokemon(pokemon: PokemonEntity) {
     const evolvedPokemon = await this.pokemonService.evolvePokemon(pokemon);
     const updatedPokemon = await this.updatePokemon(pokemon, {
-      ...evolvedPokemon,
+      name: evolvedPokemon.name,
+      types: evolvedPokemon.types,
+      ability: evolvedPokemon.ability,
+      sprites: evolvedPokemon.sprites,
+      isShiny: pokemon.isShiny,
+      timesCaught: pokemon.timesCaught,
     });
     return updatedPokemon;
   }

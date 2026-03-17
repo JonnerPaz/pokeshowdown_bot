@@ -1,5 +1,5 @@
 import { PokemonBuilder } from "../../domain/entities/PokemonBuilder.entity.js";
-import { TOTAL_OF_POKEMON } from "../../domain/data/constants.js";
+import { SHINY_ODDS, TOTAL_OF_POKEMON } from "../../domain/data/constants.js";
 import { EvolutionClient, type Pokemon, PokemonClient } from "pokenode-ts";
 import { PokemonEntity } from "../../domain/entities/pokemon.entity.js";
 import type { PokemonDataSource } from "../../domain/datasource/pokemon.datasource.js";
@@ -12,14 +12,6 @@ export class PokeApiService {
     this.api = new PokemonClient();
     this.builder = new PokemonBuilder();
     this.evolution = new EvolutionClient();
-  }
-
-  private randomizer<T>(array?: T[]): T | number {
-    if (Array.isArray(array) && array.length > 0) {
-      // gets a random number from an array
-      return array.at(Math.floor(Math.random() * array.length)) ?? 0;
-    }
-    return Math.floor(Math.random() * TOTAL_OF_POKEMON + 1);
   }
 
   public async createStarterPokemon(): Promise<
@@ -72,22 +64,6 @@ export class PokeApiService {
     return [starter, starter2, starter3];
   }
 
-  private buildPokemon(pokemon: Pokemon): PokemonEntity {
-    return this.builder
-      .setName(pokemon.name)
-      .setTypes(pokemon.types.map((type) => type.type.name))
-      .setAbility(pokemon.abilities[0]!.ability.name)
-      .setSprite({
-        frontShiny: String(pokemon.sprites.front_shiny),
-        frontDefault: String(
-          pokemon.sprites.other?.["official-artwork"].front_default,
-        ),
-        backShiny: String(pokemon.sprites.back_shiny),
-        backDefault: String(pokemon.sprites.back_default),
-      })
-      .build();
-  }
-
   public async createPokemon(
     pokemon?: string | number,
   ): Promise<PokemonEntity> {
@@ -103,7 +79,7 @@ export class PokeApiService {
 
     // get a random pokemon
     const requestPokemon = await this.api.getPokemonById(this.randomizer());
-    return this.buildPokemon(requestPokemon);
+    return this.buildPokemon(requestPokemon, this.rollForShiny());
   }
 
   public showPokemonPhoto(pokemon: PokemonEntity, position?: string): string {
@@ -150,5 +126,37 @@ export class PokeApiService {
     } catch (error) {
       throw error;
     }
+  }
+
+  /**
+   * Rolls a random number to determine if the pokemon is shiny
+   */
+  private rollForShiny(): boolean {
+    return Math.floor(Math.random() * SHINY_ODDS) === 0;
+  }
+
+  private buildPokemon(pokemon: Pokemon, isShiny = false): PokemonEntity {
+    return this.builder
+      .setName(pokemon.name)
+      .setTypes(pokemon.types.map((type) => type.type.name))
+      .setAbility(pokemon.abilities[0]!.ability.name)
+      .setShiny(isShiny)
+      .setSprite({
+        frontShiny: String(pokemon.sprites.front_shiny),
+        frontDefault: String(
+          pokemon.sprites.other?.["official-artwork"].front_default,
+        ),
+        backShiny: String(pokemon.sprites.back_shiny),
+        backDefault: String(pokemon.sprites.back_default),
+      })
+      .build();
+  }
+
+  private randomizer<T>(array?: T[]): T | number {
+    if (Array.isArray(array) && array.length > 0) {
+      // gets a random number from an array
+      return array.at(Math.floor(Math.random() * array.length)) ?? 0;
+    }
+    return Math.floor(Math.random() * TOTAL_OF_POKEMON + 1);
   }
 }

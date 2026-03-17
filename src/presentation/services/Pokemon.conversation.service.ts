@@ -3,8 +3,7 @@ import { addConversation } from "./addConversation.decorator.js";
 import type { AppContext } from "../data/types.js";
 import { Conversation } from "@grammyjs/conversations";
 import { Context, InlineKeyboard, InputMediaBuilder } from "grammy";
-import type { InputMediaPhoto } from "grammy/types";
-import { EVOLVE_CAP } from "../../domain/data/constants.js";
+import { EVOLVE_CAP, SHINY_CAP } from "../../domain/data/constants.js";
 import type { UserEntity } from "../../domain/entities/users.entity.js";
 import type { PokemonEntity } from "../../domain/entities/pokemon.entity.js";
 
@@ -24,7 +23,7 @@ export class PokemonConversation {
       }
 
       const pokemonPhotos = user.pokemons.map((el) =>
-        InputMediaBuilder.photo(el.sprites.frontDefault),
+        InputMediaBuilder.photo(this.getPokemonFrontSprite(el)),
       );
 
       await ctx.reply("Your pokemons are:");
@@ -46,10 +45,13 @@ export class PokemonConversation {
         this.generateWildPokemon(ctx.from!.id),
       );
 
-      const media = await ctx.api.sendMediaGroup(ctx.chat!.id, [pokemonPhoto]);
+      const pokemonMedia = InputMediaBuilder.photo(
+        this.getPokemonFrontSprite(pokemonPhoto),
+      );
+      const media = await ctx.api.sendMediaGroup(ctx.chat!.id, [pokemonMedia]);
 
       await ctx.reply(
-        "A wild pokemon has appeared! Touch the buttom to catch it!",
+        `A wild pokemon has appeared! Touch the buttom to catch it!`,
         { reply_markup: keyboard },
       );
 
@@ -89,9 +91,12 @@ export class PokemonConversation {
         throw new Error("NO CURRENT POKEMON");
       }
 
-      const doesPokemonExist = await this.dbService.findPokemonByName(
-        currentPokemon.name,
-      );
+      const doesPokemonExist =
+        await this.dbService.findUserPokemonByNameAndVariant(
+          user.id,
+          currentPokemon.name,
+          currentPokemon.isShiny,
+        );
 
       doesPokemonExist
         ? await conv.external(() =>
@@ -103,7 +108,9 @@ export class PokemonConversation {
           await conv.external(() =>
             this.dbService.insertPokemonIntoDB(currentPokemon!, user),
           );
-      await ctx.reply(`@${user.username} has caught a ${currentPokemon.name}.`);
+      await ctx.reply(
+        `@${user.username} has caught ${currentPokemon.isShiny ? "a shiny" : "a"} ${currentPokemon.name}.`,
+      );
 
       this.dbService.setCurrentEncounter(ctx.from!.id, null);
       return;
@@ -124,7 +131,7 @@ export class PokemonConversation {
 
       const pokemonNames = user.pokemons.map((el) => el.name);
       const pokemonPhotos = user.pokemons.map((el) =>
-        InputMediaBuilder.photo(el.sprites.frontDefault),
+        InputMediaBuilder.photo(this.getPokemonFrontSprite(el)),
       );
 
       await ctx.api.sendMediaGroup(ctx.chat!.id, pokemonPhotos);
@@ -152,6 +159,62 @@ export class PokemonConversation {
       }
 
       await ctx.reply(`Your ${pokemon.name} evolved to ${evolvedPokemon.name}`);
+      return;
+    } catch (err) {
+      await ctx.reply("There was an error during request. Please report it");
+      throw err;
+    }
+  }
+
+  @addConversation
+  public async shinyPokemon(
+    conv: Conversation<Context, AppContext>,
+    ctx: AppContext,
+  ) {
+    try {
+      const user = await this.checkUser(ctx.from!.username!, ctx);
+      if (!user) return;
+
+      const pokemonNames = user.pokemons.map((el) => el.name);
+      const pokemonPhotos = user.pokemons.map((el) =>
+        InputMediaBuilder.photo(this.getPokemonFrontSprite(el)),
+      );
+
+      await ctx.api.sendMediaGroup(ctx.chat!.id, pokemonPhotos);
+      await ctx.reply(
+        `Which pokemon do you want to make shiny? send a message with the name of the pokemon. Your pokemons: ${pokemonNames.join(", ")}`,
+      );
+
+      const choice = await conv.waitFrom(ctx.from!.id).andFor(":text");
+      const pokemon = user.pokemons.find(
+        (el) => el.name.toLowerCase() === choice!.message!.text.toLowerCase(),
+      );
+
+      if (!pokemon) {
+        await ctx.reply("You don't have that pokemon");
+        return;
+      }
+
+      if (pokemon.isShiny) {
+        await ctx.reply(`${pokemon.name} is already shiny.`);
+        return;
+      }
+
+      if (pokemon.timesCaught < SHINY_CAP) {
+        await ctx.reply(
+          `You need at least ${SHINY_CAP} catches to make ${pokemon.name} shiny.`,
+        );
+        return;
+      }
+
+      await conv.external(() =>
+        this.dbService.updatePokemon(pokemon, {
+          isShiny: true,
+          timesCaught: pokemon.timesCaught - SHINY_CAP,
+        }),
+      );
+
+      await ctx.reply(`✨ ${pokemon.name} is now shiny!`);
       return;
     } catch (err) {
       await ctx.reply("There was an error during request. Please report it");
@@ -230,7 +293,7 @@ export class PokemonConversation {
 
       const pokemonNames = user.pokemons.map((el) => el.name);
       const pokemonPhotos = user.pokemons.map((el) =>
-        InputMediaBuilder.photo(el.sprites.frontDefault),
+        InputMediaBuilder.photo(this.getPokemonFrontSprite(el)),
       );
 
       await ctx.api.sendMediaGroup(ctx.chat!.id, pokemonPhotos);
@@ -294,7 +357,7 @@ export class PokemonConversation {
     }
 
     const userPhotos = user.pokemons.map((el) =>
-      InputMediaBuilder.photo(el.sprites.frontDefault),
+      InputMediaBuilder.photo(this.getPokemonFrontSprite(el)),
     );
     const userPkmnNames = user.pokemons.map((el) => el.name);
 
@@ -355,9 +418,15 @@ export class PokemonConversation {
 
   private async generateWildPokemon(
     userId: number,
-  ): Promise<[InputMediaPhoto, InlineKeyboard]> {
+  ): Promise<[PokemonEntity, InlineKeyboard]> {
     const pokemon = await this.dbService.createPokemon(userId);
     const keyboard = new InlineKeyboard().text("Catch", "catch");
-    return [InputMediaBuilder.photo(pokemon.sprites.frontDefault), keyboard];
+    return [pokemon, keyboard];
+  }
+
+  private getPokemonFrontSprite(pokemon: PokemonEntity): string {
+    return pokemon.isShiny
+      ? pokemon.sprites.frontShiny
+      : pokemon.sprites.frontDefault;
   }
 }
