@@ -37,7 +37,10 @@ export class DBService {
     return await this.pokemonDataSource.findPokemonByName(name);
   }
 
-  async createPokemon(userId: number, pokemon?: string): Promise<PokemonEntity> {
+  async createPokemon(
+    userId: number,
+    pokemon?: string,
+  ): Promise<PokemonEntity> {
     const newPokemon = await this.pokemonService.createPokemon(pokemon);
     this.currentEncounters.set(userId, newPokemon);
     return newPokemon;
@@ -81,5 +84,19 @@ export class DBService {
 
   async createStarterPokemon() {
     return await this.pokemonService.createStarterPokemon();
+  }
+
+  async tradePokemon(
+    userA: UserEntity,
+    pokemonA: PokemonEntity,
+    userB: UserEntity,
+    pokemonB: PokemonEntity,
+  ) {
+    return await this.pokemonDataSource.tradePokemon(
+      userA,
+      pokemonA,
+      userB,
+      pokemonB,
+    );
   }
 }

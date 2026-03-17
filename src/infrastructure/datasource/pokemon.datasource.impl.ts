@@ -49,7 +49,8 @@ export class PokemonDataSourceImpl implements PokemonDataSource {
 
   async findPokemonByName(name: string): Promise<PokemonEntity | null> {
     try {
-      const pokemon = await prisma.pokemon.findUnique({ where: { name } });
+      // name is not unique, using findFirst instead of findUnique
+      const pokemon = await prisma.pokemon.findFirst({ where: { name } });
       if (!pokemon) return null;
 
       const pokemonSprites = JSON.parse(JSON.stringify(pokemon.sprites));
@@ -70,9 +71,19 @@ export class PokemonDataSourceImpl implements PokemonDataSource {
     pokemon: PokemonEntity,
     data: Partial<PokemonEntity>,
   ): Promise<PokemonEntity> {
-    const dbPokemon = await prisma.pokemon.findUnique({
-      where: { name: pokemon.name },
-    });
+    let dbPokemon;
+
+    // Try finding by ID first if available
+    if (pokemon.id) {
+      dbPokemon = await prisma.pokemon.findUnique({
+        where: { id: pokemon.id },
+      });
+    } else {
+      // Fallback to name search (findFirst) - behavior from original code but safer
+      dbPokemon = await prisma.pokemon.findFirst({
+        where: { name: pokemon.name },
+      });
+    }
 
     if (!dbPokemon) throw new Error("Pokemon not found in db");
 
@@ -157,9 +168,32 @@ export class PokemonDataSourceImpl implements PokemonDataSource {
   }
 
   async deletePokemonByName(name: string): Promise<void> {
-    const pokemon = await prisma.pokemon.findUnique({ where: { name } });
+    // Using findFirst because name is not unique
+    const pokemon = await prisma.pokemon.findFirst({ where: { name } });
     if (pokemon) {
       await prisma.pokemon.delete({ where: { id: pokemon.id } });
     }
+  }
+
+  async tradePokemon(
+    userA: UserEntity,
+    pokemonA: PokemonEntity,
+    userB: UserEntity,
+    pokemonB: PokemonEntity,
+  ): Promise<void> {
+    if (!userA.id || !userB.id) throw new Error("User ID is missing for trade");
+    if (!pokemonA.id || !pokemonB.id)
+      throw new Error("Pokemon ID is missing for trade");
+
+    await prisma.$transaction([
+      prisma.pokemon.update({
+        where: { id: pokemonA.id },
+        data: { userId: userB.id },
+      }),
+      prisma.pokemon.update({
+        where: { id: pokemonB.id },
+        data: { userId: userA.id },
+      }),
+    ]);
   }
 }

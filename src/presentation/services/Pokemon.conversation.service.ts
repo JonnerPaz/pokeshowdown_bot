@@ -5,6 +5,8 @@ import { Conversation } from "@grammyjs/conversations";
 import { Context, InlineKeyboard, InputMediaBuilder } from "grammy";
 import type { InputMediaPhoto } from "grammy/types";
 import { EVOLVE_CAP } from "../../domain/data/constants.js";
+import type { UserEntity } from "../../domain/entities/users.entity.js";
+import type { PokemonEntity } from "../../domain/entities/pokemon.entity.js";
 
 export class PokemonConversation {
   constructor(private readonly dbService: DBService) {}
@@ -99,14 +101,9 @@ export class PokemonConversation {
           )
         : // pokemon doesn't exist, create it
           await conv.external(() =>
-            this.dbService.insertPokemonIntoDB(
-              currentPokemon!,
-              user,
-            ),
+            this.dbService.insertPokemonIntoDB(currentPokemon!, user),
           );
-      await ctx.reply(
-        `@${user.username} has caught a ${currentPokemon.name}.`,
-      );
+      await ctx.reply(`@${user.username} has caught a ${currentPokemon.name}.`);
 
       this.dbService.setCurrentEncounter(ctx.from!.id, null);
       return;
@@ -165,129 +162,58 @@ export class PokemonConversation {
   @addConversation
   public async trade(conv: Conversation, ctx: AppContext) {
     try {
-      const userRequest = await conv.external((ctx) =>
-        this.dbService.findUserByUsername(ctx.from!.username!),
+      const [userReq, userReqPkmn] = await this.prepareUserTrade(
+        ctx.from?.username!,
+        ctx.from?.id!,
+        conv,
+        ctx,
       );
+      if (!userReq || !userReqPkmn) return;
 
-      if (!userRequest) {
-        await ctx.reply("You are not registered!");
-        return;
-      }
-
-      const userRequestpokemonPhotos = userRequest.pokemons.map((el) =>
-        InputMediaBuilder.photo(el.sprites.frontDefault),
-      );
-      const userRequestpokemonNames = userRequest.pokemons.map((el) => el.name);
-
-      await ctx.api.sendMediaGroup(ctx.chat!.id, userRequestpokemonPhotos);
-      await ctx.reply(
-        `Which pokemon do you want to trade? send a message with the name of the pokemon you want to trade. Your pokemons: ${userRequestpokemonNames.join(", ")}`,
-      );
-
-      const choice = await conv.waitFrom(ctx.from!.id).andFor(":text");
-
-      const userRequestpokemon = userRequest.pokemons.find(
-        (el) => el.name.toLowerCase() === choice?.message?.text.toLowerCase(),
-      );
-
-      if (!userRequestpokemon) {
-        await ctx.reply("You don't have that pokemon. Please try again");
-        return;
-      }
-
-      await ctx.reply(
-        `@${userRequest.username} wants to trade ${userRequestpokemon.name}. Click the button below to accept the trade.`,
+      const reqMsg = await ctx.reply(
+        `@${userReq.username} wants to trade ${userReqPkmn.name}. Click the button below to accept the trade.`,
         {
           reply_markup: new InlineKeyboard().text("Accept", "trade-accept"),
         },
       );
 
-      const userCallback = await conv.waitForCallbackQuery(/trade-accept/, {
-        otherwise(ctx) {
-          ctx.api.deleteMessage(
-            ctx.chat!.id,
-            ctx.callbackQuery!.message!.message_id,
-          );
-        },
-      });
+      const userCallback = await conv.waitForCallbackQuery(/trade-accept/);
 
-      const userResponse = await conv.external((_) =>
-        this.dbService.findUserByUsername(
-          userCallback.callbackQuery.from.username!,
-        ),
-      );
-
-      if (!userResponse) {
-        await ctx.reply("You are not registered!");
+      if (userCallback.callbackQuery.from.username === userReq.username) {
+        await ctx.api.deleteMessage(ctx.chat!.id, reqMsg.message_id);
+        await ctx.reply("You can't trade with yourself!");
         return;
       }
 
-      const userResponsePokemonPhotos = userResponse.pokemons.map((el) =>
-        InputMediaBuilder.photo(el.sprites.frontDefault),
+      const [userRes, userResPkmn] = await this.prepareUserTrade(
+        userCallback.callbackQuery.from.username!,
+        userCallback.callbackQuery.from.id!,
+        conv,
+        ctx,
       );
-      const userResponsePokemonNames = userResponse.pokemons.map(
-        (el) => el.name,
-      );
+      if (!userRes || !userResPkmn) return;
 
-      await ctx.api.sendMediaGroup(ctx.chat!.id, userResponsePokemonPhotos);
-      await ctx.reply(
-        `@${userResponse.username}, select the pokemon you want to trade. Your pokemons: ${userResponsePokemonNames.join(", ")}`,
-        {
-          reply_markup: new InlineKeyboard().text("Accept", "trade-accept"),
-        },
-      );
+      const trainers = {
+        1: { user: userReq, pokemon: userReqPkmn },
+        2: { user: userRes, pokemon: userResPkmn },
+      };
 
-      const userResponseChoice = await conv
-        .waitForCallbackQuery(/trade-accept/)
-        .andFrom(userCallback.callbackQuery.from);
+      for (const { user, pokemon } of Object.values(trainers)) {
+        const trainerId =
+          userReq.username === user.username
+            ? ctx.from!.id
+            : userCallback.callbackQuery.from.id!;
 
-      const userResponsepokemon = userResponse.pokemons.find(
-        (el) =>
-          el.name.toLowerCase() ===
-          userResponseChoice.callbackQuery.data.toLowerCase(),
-      );
-
-      if (!userResponsepokemon) {
-        await ctx.reply(
-          "You don't have that pokemon. Please try again. Trade cancelled!",
-        );
-        return;
+        if (
+          !(await this.confirmSelection(conv, ctx, user, trainerId, pokemon))
+        ) {
+          return;
+        }
       }
 
-      await ctx.reply(
-        `@${userResponse.username}, would you like to trade ${userRequestpokemon.name}?`,
-        {
-          reply_markup: new InlineKeyboard()
-            .text("Accept", "trade-accept")
-            .text("Reject", "trade-reject"),
-        },
+      await conv.external(() =>
+        this.dbService.tradePokemon(userReq, userReqPkmn, userRes, userResPkmn),
       );
-
-      const tradeResult = await conv
-        .waitForCallbackQuery(/trade-accept|trade-reject/)
-        .andFrom(userCallback.callbackQuery.from);
-
-      if (tradeResult.callbackQuery.data === "trade-reject") {
-        await ctx.reply("Trade cancelled!");
-        return;
-      }
-
-      await ctx.reply(
-        `@${userRequest.username}, would you like to trade ${userRequestpokemon.name}?`,
-        {
-          reply_markup: new InlineKeyboard()
-            .text("Accept", "trade-accept")
-            .text("Reject", "trade-reject"),
-        },
-      );
-      const userRequestChoice = await conv
-        .waitForCallbackQuery(/trade-accept|trade-reject/)
-        .andFrom(ctx.from!);
-
-      if (userRequestChoice.callbackQuery.data === "trade-reject") {
-        await ctx.reply("Trade cancelled!");
-        return;
-      }
 
       await ctx.reply("Trade successful!");
     } catch (err) {
@@ -296,12 +222,78 @@ export class PokemonConversation {
     }
   }
 
-  private async checkUser(userName: string, ctx: AppContext) {
-    const user = await this.dbService.findUserByUsername(userName);
+  private async prepareUserTrade(
+    userName: string,
+    userId: number,
+    conv: Conversation,
+    ctx: AppContext,
+  ): Promise<[UserEntity, PokemonEntity] | [null, null]> {
+    const user = await conv.external((ctx: AppContext) =>
+      this.checkUser(userName, ctx),
+    );
+
     if (!user) {
       await ctx.reply("You are not registered!");
-      return null;
+      return [null, null];
     }
+
+    const userPhotos = user.pokemons.map((el) =>
+      InputMediaBuilder.photo(el.sprites.frontDefault),
+    );
+    const userPkmnNames = user.pokemons.map((el) => el.name);
+
+    await ctx.api.sendMediaGroup(ctx.chat!.id, userPhotos);
+    await ctx.reply(
+      `Which pokemon do you want to trade? send a message with the name of the pokemon you want to trade. Your pokemons: ${userPkmnNames.join(", ")}`,
+    );
+
+    const userInput = await conv.waitFrom(userId).andFor(":text");
+    const userPkmn = user.pokemons.find(
+      (el) => el.name.toLowerCase() === userInput!.message!.text.toLowerCase(),
+    );
+
+    if (!userPkmn) {
+      await ctx.reply("You don't have that pokemon");
+      return [null, null];
+    }
+
+    return [user, userPkmn];
+  }
+
+  private async confirmSelection(
+    conv: Conversation,
+    ctx: AppContext,
+    user: UserEntity,
+    userId: number,
+    pokemon: PokemonEntity,
+  ): Promise<boolean> {
+    const msg = await ctx.reply(
+      `@${user.username}, would you like to trade your ${pokemon.name}?`,
+      {
+        reply_markup: new InlineKeyboard()
+          .text("Accept", "trade-accept")
+          .text("Reject", "trade-reject"),
+      },
+    );
+
+    const tradeResult = await conv
+      .waitForCallbackQuery(/trade-accept|trade-reject/)
+      .andFrom(userId);
+
+    if (tradeResult.callbackQuery.data === "trade-reject") {
+      await ctx.reply("Trade cancelled!");
+      await ctx.api.deleteMessage(ctx.chat!.id, msg.message_id);
+      return false;
+    }
+
+    await ctx.api.deleteMessage(ctx.chat!.id, msg.message_id);
+    return true;
+  }
+
+  private async checkUser(userName: string, ctx: AppContext) {
+    const user = await this.dbService.findUserByUsername(userName);
+    if (!user) return null;
+
     return user;
   }
 
