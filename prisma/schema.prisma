@@ -12,6 +12,7 @@ model User {
   username  String    @unique
   createdAt DateTime  @default(now()) @db.Timestamp(6)
   updatedAt DateTime  @updatedAt @default(now()) @db.Timestamp(6)
+  nickname  String?
 
   pokemons  Pokemon[]
 }
@@ -24,6 +25,7 @@ model Pokemon {
   sprites   Json          @db.Json
   createdAt DateTime      @default(now()) @db.Timestamp(6)
   timesCaught Int         @default(1)
+  nickname    String?
   userId    Int?          @map("user_id")
 
   user      User?         @relation(fields: [userId], references: [id], onDelete: Cascade)

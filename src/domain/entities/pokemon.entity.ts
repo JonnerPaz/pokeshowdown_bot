@@ -1,6 +1,7 @@
 interface PokemonEntityProps {
   id: number | null;
   name: string;
+  nickname?: string;
   types: string[];
   ability: string;
   sprites: {
@@ -24,15 +25,27 @@ export class PokemonEntity {
     frontShiny: string;
   };
   public timesCaught: number;
+  public nickname?: string;
 
   constructor(props: PokemonEntityProps) {
-    const { id, name, types, ability, sprites, timesCaught = 1 } = props;
+    const {
+      id,
+      name,
+      types,
+      ability,
+      sprites,
+      timesCaught = 1,
+      nickname,
+    } = props;
     this.id = id;
     this.name = name;
     this.types = types;
     this.ability = ability;
     this.sprites = sprites;
     this.timesCaught = timesCaught;
+    if (nickname) {
+      this.nickname = nickname;
+    }
   }
 
   public static fromObject(props: Partial<PokemonEntity>): PokemonEntity {
@@ -44,6 +57,7 @@ export class PokemonEntity {
         ability,
         sprites,
         timesCaught = 1,
+        nickname,
       } = props;
       if (!name) throw new Error("Name is required");
       if (!types) throw new Error("Types are required");
@@ -57,6 +71,7 @@ export class PokemonEntity {
         ability,
         sprites,
         timesCaught,
+        ...(nickname && { nickname }),
       });
     } catch (error) {
       throw new Error(

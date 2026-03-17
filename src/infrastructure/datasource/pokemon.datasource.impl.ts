@@ -9,9 +9,14 @@ export class PokemonDataSourceImpl implements PokemonDataSource {
       const pokemon = await prisma.pokemon.findUnique({ where: { id } });
       if (!pokemon) throw new Error("Pokemon not found in db");
 
+      const { nickname, ...pokemonData } = pokemon;
       const pokemonSprites = JSON.parse(pokemon.sprites?.toString() as string);
 
-      return PokemonEntity.fromObject({ ...pokemon, sprites: pokemonSprites });
+      return PokemonEntity.fromObject({
+        ...pokemonData,
+        sprites: pokemonSprites,
+        ...(nickname && { nickname }),
+      });
     } catch (error) {
       if (error instanceof Error) {
         throw new Error(error.message);
@@ -31,10 +36,15 @@ export class PokemonDataSourceImpl implements PokemonDataSource {
       const pokemonEntities: PokemonEntity[] = [];
 
       for (const pokemon of pokemons) {
+        const { nickname, ...pokemonData } = pokemon;
         const pokemonSprites = JSON.parse(JSON.stringify(pokemon.sprites));
 
         pokemonEntities.push(
-          PokemonEntity.fromObject({ ...pokemon, sprites: pokemonSprites }),
+          PokemonEntity.fromObject({
+            ...pokemonData,
+            sprites: pokemonSprites,
+            ...(nickname && { nickname }),
+          }),
         );
       }
 
@@ -53,9 +63,14 @@ export class PokemonDataSourceImpl implements PokemonDataSource {
       const pokemon = await prisma.pokemon.findFirst({ where: { name } });
       if (!pokemon) return null;
 
+      const { nickname, ...pokemonData } = pokemon;
       const pokemonSprites = JSON.parse(JSON.stringify(pokemon.sprites));
 
-      return PokemonEntity.fromObject({ ...pokemon, sprites: pokemonSprites });
+      return PokemonEntity.fromObject({
+        ...pokemonData,
+        sprites: pokemonSprites,
+        ...(nickname && { nickname }),
+      });
     } catch (error) {
       if (error instanceof Error)
         if (error.message === "Pokemon not found in db") {
@@ -93,6 +108,7 @@ export class PokemonDataSourceImpl implements PokemonDataSource {
       ability?: string;
       sprites?: PokemonEntity["sprites"];
       timesCaught?: number;
+      nickname?: string | null;
     } = {};
 
     if (typeof data.name === "string") updateData.name = data.name;
@@ -102,10 +118,18 @@ export class PokemonDataSourceImpl implements PokemonDataSource {
     if (typeof data.timesCaught === "number") {
       updateData.timesCaught = data.timesCaught;
     }
+    if (typeof data.nickname === "string") {
+      updateData.nickname = data.nickname;
+    }
 
     if (Object.keys(updateData).length === 0) {
+      const { nickname, ...pokemonData } = dbPokemon;
       const sprites = JSON.parse(JSON.stringify(dbPokemon.sprites));
-      return PokemonEntity.fromObject({ ...dbPokemon, sprites });
+      return PokemonEntity.fromObject({
+        ...pokemonData,
+        sprites,
+        ...(nickname && { nickname }),
+      });
     }
 
     const updatedPokemon = await prisma.pokemon.update({
@@ -115,11 +139,13 @@ export class PokemonDataSourceImpl implements PokemonDataSource {
 
     if (!updatedPokemon) throw new Error("Pokemon not found in db");
 
+    const { nickname, ...pokemonData } = updatedPokemon;
     const sprites = JSON.parse(JSON.stringify(updatedPokemon.sprites));
 
     return PokemonEntity.fromObject({
-      ...updatedPokemon,
+      ...pokemonData,
       sprites,
+      ...(nickname && { nickname }),
     });
   }
 
@@ -127,7 +153,7 @@ export class PokemonDataSourceImpl implements PokemonDataSource {
     pokemon: PokemonEntity,
     user?: UserEntity,
   ): Promise<PokemonEntity> {
-    const { name, types, ability, sprites, timesCaught } = pokemon;
+    const { name, types, ability, sprites, timesCaught, nickname } = pokemon;
 
     const createdPokemon = await prisma.pokemon.create({
       data: {
@@ -136,6 +162,7 @@ export class PokemonDataSourceImpl implements PokemonDataSource {
         ability,
         sprites,
         timesCaught,
+        nickname: nickname ?? null,
       },
     });
 
@@ -152,11 +179,13 @@ export class PokemonDataSourceImpl implements PokemonDataSource {
       });
     }
 
+    const { nickname: createdNickname, ...createdPokemonData } = createdPokemon;
     const pokemonSprites = JSON.parse(JSON.stringify(createdPokemon.sprites));
 
     return PokemonEntity.fromObject({
-      ...createdPokemon,
+      ...createdPokemonData,
       sprites: pokemonSprites,
+      ...(createdNickname && { nickname: createdNickname }),
     });
   }
 

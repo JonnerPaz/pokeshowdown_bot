@@ -15,7 +15,6 @@ export abstract class PokemonDataSource {
   ): Promise<PokemonEntity>;
   abstract deletePokemonById(id: number): Promise<void>;
   abstract deletePokemonByName(name: string): Promise<void>;
-
   abstract tradePokemon(
     userA: UserEntity,
     pokemonA: PokemonEntity,
