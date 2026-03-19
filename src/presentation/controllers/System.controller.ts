@@ -12,7 +12,17 @@ export class SystemController extends BaseCommandController<AppContext> {
     const handler = async (ctx: AppContext) => {
       try {
         let msg = `List of commands of @${ctx.me.username}:\n`;
-        getAllCommands().forEach((command) => {
+
+        const engCommands = getAllCommands();
+        const spaCommmands = getAllCommands("es");
+
+        msg += "English Commands:\n";
+        engCommands.forEach((command) => {
+          msg += `/${command.command} - ${command.description}\n`;
+        });
+
+        msg += "\nSpanish Commands:\n";
+        spaCommmands.forEach((command) => {
           msg += `/${command.command} - ${command.description}\n`;
         });
         await ctx.reply(msg + "\nFor more information, type /start");
