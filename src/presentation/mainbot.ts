@@ -63,9 +63,14 @@ export class MainBot {
       this.pokemonController.nickname(),
     ]);
 
-    this.bot.use(this.authController.middleware());
-    this.bot.use(this.pokemonController.middleware());
-    this.bot.use(this.systemController.middleware());
+    const controllers = [
+      this.authController,
+      this.pokemonController,
+      this.systemController,
+    ];
+    for (const controller of controllers) {
+      this.bot.use(controller.middleware());
+    }
 
     await this.registerBotMenuCommands();
   }

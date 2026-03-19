@@ -28,6 +28,13 @@ export class AuthConversation {
         return;
       }
 
+      if (ctx.from!.username === null) {
+        await ctx.reply(
+          "To use this bot, you need to have a username. Once you have one, please try again.",
+        );
+        return;
+      }
+
       await ctx.reply("Welcome to ShowdownBot!. Please select your starter!");
 
       const [photos, keyboard] = await conv.external(() =>
@@ -63,7 +70,10 @@ export class AuthConversation {
 
       pokemonName = selectedPokemon.text;
 
-      const starter = await this.dbService.createPokemon(ctx.from!.id, pokemonName);
+      const starter = await this.dbService.createPokemon(
+        ctx.from!.id,
+        pokemonName,
+      );
 
       const createdUser = await conv.external(() =>
         this.dbService.createUser(
@@ -106,8 +116,9 @@ export class AuthConversation {
   public async deleteAccount(conv: Conversation<AppContext>, ctx: AppContext) {
     try {
       const username = ctx.from?.username as string;
-      const isUserRegistered =
-        await this.dbService.findUserByUsername(username);
+      const isUserRegistered = await conv.external(() =>
+        this.dbService.findUserByUsername(username),
+      );
 
       if (!isUserRegistered) {
         await ctx.reply("You are not registered!");

@@ -126,7 +126,7 @@ export class PokemonConversation {
     ctx: AppContext,
   ) {
     try {
-      const user = await this.checkUser(ctx.from!.username!, ctx);
+      const user = await this.checkUserExists(ctx.from!.username!, ctx);
       if (!user) return;
 
       const pokemonNames = user.pokemons.map((el) => el.name);
@@ -172,7 +172,7 @@ export class PokemonConversation {
     ctx: AppContext,
   ) {
     try {
-      const user = await this.checkUser(ctx.from!.username!, ctx);
+      const user = await this.checkUserExists(ctx.from!.username!, ctx);
       if (!user) return;
 
       const pokemonNames = user.pokemons.map((el) => el.name);
@@ -288,7 +288,7 @@ export class PokemonConversation {
   @addConversation
   public async nickname(conv: Conversation, ctx: AppContext) {
     try {
-      const user = await this.checkUser(ctx.from!.username!, ctx);
+      const user = await this.checkUserExists(ctx.from!.username!, ctx);
       if (!user) return;
 
       const pokemonNames = user.pokemons.map((el) => el.name);
@@ -348,7 +348,7 @@ export class PokemonConversation {
     ctx: AppContext,
   ): Promise<[UserEntity, PokemonEntity] | [null, null]> {
     const user = await conv.external((ctx: AppContext) =>
-      this.checkUser(userName, ctx),
+      this.checkUserExists(userName, ctx),
     );
 
     if (!user) {
@@ -409,9 +409,12 @@ export class PokemonConversation {
     return true;
   }
 
-  private async checkUser(userName: string, ctx: AppContext) {
+  private async checkUserExists(userName: string, ctx: AppContext) {
     const user = await this.dbService.findUserByUsername(userName);
-    if (!user) return null;
+    if (!user) {
+      await ctx.reply("You are not registered!");
+      return null;
+    }
 
     return user;
   }

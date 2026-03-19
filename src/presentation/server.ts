@@ -23,15 +23,10 @@ export class Server {
     try {
       this.app.use(express.json());
 
-      // this.app.post("/webhook", webhookCallback(this.bot, "express"));
-
+      this.app.use(webhookCallback(this.bot, "express"));
       this.app.listen(this.port, () => {
         console.log(`Server running on port ${this.port}`);
       });
-
-      this.bot.start();
-
-      // this.bot.api.setWebhook(`https://jonner.loca.lt/bot/webhook`);
     } catch (error) {
       if (error instanceof GrammyError) {
         console.error("Error in request:", error.description);
