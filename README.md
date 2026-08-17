@@ -36,6 +36,7 @@ cp env-sample.env .env
 
 - `API_KEY`: Telegram bot token from BotFather
 - `PORT`: Express server port (default sample: `5000`)
+- `WEBHOOK_URL`: public HTTPS tunnel URL (required for webhook mode)
 - `POSTGRES_USER`: Postgres user
 - `POSTGRES_PASSWORD`: Postgres password
 - `POSTGRES_DB`: Postgres database name
@@ -92,15 +93,23 @@ All commands are case sensitive and must start with `/`.
 
 ## Webhook note for local development
 
-This app currently uses Express + Telegram webhook middleware (not long polling). That means Telegram must be able to reach your local server over HTTPS.
+This app uses Express + Telegram webhook middleware (not long polling). That means Telegram must be able to reach your local server over HTTPS, and `WEBHOOK_URL` must be set to a public URL that forwards to your local `PORT`.
 
 Typical local flow:
 
-1. Expose your local app (`PORT`) using a tunnel service (for example, [Pinggy](https://pinggy.io/) or [ngrok](https://ngrok.com/)).
-2. Set Telegram webhook to your public HTTPS URL. You can use [grammyjs webhook manager](https://telegram.tools/webhook-manager)
-3. Keep `pnpm dev` running while testing commands in Telegram.
+1. Expose your local app (`PORT`) with a tunnel, e.g.:
+   ```bash
+   cloudflared tunnel --url http://localhost:5000
+   ```
+   Cloudflare quick tunnels print a random `https://<tunnel>.trycloudflare.com` URL (ngrok or Pinggy work too).
+2. Copy that URL into `WEBHOOK_URL` in `.env`.
+3. Run `pnpm dev` — the bot registers the webhook automatically at startup (logs `Webhook set to ...`).
+4. Keep the tunnel running while testing commands in Telegram.
 
-If updates are not arriving, verify your webhook URL and that the tunnel is still active.
+> [!NOTE]
+> Cloudflare quick-tunnel URLs change on every restart. If you see no updates, copy the new tunnel URL into `WEBHOOK_URL` and restart `pnpm dev`. To check what Telegram has registered: `curl https://api.telegram.org/bot<API_KEY>/getWebhookInfo`.
+
+If updates are still not arriving, verify `WEBHOOK_URL` matches the tunnel output and that the tunnel is active.
 
 ## Stack
 
