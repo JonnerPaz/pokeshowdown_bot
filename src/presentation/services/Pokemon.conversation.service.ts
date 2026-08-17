@@ -36,30 +36,22 @@ export class PokemonConversation {
   }
 
   @addConversation
-  public async generatePokemon(
-    conv: Conversation<AppContext>,
-    ctx: AppContext,
-  ) {
+  public async generatePokemon(conv: Conversation<AppContext>, ctx: AppContext) {
     try {
       const [pokemonPhoto, keyboard] = await conv.external(() =>
         this.generateWildPokemon(ctx.from!.id),
       );
 
-      const pokemonMedia = InputMediaBuilder.photo(
-        this.getPokemonFrontSprite(pokemonPhoto),
-      );
+      const pokemonMedia = InputMediaBuilder.photo(this.getPokemonFrontSprite(pokemonPhoto));
       const media = await ctx.api.sendMediaGroup(ctx.chat!.id, [pokemonMedia]);
 
-      await ctx.reply(
-        `A wild pokemon has appeared! Touch the buttom to catch it!`,
-        { reply_markup: keyboard },
-      );
+      await ctx.reply(`A wild pokemon has appeared! Touch the buttom to catch it!`, {
+        reply_markup: keyboard,
+      });
 
-      const choice = await conv
-        .waitForCallbackQuery("catch")
-        .andFrom(ctx.from!);
+      const choice = await conv.waitForCallbackQuery("catch").andFrom(ctx.from!);
 
-      const user = await conv.external((_) =>
+      const user = await conv.external(() =>
         this.dbService.findUserByUsername(choice.callbackQuery.from.username!),
       );
       if (!user || !user.id) {
@@ -71,18 +63,13 @@ export class PokemonConversation {
       for (const photo of media) {
         await ctx.api.deleteMessage(choice.chat!.id, photo.message_id);
       }
-      await ctx.api.deleteMessage(
-        choice.chat!.id,
-        choice.callbackQuery.message!.message_id,
-      );
+      await ctx.api.deleteMessage(choice.chat!.id, choice.callbackQuery.message!.message_id);
 
       const currentPokemon = this.dbService.getCurrentEncounter(ctx.from!.id);
 
       const { pokemons } = user;
       if (pokemons.length >= 6) {
-        await ctx.reply(
-          `Your pokemon bag is full! You can't catch ${currentPokemon?.name}`,
-        );
+        await ctx.reply(`Your pokemon bag is full! You can't catch ${currentPokemon?.name}`);
         return;
       }
 
@@ -91,23 +78,22 @@ export class PokemonConversation {
         throw new Error("NO CURRENT POKEMON");
       }
 
-      const doesPokemonExist =
-        await this.dbService.findUserPokemonByNameAndVariant(
-          user.id,
-          currentPokemon.name,
-          currentPokemon.isShiny,
-        );
+      const doesPokemonExist = await this.dbService.findUserPokemonByNameAndVariant(
+        user.id,
+        currentPokemon.name,
+        currentPokemon.isShiny,
+      );
 
-      doesPokemonExist
-        ? await conv.external(() =>
-            this.dbService.updatePokemon(doesPokemonExist, {
-              timesCaught: doesPokemonExist.timesCaught + 1,
-            }),
-          )
-        : // pokemon doesn't exist, create it
-          await conv.external(() =>
-            this.dbService.insertPokemonIntoDB(currentPokemon!, user),
-          );
+      if (doesPokemonExist) {
+        await conv.external(() =>
+          this.dbService.updatePokemon(doesPokemonExist, {
+            timesCaught: doesPokemonExist.timesCaught + 1,
+          }),
+        );
+      } else {
+        // pokemon doesn't exist, create it
+        await conv.external(() => this.dbService.insertPokemonIntoDB(currentPokemon, user));
+      }
       await ctx.reply(
         `@${user.username} has caught ${currentPokemon.isShiny ? "a shiny" : "a"} ${currentPokemon.name}.`,
       );
@@ -121,10 +107,7 @@ export class PokemonConversation {
   }
 
   @addConversation
-  public async evolvePokemon(
-    conv: Conversation<Context, AppContext>,
-    ctx: AppContext,
-  ) {
+  public async evolvePokemon(conv: Conversation<Context, AppContext>, ctx: AppContext) {
     try {
       const user = await this.checkUserExists(ctx.from!.username!, ctx);
       if (!user) return;
@@ -167,10 +150,7 @@ export class PokemonConversation {
   }
 
   @addConversation
-  public async shinyPokemon(
-    conv: Conversation<Context, AppContext>,
-    ctx: AppContext,
-  ) {
+  public async shinyPokemon(conv: Conversation<Context, AppContext>, ctx: AppContext) {
     try {
       const user = await this.checkUserExists(ctx.from!.username!, ctx);
       if (!user) return;
@@ -201,9 +181,7 @@ export class PokemonConversation {
       }
 
       if (pokemon.timesCaught < SHINY_CAP) {
-        await ctx.reply(
-          `You need at least ${SHINY_CAP} catches to make ${pokemon.name} shiny.`,
-        );
+        await ctx.reply(`You need at least ${SHINY_CAP} catches to make ${pokemon.name} shiny.`);
         return;
       }
 
@@ -226,8 +204,8 @@ export class PokemonConversation {
   public async trade(conv: Conversation, ctx: AppContext) {
     try {
       const [userReq, userReqPkmn] = await this.prepareUserTrade(
-        ctx.from?.username!,
-        ctx.from?.id!,
+        ctx.from!.username!,
+        ctx.from!.id,
         conv,
         ctx,
       );
@@ -263,13 +241,9 @@ export class PokemonConversation {
 
       for (const { user, pokemon } of Object.values(trainers)) {
         const trainerId =
-          userReq.username === user.username
-            ? ctx.from!.id
-            : userCallback.callbackQuery.from.id!;
+          userReq.username === user.username ? ctx.from!.id : userCallback.callbackQuery.from.id!;
 
-        if (
-          !(await this.confirmSelection(conv, ctx, user, trainerId, pokemon))
-        ) {
+        if (!(await this.confirmSelection(conv, ctx, user, trainerId, pokemon))) {
           return;
         }
       }
@@ -311,9 +285,7 @@ export class PokemonConversation {
         return;
       }
 
-      await ctx.reply(
-        `Enter the nickname you want to give to ${pokemon.name}:`,
-      );
+      await ctx.reply(`Enter the nickname you want to give to ${pokemon.name}:`);
       const nickname = await conv.waitFrom(ctx.from!.id).andFor(":text");
 
       await ctx.reply(
@@ -332,9 +304,7 @@ export class PokemonConversation {
         }),
       );
 
-      await ctx.reply(
-        `Success! ${pokemon.name} is now known as ${nickname.message!.text}.`,
-      );
+      await ctx.reply(`Success! ${pokemon.name} is now known as ${nickname.message!.text}.`);
     } catch (error) {
       await ctx.reply("There was an error during request. Please report it");
       throw error;
@@ -347,9 +317,7 @@ export class PokemonConversation {
     conv: Conversation,
     ctx: AppContext,
   ): Promise<[UserEntity, PokemonEntity] | [null, null]> {
-    const user = await conv.external((ctx: AppContext) =>
-      this.checkUserExists(userName, ctx),
-    );
+    const user = await conv.external((ctx: AppContext) => this.checkUserExists(userName, ctx));
 
     if (!user) {
       await ctx.reply("You are not registered!");
@@ -419,17 +387,13 @@ export class PokemonConversation {
     return user;
   }
 
-  private async generateWildPokemon(
-    userId: number,
-  ): Promise<[PokemonEntity, InlineKeyboard]> {
+  private async generateWildPokemon(userId: number): Promise<[PokemonEntity, InlineKeyboard]> {
     const pokemon = await this.dbService.createPokemon(userId);
     const keyboard = new InlineKeyboard().text("Catch", "catch");
     return [pokemon, keyboard];
   }
 
   private getPokemonFrontSprite(pokemon: PokemonEntity): string {
-    return pokemon.isShiny
-      ? pokemon.sprites.frontShiny
-      : pokemon.sprites.frontDefault;
+    return pokemon.isShiny ? pokemon.sprites.frontShiny : pokemon.sprites.frontDefault;
   }
 }

@@ -19,9 +19,9 @@ export class PokemonDataSourceImpl implements PokemonDataSource {
       });
     } catch (error) {
       if (error instanceof Error) {
-        throw new Error(error.message);
+        throw new Error(error.message, { cause: error });
       }
-      throw new Error("Unknown error");
+      throw new Error("Unknown error", { cause: error });
     }
   }
 
@@ -51,9 +51,9 @@ export class PokemonDataSourceImpl implements PokemonDataSource {
       return pokemonEntities;
     } catch (error) {
       if (error instanceof Error) {
-        throw new Error(error.message);
+        throw new Error(error.message, { cause: error });
       }
-      throw new Error("Unknown error");
+      throw new Error("Unknown error", { cause: error });
     }
   }
 
@@ -72,13 +72,10 @@ export class PokemonDataSourceImpl implements PokemonDataSource {
         ...(nickname && { nickname }),
       });
     } catch (error) {
-      if (error instanceof Error)
-        if (error.message === "Pokemon not found in db") {
-          throw new Error(error.message);
-        } else {
-          throw new Error(error.message);
-        }
-      throw new Error("Unknown error");
+      if (error instanceof Error) {
+        throw new Error(error.message, { cause: error });
+      }
+      throw new Error("Unknown error", { cause: error });
     }
   }
 
@@ -178,12 +175,8 @@ export class PokemonDataSourceImpl implements PokemonDataSource {
     });
   }
 
-  async createPokemon(
-    pokemon: PokemonEntity,
-    user?: UserEntity,
-  ): Promise<PokemonEntity> {
-    const { name, types, ability, sprites, timesCaught, nickname, isShiny } =
-      pokemon;
+  async createPokemon(pokemon: PokemonEntity, user?: UserEntity): Promise<PokemonEntity> {
+    const { name, types, ability, sprites, timesCaught, nickname, isShiny } = pokemon;
 
     const createdPokemon = await prisma.$transaction(async (tx) => {
       const created = await tx.pokemon.create({
@@ -247,8 +240,7 @@ export class PokemonDataSourceImpl implements PokemonDataSource {
     pokemonB: PokemonEntity,
   ): Promise<void> {
     if (!userA.id || !userB.id) throw new Error("User ID is missing for trade");
-    if (!pokemonA.id || !pokemonB.id)
-      throw new Error("Pokemon ID is missing for trade");
+    if (!pokemonA.id || !pokemonB.id) throw new Error("Pokemon ID is missing for trade");
 
     await prisma.$transaction([
       prisma.pokemon.update({

@@ -37,22 +37,11 @@ export class DBService {
     return await this.pokemonDataSource.findPokemonByName(name);
   }
 
-  async findUserPokemonByNameAndVariant(
-    userId: number,
-    name: string,
-    isShiny: boolean,
-  ) {
-    return await this.pokemonDataSource.findUserPokemonByNameAndVariant(
-      userId,
-      name,
-      isShiny,
-    );
+  async findUserPokemonByNameAndVariant(userId: number, name: string, isShiny: boolean) {
+    return await this.pokemonDataSource.findUserPokemonByNameAndVariant(userId, name, isShiny);
   }
 
-  async createPokemon(
-    userId: number,
-    pokemon?: string,
-  ): Promise<PokemonEntity> {
+  async createPokemon(userId: number, pokemon?: string): Promise<PokemonEntity> {
     const newPokemon = await this.pokemonService.createPokemon(pokemon);
     this.currentEncounters.set(userId, newPokemon);
     return newPokemon;
@@ -109,11 +98,6 @@ export class DBService {
     userB: UserEntity,
     pokemonB: PokemonEntity,
   ) {
-    return await this.pokemonDataSource.tradePokemon(
-      userA,
-      pokemonA,
-      userB,
-      pokemonB,
-    );
+    return await this.pokemonDataSource.tradePokemon(userA, pokemonA, userB, pokemonB);
   }
 }

@@ -15,7 +15,7 @@ A Telegram bot to catch, evolve, and trade Pokemon with your friends.
 
 - Telegram account (to create a bot with [@BotFather](https://t.me/botfather))
 - Node.js 22+
-- pnpm 
+- pnpm
 - Docker (recommended for local Postgres)
 
 ## Local setup
@@ -42,7 +42,7 @@ cp env-sample.env .env
 - `POSTGRES_DB`: Postgres database name
 - `DATABASE_URL`: Prisma connection string
 
-> [!NOTE] 
+> [!NOTE]
 > A .env example has been provided at env-sample.env.
 > It's default values are suitable for local development.
 

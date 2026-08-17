@@ -14,9 +14,7 @@ export class PokeApiService {
     this.evolution = new EvolutionClient();
   }
 
-  public async createStarterPokemon(): Promise<
-    [PokemonEntity, PokemonEntity, PokemonEntity]
-  > {
+  public async createStarterPokemon(): Promise<[PokemonEntity, PokemonEntity, PokemonEntity]> {
     // Creates a random ID array with 3 random numbers
     const starterList = [
       "bulbasaur",
@@ -51,9 +49,7 @@ export class PokeApiService {
       }
     }
 
-    const [p1, p2, p3] = [...uniqueNames].map((name) =>
-      this.createPokemon(name),
-    );
+    const [p1, p2, p3] = [...uniqueNames].map((name) => this.createPokemon(name));
 
     const [starter, starter2, starter3] = (await Promise.all([p1, p2, p3])) as [
       PokemonEntity,
@@ -64,9 +60,7 @@ export class PokeApiService {
     return [starter, starter2, starter3];
   }
 
-  public async createPokemon(
-    pokemon?: string | number,
-  ): Promise<PokemonEntity> {
+  public async createPokemon(pokemon?: string | number): Promise<PokemonEntity> {
     if (pokemon && typeof pokemon === "string") {
       const requestPokemon = await this.api.getPokemonByName(pokemon);
       return this.buildPokemon(requestPokemon);
@@ -98,33 +92,27 @@ export class PokeApiService {
   }
 
   public async evolvePokemon(pokemon: PokemonEntity): Promise<PokemonEntity> {
-    try {
-      // input pokemon
-      const pokemonToEvolve = await this.api.getPokemonSpeciesByName(
-        pokemon.name,
-      );
+    // input pokemon
+    const pokemonToEvolve = await this.api.getPokemonSpeciesByName(pokemon.name);
 
-      // retrieves id used for evolution chain
-      const evoQuery = +pokemonToEvolve.evolution_chain.url.split("/").at(-2)!;
+    // retrieves id used for evolution chain
+    const evoQuery = +pokemonToEvolve.evolution_chain.url.split("/").at(-2)!;
 
-      // evolution chain
-      const { chain } = await this.evolution.getEvolutionChainById(evoQuery);
-      const evolutionChain = {
-        firstForm: chain.species.name,
-        secondForm: chain.evolves_to.at(0)?.species.name,
-        thirdForm: chain.evolves_to.at(0)?.evolves_to.at(0)?.species.name,
-      };
+    // evolution chain
+    const { chain } = await this.evolution.getEvolutionChainById(evoQuery);
+    const evolutionChain = {
+      firstForm: chain.species.name,
+      secondForm: chain.evolves_to.at(0)?.species.name,
+      thirdForm: chain.evolves_to.at(0)?.evolves_to.at(0)?.species.name,
+    };
 
-      // evolution resolver
-      if (pokemon.name === evolutionChain.firstForm) {
-        return await this.createPokemon(evolutionChain.secondForm);
-      } else if (pokemon.name === evolutionChain.secondForm) {
-        return await this.createPokemon(evolutionChain.thirdForm);
-      } else {
-        return pokemon;
-      }
-    } catch (error) {
-      throw error;
+    // evolution resolver
+    if (pokemon.name === evolutionChain.firstForm) {
+      return await this.createPokemon(evolutionChain.secondForm);
+    } else if (pokemon.name === evolutionChain.secondForm) {
+      return await this.createPokemon(evolutionChain.thirdForm);
+    } else {
+      return pokemon;
     }
   }
 
@@ -143,9 +131,7 @@ export class PokeApiService {
       .setShiny(isShiny)
       .setSprite({
         frontShiny: String(pokemon.sprites.front_shiny),
-        frontDefault: String(
-          pokemon.sprites.other?.["official-artwork"].front_default,
-        ),
+        frontDefault: String(pokemon.sprites.other?.["official-artwork"].front_default),
         backShiny: String(pokemon.sprites.back_shiny),
         backDefault: String(pokemon.sprites.back_default),
       })

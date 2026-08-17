@@ -19,13 +19,7 @@ export class UserEntity {
   pokemons: PokemonEntity[];
 
   constructor(props: UserEntityProps) {
-    const {
-      id = null,
-      username,
-      createdAt = new Date(),
-      updatedAt,
-      pokemons,
-    } = props;
+    const { id = null, username, createdAt = new Date(), updatedAt, pokemons } = props;
     this.id = id;
     this.username = username;
     this.createdAt = createdAt;

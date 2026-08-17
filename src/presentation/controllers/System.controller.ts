@@ -31,9 +31,6 @@ export class SystemController extends BaseCommandController<AppContext> {
       }
     };
 
-    return this.registerCommand(
-      "HELP",
-      async (ctx: AppContext) => await handler(ctx),
-    );
+    return this.registerCommand("HELP", async (ctx: AppContext) => await handler(ctx));
   }
 }

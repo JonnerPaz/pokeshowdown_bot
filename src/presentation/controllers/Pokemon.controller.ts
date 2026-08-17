@@ -16,10 +16,7 @@ export class PokemonController extends BaseCommandController<AppContext> {
       }
     };
 
-    return this.registerCommand(
-      "MY_POKEMONS",
-      async (ctx: AppContext) => await handler(ctx),
-    );
+    return this.registerCommand("MY_POKEMONS", async (ctx: AppContext) => await handler(ctx));
   }
 
   public async generatePokemon() {
@@ -30,10 +27,7 @@ export class PokemonController extends BaseCommandController<AppContext> {
         this.displayError(error as Error, ctx);
       }
     };
-    return this.registerCommand(
-      "POKEMON_GENERATE",
-      async (ctx: AppContext) => await handler(ctx),
-    );
+    return this.registerCommand("POKEMON_GENERATE", async (ctx: AppContext) => await handler(ctx));
   }
 
   public async evolve() {
@@ -44,10 +38,7 @@ export class PokemonController extends BaseCommandController<AppContext> {
         this.displayError(error as Error, ctx);
       }
     };
-    return this.registerCommand(
-      "EVOLVE",
-      async (ctx: AppContext) => await handler(ctx),
-    );
+    return this.registerCommand("EVOLVE", async (ctx: AppContext) => await handler(ctx));
   }
 
   public async shiny() {
@@ -59,10 +50,7 @@ export class PokemonController extends BaseCommandController<AppContext> {
       }
     };
 
-    return this.registerCommand(
-      "SHINY",
-      async (ctx: AppContext) => await handler(ctx),
-    );
+    return this.registerCommand("SHINY", async (ctx: AppContext) => await handler(ctx));
   }
 
   public async trade() {
@@ -74,10 +62,7 @@ export class PokemonController extends BaseCommandController<AppContext> {
       }
     };
 
-    return this.registerCommand(
-      "TRADE",
-      async (ctx: AppContext) => await handler(ctx),
-    );
+    return this.registerCommand("TRADE", async (ctx: AppContext) => await handler(ctx));
   }
 
   public async nickname() {
@@ -89,9 +74,6 @@ export class PokemonController extends BaseCommandController<AppContext> {
       }
     };
 
-    return this.registerCommand(
-      "NICKNAME",
-      async (ctx: AppContext) => await handler(ctx),
-    );
+    return this.registerCommand("NICKNAME", async (ctx: AppContext) => await handler(ctx));
   }
 }

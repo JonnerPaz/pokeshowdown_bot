@@ -1,7 +1,7 @@
 export class ErrorEntity {
-    constructor(public readonly message: string) {}
+  constructor(public readonly message: string) {}
 
-    public dbError(message: string): ErrorEntity {
-        return new ErrorEntity(message);
-    }
+  public dbError(message: string): ErrorEntity {
+    return new ErrorEntity(message);
+  }
 }

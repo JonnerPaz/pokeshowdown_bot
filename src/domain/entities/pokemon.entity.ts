@@ -30,16 +30,7 @@ export class PokemonEntity {
   public nickname?: string;
 
   constructor(props: PokemonEntityProps) {
-    const {
-      id,
-      name,
-      types,
-      ability,
-      isShiny = false,
-      sprites,
-      timesCaught = 1,
-      nickname,
-    } = props;
+    const { id, name, types, ability, isShiny = false, sprites, timesCaught = 1, nickname } = props;
     this.id = id;
     this.name = name;
     this.types = types;
@@ -80,9 +71,9 @@ export class PokemonEntity {
         ...(nickname && { nickname }),
       });
     } catch (error) {
-      throw new Error(
-        `The following field is was not found when creating the pokemon: ${error}`,
-      );
+      throw new Error(`The following field is was not found when creating the pokemon: ${error}`, {
+        cause: error,
+      });
     }
   }
 }

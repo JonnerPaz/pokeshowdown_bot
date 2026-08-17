@@ -110,17 +110,11 @@ export function getCommand(command: CommandKeys, language: Languages = "en") {
   return commands[command][language].command;
 }
 
-export function getCommandInfo(
-  command: CommandKeys,
-  language: Languages = "en",
-) {
+export function getCommandInfo(command: CommandKeys, language: Languages = "en") {
   return commands[command][language];
 }
 
-export function getDescription(
-  command: CommandKeys,
-  language: Languages = "en",
-) {
+export function getDescription(command: CommandKeys, language: Languages = "en") {
   return commands[command][language].description;
 }
 

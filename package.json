@@ -10,8 +10,8 @@
     "typecheck": "tsc --noEmit",
     "lint": "eslint .",
     "lint:fix": "eslint . --fix",
-    "format": "prettier --write .",
-    "format:check": "prettier --check .",
+    "format": "prettier --write \"src/**/*.ts\" \"*.{json,md}\" compose.yaml prisma.config.ts tsconfig.json",
+    "format:check": "prettier --check \"src/**/*.ts\" \"*.{json,md}\" compose.yaml prisma.config.ts tsconfig.json",
     "prisma:generate": "prisma generate",
     "prisma:migrate": "prisma migrate dev"
   },

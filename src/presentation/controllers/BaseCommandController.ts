@@ -32,8 +32,6 @@ export abstract class BaseCommandController<T extends AppContext> {
 
   protected async displayError(e: Error, ctx: T, msg?: string) {
     console.error(e);
-    return msg
-      ? ctx.reply(msg)
-      : ctx.reply("There was an error during request. Please report it");
+    return msg ? ctx.reply(msg) : ctx.reply("There was an error during request. Please report it");
   }
 }

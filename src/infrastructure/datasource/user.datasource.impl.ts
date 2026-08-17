@@ -5,9 +5,7 @@ import { ErrorEntity } from "../../domain/entities/error.entity.js";
 import { PokemonEntity } from "../../domain/entities/pokemon.entity.js";
 
 export class UserDataSourceImpl implements UserDataSource {
-  constructor(
-    public readonly error: ErrorEntity = new ErrorEntity("Generic Error"),
-  ) {}
+  constructor(public readonly error: ErrorEntity = new ErrorEntity("Generic Error")) {}
 
   public async findUserById(id: number): Promise<UserEntity | null> {
     const user = await prisma.user.findUnique({
@@ -21,9 +19,7 @@ export class UserDataSourceImpl implements UserDataSource {
     return new UserEntity({ ...user, pokemons });
   }
 
-  public async findUserByUsername(
-    username: string,
-  ): Promise<UserEntity | null> {
+  public async findUserByUsername(username: string): Promise<UserEntity | null> {
     const user = await prisma.user.findUnique({
       where: { username },
       include: { pokemons: true },
@@ -64,10 +60,7 @@ export class UserDataSourceImpl implements UserDataSource {
     return new UserEntity({ ...createdUser, pokemons });
   }
 
-  public async updateUser(
-    user: UserEntity,
-    data: Partial<UserEntity>,
-  ): Promise<UserEntity> {
+  public async updateUser(user: UserEntity, data: Partial<UserEntity>): Promise<UserEntity> {
     const { id } = user;
     if (!id) throw new Error("Id not found");
 
@@ -75,9 +68,7 @@ export class UserDataSourceImpl implements UserDataSource {
     if (!authUser) throw new Error("Username not found");
 
     const validPokemonUpdates = data.pokemons
-      ? data.pokemons.filter(
-          (p) => p.id && authUser.pokemons.map((p) => p.id).includes(p.id),
-        )
+      ? data.pokemons.filter((p) => p.id && authUser.pokemons.map((p) => p.id).includes(p.id))
       : [];
 
     const pokemonUpdateOperations = validPokemonUpdates.map((pokemon) => ({

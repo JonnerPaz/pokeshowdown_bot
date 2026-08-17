@@ -16,10 +16,7 @@ export class AuthController extends BaseCommandController<AppContext> {
       }
     };
 
-    return this.registerCommand(
-      "START",
-      async (ctx: AppContext) => await handler(ctx),
-    );
+    return this.registerCommand("START", async (ctx: AppContext) => await handler(ctx));
   }
 
   public async register() {
@@ -31,10 +28,7 @@ export class AuthController extends BaseCommandController<AppContext> {
       }
     };
 
-    return this.registerCommand(
-      "REGISTER",
-      async (ctx: AppContext) => await handler(ctx),
-    );
+    return this.registerCommand("REGISTER", async (ctx: AppContext) => await handler(ctx));
   }
 
   public async deleteAccount() {
@@ -46,9 +40,6 @@ export class AuthController extends BaseCommandController<AppContext> {
       }
     };
 
-    return this.registerCommand(
-      "DELETE_ACCOUNT",
-      async (ctx: AppContext) => await handler(ctx),
-    );
+    return this.registerCommand("DELETE_ACCOUNT", async (ctx: AppContext) => await handler(ctx));
   }
 }

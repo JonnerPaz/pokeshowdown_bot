@@ -35,9 +35,9 @@ export class MainBot {
     const pokeApi = new PokeApiService(pokemonDatasource);
     const dbService = new DBService(userDatasource, pokemonDatasource, pokeApi);
 
-    // Setup conversations
-    const authConversation = new AuthConversation(dbService);
-    const pokemonConversation = new PokemonConversation(dbService);
+    // Setup conversations (decorators register them into botConversations)
+    void new AuthConversation(dbService);
+    void new PokemonConversation(dbService);
 
     // Setup controllers
     this.authController = new AuthController(this.bot);
@@ -63,11 +63,7 @@ export class MainBot {
       this.pokemonController.nickname(),
     ]);
 
-    const controllers = [
-      this.authController,
-      this.pokemonController,
-      this.systemController,
-    ];
+    const controllers = [this.authController, this.pokemonController, this.systemController];
     for (const controller of controllers) {
       this.bot.use(controller.middleware());
     }
