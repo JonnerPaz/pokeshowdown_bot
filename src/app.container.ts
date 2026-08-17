@@ -11,6 +11,7 @@ export class AppContainer {
     const server = new Server({
       port: +process.env.PORT! || 3000,
       bot: botController.bot,
+      webhookUrl: process.env.WEBHOOK_URL!,
     });
 
     await server.setup();
