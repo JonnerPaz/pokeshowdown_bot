@@ -24,6 +24,7 @@ export class MainBot {
 
   constructor(apiKey: string = process.env.API_KEY as string) {
     this.bot = new Bot<AppContext>(apiKey);
+    this.setupErrorHandler();
 
     // Setup core services
     this.bot.use(commands());
@@ -47,6 +48,17 @@ export class MainBot {
     // init controllers and conversations
     this.registerControllers();
     this.registerConversations();
+  }
+
+  private setupErrorHandler() {
+    this.bot.catch(({ error, ctx }) => {
+      const username = ctx.from?.username ?? ctx.chat?.id?.toString() ?? "unknown";
+      console.error("bot.catch: unhandled error", { username, error });
+
+      ctx.reply("There was an error during request. Please report it").catch((replyError) => {
+        console.error("bot.catch: failed to notify user", { username, error: replyError });
+      });
+    });
   }
 
   private async registerControllers() {
