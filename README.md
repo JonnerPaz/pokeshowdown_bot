@@ -37,6 +37,7 @@ cp env-sample.env .env
 - `API_KEY`: Telegram bot token from BotFather
 - `PORT`: Express server port (default sample: `5000`)
 - `WEBHOOK_URL`: public HTTPS tunnel URL (required for webhook mode)
+- `WEBHOOK_SECRET`: random secret that secures the webhook endpoint (required for webhook mode)
 - `POSTGRES_USER`: Postgres user
 - `POSTGRES_PASSWORD`: Postgres password
 - `POSTGRES_DB`: Postgres database name
@@ -102,8 +103,8 @@ Typical local flow:
    cloudflared tunnel --url http://localhost:5000
    ```
    Cloudflare quick tunnels print a random `https://<tunnel>.trycloudflare.com` URL (ngrok or Pinggy work too).
-2. Copy that URL into `WEBHOOK_URL` in `.env`.
-3. Run `pnpm dev` — the bot registers the webhook automatically at startup (logs `Webhook set to ...`).
+2. Copy that URL into `WEBHOOK_URL` in `.env` (and keep the `WEBHOOK_SECRET` value).
+3. Run `pnpm dev` — the bot registers the webhook automatically at startup, secured with the `X-Telegram-Bot-Api-Secret-Token` header.
 4. Keep the tunnel running while testing commands in Telegram.
 
 > [!NOTE]

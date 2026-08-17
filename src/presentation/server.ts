@@ -5,8 +5,8 @@ import type { AppContext } from "./data/types.js";
 
 interface ServerOptions {
   port: number;
-  /** @description path to webhook url */
   webhookUrl: string;
+  webhookSecret: string;
   bot: Bot<AppContext>;
 }
 
@@ -15,21 +15,29 @@ export class Server {
   public readonly bot: Bot<AppContext>;
   public readonly port: number;
   public readonly webhookUrl: string;
+  public readonly webhookSecret: string;
 
   constructor(options: ServerOptions) {
     this.app = express();
     this.port = options.port;
     this.bot = options.bot;
     this.webhookUrl = options.webhookUrl;
+    this.webhookSecret = options.webhookSecret;
   }
 
   public async setup() {
     try {
       this.app.use(express.json());
 
-      await this.bot.api.setWebhook(this.webhookUrl);
+      await this.bot.api.setWebhook(this.webhookUrl, {
+        secret_token: this.webhookSecret,
+      });
 
-      this.app.use(webhookCallback(this.bot, "express"));
+      this.app.use(
+        webhookCallback(this.bot, "express", {
+          secretToken: this.webhookSecret,
+        }),
+      );
       this.app.listen(this.port, () => {
         console.log(`Server running on port ${this.port}`);
       });
