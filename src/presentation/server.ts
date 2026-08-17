@@ -24,11 +24,6 @@ export class Server {
   }
 
   public async setup() {
-    if (!this.webhookUrl) {
-      console.error("WEBHOOK_URL is not set — add your tunnel URL to .env");
-      throw new Error("WEBHOOK_URL is not defined");
-    }
-
     try {
       this.app.use(express.json());
 
