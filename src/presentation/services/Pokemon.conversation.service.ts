@@ -38,11 +38,9 @@ export class PokemonConversation {
 
   @addConversation
   public async generatePokemon(conv: Conversation<AppContext>, ctx: AppContext) {
-    const [pokemonPhoto, keyboard] = await conv.external(() =>
-      this.generateWildPokemon(ctx.from!.id),
-    );
+    const [currentPokemon, keyboard] = await conv.external(() => this.generateWildPokemon());
 
-    const pokemonMedia = InputMediaBuilder.photo(this.getPokemonFrontSprite(pokemonPhoto));
+    const pokemonMedia = InputMediaBuilder.photo(this.getPokemonFrontSprite(currentPokemon));
     const media = await ctx.api.sendMediaGroup(ctx.chat!.id, [pokemonMedia]);
 
     await ctx.reply(`A wild pokemon has appeared! Touch the buttom to catch it!`, {
@@ -65,16 +63,10 @@ export class PokemonConversation {
     }
     await ctx.api.deleteMessage(choice.chat!.id, choice.callbackQuery.message!.message_id);
 
-    const currentPokemon = this.dbService.getCurrentEncounter(ctx.from!.id);
-
     const { pokemons } = user;
     if (pokemons.length >= 6) {
-      await ctx.reply(`Your pokemon bag is full! You can't catch ${currentPokemon?.name}`);
+      await ctx.reply(`Your pokemon bag is full! You can't catch ${currentPokemon.name}`);
       return;
-    }
-
-    if (!currentPokemon) {
-      throw new Error("NO CURRENT POKEMON");
     }
 
     const doesPokemonExist = await this.dbService.findUserPokemonByNameAndVariant(
@@ -97,7 +89,6 @@ export class PokemonConversation {
       `@${user.username} has caught ${currentPokemon.isShiny ? "a shiny" : "a"} ${currentPokemon.name}.`,
     );
 
-    this.dbService.setCurrentEncounter(ctx.from!.id, null);
     return;
   }
 
@@ -363,8 +354,8 @@ export class PokemonConversation {
     return user;
   }
 
-  private async generateWildPokemon(userId: number): Promise<[PokemonEntity, InlineKeyboard]> {
-    const pokemon = await this.dbService.createPokemon(userId);
+  private async generateWildPokemon(): Promise<[PokemonEntity, InlineKeyboard]> {
+    const pokemon = await this.dbService.createPokemon();
     const keyboard = new InlineKeyboard().text("Catch", "catch");
     return [pokemon, keyboard];
   }
