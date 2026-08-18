@@ -45,9 +45,11 @@ export class MainBot {
     this.pokemonController = new PokemonController(this.bot);
     this.systemController = new SystemController(this.bot);
 
-    // init controllers and conversations
-    this.registerControllers();
     this.registerConversations();
+  }
+
+  public async register(): Promise<void> {
+    await this.registerControllers();
   }
 
   private setupErrorHandler() {

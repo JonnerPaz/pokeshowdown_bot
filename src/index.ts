@@ -9,9 +9,10 @@ async function startup() {
   if (!webhookUrl) throw new Error("WEBHOOK_URL is not defined");
   if (!webhookSecret) throw new Error("WEBHOOK_SECRET is not defined");
 
-  const { bot } = new MainBot(apiKey);
+  const botInstance = new MainBot(apiKey);
+  await botInstance.register();
 
-  const server = new Server({ port, bot, webhookUrl, webhookSecret });
+  const server = new Server({ port, bot: botInstance.bot, webhookUrl, webhookSecret });
   await server.setup();
 }
 
