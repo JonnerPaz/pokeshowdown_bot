@@ -5,13 +5,15 @@ import { PokemonEntity } from "../../domain/entities/pokemon.entity.js";
 import type { PokemonDataSource } from "../../domain/datasource/pokemon.datasource.js";
 
 export class PokeApiService {
+  private static readonly CACHE_TTL_MS = 60 * 60 * 1000;
   private api: PokemonClient;
   private builder: PokemonBuilder;
   private evolution: EvolutionClient;
   constructor(public readonly repository: PokemonDataSource) {
-    this.api = new PokemonClient();
+    const cacheOptions = { ttl: PokeApiService.CACHE_TTL_MS };
+    this.api = new PokemonClient({ cacheOptions });
     this.builder = new PokemonBuilder();
-    this.evolution = new EvolutionClient();
+    this.evolution = new EvolutionClient({ cacheOptions });
   }
 
   public async createStarterPokemon(): Promise<[PokemonEntity, PokemonEntity, PokemonEntity]> {
