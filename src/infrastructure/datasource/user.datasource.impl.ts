@@ -60,47 +60,6 @@ export class UserDataSourceImpl implements UserDataSource {
     return new UserEntity({ ...createdUser, pokemons });
   }
 
-  public async updateUser(user: UserEntity, data: Partial<UserEntity>): Promise<UserEntity> {
-    const { id } = user;
-    if (!id) throw new Error("Id not found");
-
-    const authUser = await this.findUserById(id);
-    if (!authUser) throw new Error("Username not found");
-
-    const validPokemonUpdates = data.pokemons
-      ? data.pokemons.filter((p) => p.id && authUser.pokemons.map((p) => p.id).includes(p.id))
-      : [];
-
-    const pokemonUpdateOperations = validPokemonUpdates.map((pokemon) => ({
-      where: { id: pokemon.id! },
-      data: { timesCaught: pokemon.timesCaught },
-    }));
-
-    const updatedUserFromDb = await prisma.user.update({
-      where: { id },
-      data: {
-        ...(data.username && { username: data.username }),
-
-        // Update the relations
-        pokemons: {
-          update: pokemonUpdateOperations,
-        },
-      },
-
-      // Include pokemons so we can reconstruct the Entity's pokemonIds array accurately
-      include: {
-        pokemons: {
-          select: { id: true },
-        },
-      },
-    });
-
-    return new UserEntity({
-      ...updatedUserFromDb,
-      pokemons: JSON.parse(JSON.stringify(updatedUserFromDb.pokemons)),
-    });
-  }
-
   public async deleteUserById(id: number): Promise<void> {
     await prisma.user.delete({ where: { id } });
   }

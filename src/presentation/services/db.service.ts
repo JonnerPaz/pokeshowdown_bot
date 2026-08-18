@@ -51,10 +51,6 @@ export class DBService {
     return await this.pokemonDataSource.updatePokemon(pokemon, data);
   }
 
-  async updateUser(user: UserEntity, data: Partial<UserEntity>) {
-    return await this.userDataSource.updateUser(user, data);
-  }
-
   async deleteUserByUsername(username: string) {
     return await this.userDataSource.deleteUserByUsername(username);
   }
