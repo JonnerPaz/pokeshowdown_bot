@@ -2,9 +2,6 @@ import type { PokemonEntity } from "../entities/pokemon.entity.js";
 import type { UserEntity } from "../entities/users.entity.js";
 
 export abstract class PokemonDataSource {
-  abstract findPokemonById(id: number): Promise<PokemonEntity>;
-  abstract findPokemons(ids: number[]): Promise<PokemonEntity[]>;
-  abstract findPokemonByName(name: string): Promise<PokemonEntity | null>;
   abstract findUserPokemonByNameAndVariant(
     userId: number,
     name: string,
@@ -15,8 +12,6 @@ export abstract class PokemonDataSource {
     data: Partial<PokemonEntity>,
   ): Promise<PokemonEntity>;
   abstract createPokemon(pokemon: PokemonEntity, user?: UserEntity): Promise<PokemonEntity>;
-  abstract deletePokemonById(id: number): Promise<void>;
-  abstract deletePokemonByName(name: string): Promise<void>;
   abstract tradePokemon(
     userA: UserEntity,
     pokemonA: PokemonEntity,

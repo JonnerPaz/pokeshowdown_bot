@@ -7,18 +7,6 @@ import { PokemonEntity } from "../../domain/entities/pokemon.entity.js";
 export class UserDataSourceImpl implements UserDataSource {
   constructor(public readonly error: ErrorEntity = new ErrorEntity("Generic Error")) {}
 
-  public async findUserById(id: number): Promise<UserEntity | null> {
-    const user = await prisma.user.findUnique({
-      where: { id },
-      include: { pokemons: true },
-    });
-
-    if (!user) return null;
-
-    const pokemons = JSON.parse(JSON.stringify(user.pokemons));
-    return new UserEntity({ ...user, pokemons });
-  }
-
   public async findUserByUsername(username: string): Promise<UserEntity | null> {
     const user = await prisma.user.findUnique({
       where: { username },

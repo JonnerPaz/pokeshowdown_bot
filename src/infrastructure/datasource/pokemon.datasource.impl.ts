@@ -4,81 +4,6 @@ import { PokemonEntity } from "../../domain/entities/pokemon.entity.js";
 import { prisma } from "../../data/postgres/index.js";
 
 export class PokemonDataSourceImpl implements PokemonDataSource {
-  async findPokemonById(id: number): Promise<PokemonEntity> {
-    try {
-      const pokemon = await prisma.pokemon.findUnique({ where: { id } });
-      if (!pokemon) throw new Error("Pokemon not found in db");
-
-      const { nickname, ...pokemonData } = pokemon;
-      const pokemonSprites = JSON.parse(pokemon.sprites?.toString() as string);
-
-      return PokemonEntity.fromObject({
-        ...pokemonData,
-        sprites: pokemonSprites,
-        ...(nickname && { nickname }),
-      });
-    } catch (error) {
-      if (error instanceof Error) {
-        throw new Error(error.message, { cause: error });
-      }
-      throw new Error("Unknown error", { cause: error });
-    }
-  }
-
-  async findPokemons(ids: number[]): Promise<PokemonEntity[]> {
-    try {
-      const pokemons = await prisma.pokemon.findMany({
-        where: { id: { in: ids } },
-      });
-
-      if (!pokemons) throw new Error("Pokemons not found in db");
-
-      const pokemonEntities: PokemonEntity[] = [];
-
-      for (const pokemon of pokemons) {
-        const { nickname, ...pokemonData } = pokemon;
-        const pokemonSprites = JSON.parse(JSON.stringify(pokemon.sprites));
-
-        pokemonEntities.push(
-          PokemonEntity.fromObject({
-            ...pokemonData,
-            sprites: pokemonSprites,
-            ...(nickname && { nickname }),
-          }),
-        );
-      }
-
-      return pokemonEntities;
-    } catch (error) {
-      if (error instanceof Error) {
-        throw new Error(error.message, { cause: error });
-      }
-      throw new Error("Unknown error", { cause: error });
-    }
-  }
-
-  async findPokemonByName(name: string): Promise<PokemonEntity | null> {
-    try {
-      // name is not unique, using findFirst instead of findUnique
-      const pokemon = await prisma.pokemon.findFirst({ where: { name } });
-      if (!pokemon) return null;
-
-      const { nickname, ...pokemonData } = pokemon;
-      const pokemonSprites = JSON.parse(JSON.stringify(pokemon.sprites));
-
-      return PokemonEntity.fromObject({
-        ...pokemonData,
-        sprites: pokemonSprites,
-        ...(nickname && { nickname }),
-      });
-    } catch (error) {
-      if (error instanceof Error) {
-        throw new Error(error.message, { cause: error });
-      }
-      throw new Error("Unknown error", { cause: error });
-    }
-  }
-
   async findUserPokemonByNameAndVariant(
     userId: number,
     name: string,
@@ -216,21 +141,6 @@ export class PokemonDataSourceImpl implements PokemonDataSource {
       sprites: pokemonSprites,
       ...(createdNickname && { nickname: createdNickname }),
     });
-  }
-
-  async deletePokemonById(id: number): Promise<void> {
-    const pokemon = await prisma.pokemon.findUnique({ where: { id } });
-    if (pokemon) {
-      await prisma.pokemon.delete({ where: { id } });
-    }
-  }
-
-  async deletePokemonByName(name: string): Promise<void> {
-    // Using findFirst because name is not unique
-    const pokemon = await prisma.pokemon.findFirst({ where: { name } });
-    if (pokemon) {
-      await prisma.pokemon.delete({ where: { id: pokemon.id } });
-    }
   }
 
   async tradePokemon(

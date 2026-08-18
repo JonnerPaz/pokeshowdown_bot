@@ -15,24 +15,8 @@ export class DBService {
     return await this.userDataSource.createUser(user);
   }
 
-  async findUserById(id: number) {
-    return await this.userDataSource.findUserById(id);
-  }
-
   async findUserByUsername(username: string) {
     return await this.userDataSource.findUserByUsername(username);
-  }
-
-  async findPokemonById(id: number) {
-    return await this.pokemonDataSource.findPokemonById(id);
-  }
-
-  async findPokemons(ids: number[]) {
-    return await this.pokemonDataSource.findPokemons(ids);
-  }
-
-  async findPokemonByName(name: string) {
-    return await this.pokemonDataSource.findPokemonByName(name);
   }
 
   async findUserPokemonByNameAndVariant(userId: number, name: string, isShiny: boolean) {
