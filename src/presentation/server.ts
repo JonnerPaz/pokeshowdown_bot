@@ -26,31 +26,32 @@ export class Server {
   }
 
   public async setup() {
-    try {
-      this.app.use(express.json());
+    this.app.use(express.json());
 
+    try {
       await this.bot.api.setWebhook(this.webhookUrl, {
         secret_token: this.webhookSecret,
       });
-
-      this.app.use(
-        webhookCallback(this.bot, "express", {
-          secretToken: this.webhookSecret,
-        }),
-      );
-      this.app.listen(this.port, () => {
-        console.log(`Server running on port ${this.port}`);
-      });
     } catch (error) {
       if (error instanceof GrammyError) {
-        console.error("Error in request:", error.description);
+        console.error("Webhook registration failed:", error.description);
       } else if (error instanceof HttpError) {
         console.error("Could not contact Telegram:", error);
       } else if (error instanceof BotError) {
         console.error("Error associate with BotError:", error);
       } else {
-        console.error("Unknown error:", error);
+        console.error("Unknown error while registering webhook:", error);
       }
+      throw error;
     }
+
+    this.app.use(
+      webhookCallback(this.bot, "express", {
+        secretToken: this.webhookSecret,
+      }),
+    );
+    this.app.listen(this.port, () => {
+      console.log(`Server running on port ${this.port}`);
+    });
   }
 }
