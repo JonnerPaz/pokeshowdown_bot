@@ -4,7 +4,7 @@ import { addConversation } from "./addConversation.decorator.js";
 import type { AppContext } from "../data/types.js";
 import { Conversation } from "@grammyjs/conversations";
 import { Context, InlineKeyboard, InputMediaBuilder } from "grammy";
-import { EVOLVE_CAP, SHINY_CAP } from "../../domain/data/constants.js";
+import { EVOLVE_CAP, SHINY_CAP, CONVERSATION_TIMEOUT_MS } from "../../domain/data/constants.js";
 import type { UserEntity } from "../../domain/entities/users.entity.js";
 import type { PokemonEntity } from "../../domain/entities/pokemon.entity.js";
 
@@ -47,7 +47,9 @@ export class PokemonConversation {
       reply_markup: keyboard,
     });
 
-    const choice = await conv.waitForCallbackQuery("catch").andFrom(ctx.from!);
+    const choice = await conv
+      .waitForCallbackQuery("catch", { maxMilliseconds: CONVERSATION_TIMEOUT_MS })
+      .andFrom(ctx.from!);
 
     const user = await conv.external(() =>
       this.dbService.findUserByUsername(choice.callbackQuery.from.username!),
@@ -107,7 +109,9 @@ export class PokemonConversation {
       `Which pokemon do you want to evolve? send a message with the name of the pokemon you want to evolve. Your pokemons: ${pokemonNames.join(", ")}`,
     );
 
-    const choice = await conv.waitFrom(ctx.from!.id).andFor(":text");
+    const choice = await conv
+      .waitFrom(ctx.from!.id, { maxMilliseconds: CONVERSATION_TIMEOUT_MS })
+      .andFor(":text");
     const pokemon = user.pokemons.find(
       (el) => el.name.toLowerCase() === choice!.message!.text.toLowerCase(),
     );
@@ -145,7 +149,9 @@ export class PokemonConversation {
       `Which pokemon do you want to make shiny? send a message with the name of the pokemon. Your pokemons: ${pokemonNames.join(", ")}`,
     );
 
-    const choice = await conv.waitFrom(ctx.from!.id).andFor(":text");
+    const choice = await conv
+      .waitFrom(ctx.from!.id, { maxMilliseconds: CONVERSATION_TIMEOUT_MS })
+      .andFor(":text");
     const pokemon = user.pokemons.find(
       (el) => el.name.toLowerCase() === choice!.message!.text.toLowerCase(),
     );
@@ -195,7 +201,9 @@ export class PokemonConversation {
       },
     );
 
-    const userCallback = await conv.waitForCallbackQuery(new RegExp(`^trade-accept:${tradeId}$`));
+    const userCallback = await conv.waitForCallbackQuery(new RegExp(`^trade-accept:${tradeId}$`), {
+      maxMilliseconds: CONVERSATION_TIMEOUT_MS,
+    });
 
     if (userCallback.callbackQuery.from.username === userReq.username) {
       await ctx.api.deleteMessage(ctx.chat!.id, reqMsg.message_id);
@@ -245,7 +253,9 @@ export class PokemonConversation {
     await ctx.api.sendMediaGroup(ctx.chat!.id, pokemonPhotos);
     await ctx.reply(`Which pokemon do you want to give a nickname? (${pokemonNames.join(", ")}):`);
 
-    const choice = await conv.waitFrom(ctx.from!.id).andFor(":text");
+    const choice = await conv
+      .waitFrom(ctx.from!.id, { maxMilliseconds: CONVERSATION_TIMEOUT_MS })
+      .andFor(":text");
     const pokemon = user.pokemons.find(
       (el) => el.name.toLowerCase() === choice!.message!.text.toLowerCase(),
     );
@@ -256,13 +266,17 @@ export class PokemonConversation {
     }
 
     await ctx.reply(`Enter the nickname you want to give to ${pokemon.name}:`);
-    const nickname = await conv.waitFrom(ctx.from!.id).andFor(":text");
+    const nickname = await conv
+      .waitFrom(ctx.from!.id, { maxMilliseconds: CONVERSATION_TIMEOUT_MS })
+      .andFor(":text");
 
     await ctx.reply(
       `Are you sure you want to give ${pokemon.name} the nickname "${nickname.message!.text}"? (yes/no):`,
     );
 
-    const confirm = await conv.waitFrom(ctx.from!.id).andFor(":text");
+    const confirm = await conv
+      .waitFrom(ctx.from!.id, { maxMilliseconds: CONVERSATION_TIMEOUT_MS })
+      .andFor(":text");
     if (confirm.message!.text.toLowerCase() !== "yes") {
       await ctx.reply("Nickname not changed!");
       return;
@@ -300,7 +314,9 @@ export class PokemonConversation {
       `Which pokemon do you want to trade? send a message with the name of the pokemon you want to trade. Your pokemons: ${userPkmnNames.join(", ")}`,
     );
 
-    const userInput = await conv.waitFrom(userId).andFor(":text");
+    const userInput = await conv
+      .waitFrom(userId, { maxMilliseconds: CONVERSATION_TIMEOUT_MS })
+      .andFor(":text");
     const userPkmn = user.pokemons.find(
       (el) => el.name.toLowerCase() === userInput!.message!.text.toLowerCase(),
     );
@@ -331,7 +347,9 @@ export class PokemonConversation {
     );
 
     const tradeResult = await conv
-      .waitForCallbackQuery(new RegExp(`^trade-(accept|reject):${tradeId}$`))
+      .waitForCallbackQuery(new RegExp(`^trade-(accept|reject):${tradeId}$`), {
+        maxMilliseconds: CONVERSATION_TIMEOUT_MS,
+      })
       .andFrom(userId);
 
     if (tradeResult.callbackQuery.data === `trade-reject:${tradeId}`) {

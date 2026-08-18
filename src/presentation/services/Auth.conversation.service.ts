@@ -5,6 +5,7 @@ import { DBService } from "./db.service.js";
 import { Conversation } from "@grammyjs/conversations";
 import { InlineKeyboard, InputMediaBuilder } from "grammy";
 import { UserEntity } from "../../domain/entities/users.entity.js";
+import { CONVERSATION_TIMEOUT_MS } from "../../domain/data/constants.js";
 
 export class AuthConversation {
   constructor(private readonly dbService: DBService) {}
@@ -44,7 +45,7 @@ export class AuthConversation {
     });
 
     const startedSelected = await conv
-      .waitForCallbackQuery(/starter(?:0|1|2|Cancel)/)
+      .waitForCallbackQuery(/starter(?:0|1|2|Cancel)/, { maxMilliseconds: CONVERSATION_TIMEOUT_MS })
       .andFrom(ctx.from!);
 
     const selectedPokemon = keyboard.inline_keyboard.flat().find((_, idx) => {
@@ -119,7 +120,9 @@ export class AuthConversation {
       reply_markup: keyboard,
     });
 
-    const data = await conv.waitForCallbackQuery(/delete-\w+/).andFrom(ctx.from!);
+    const data = await conv
+      .waitForCallbackQuery(/delete-\w+/, { maxMilliseconds: CONVERSATION_TIMEOUT_MS })
+      .andFrom(ctx.from!);
 
     if (data.callbackQuery.data === "delete-cancelled") {
       const msg = "Account was not deleted";
