@@ -33,7 +33,7 @@ export class MainBot {
     const userDatasource = new UserDataSourceImpl();
     const pokemonDatasource = new PokemonDataSourceImpl();
 
-    const pokeApi = new PokeApiService(pokemonDatasource);
+    const pokeApi = new PokeApiService();
     const dbService = new DBService(userDatasource, pokemonDatasource, pokeApi);
 
     // Setup conversations (decorators register them into botConversations)

@@ -2,14 +2,13 @@ import { PokemonBuilder } from "../../domain/entities/PokemonBuilder.entity.js";
 import { SHINY_ODDS, TOTAL_OF_POKEMON } from "../../domain/data/constants.js";
 import { EvolutionClient, type Pokemon, PokemonClient } from "pokenode-ts";
 import { PokemonEntity } from "../../domain/entities/pokemon.entity.js";
-import type { PokemonDataSource } from "../../domain/datasource/pokemon.datasource.js";
 
 export class PokeApiService {
   private static readonly CACHE_TTL_MS = 60 * 60 * 1000;
   private api: PokemonClient;
   private builder: PokemonBuilder;
   private evolution: EvolutionClient;
-  constructor(public readonly repository: PokemonDataSource) {
+  constructor() {
     const cacheOptions = { ttl: PokeApiService.CACHE_TTL_MS };
     this.api = new PokemonClient({ cacheOptions });
     this.builder = new PokemonBuilder();
@@ -76,21 +75,6 @@ export class PokeApiService {
     // get a random pokemon
     const requestPokemon = await this.api.getPokemonById(this.randomizer());
     return this.buildPokemon(requestPokemon, this.rollForShiny());
-  }
-
-  public showPokemonPhoto(pokemon: PokemonEntity, position?: string): string {
-    // using return. No need to use "break"
-    switch (position) {
-      case "front":
-        return pokemon.sprites.frontDefault;
-      case "back":
-        return pokemon.sprites.backDefault;
-      case "frontShiny":
-        return pokemon.sprites.frontShiny;
-      case "backShiny":
-        return pokemon.sprites.backShiny;
-    }
-    return pokemon.sprites.frontDefault;
   }
 
   public async evolvePokemon(pokemon: PokemonEntity): Promise<PokemonEntity> {
