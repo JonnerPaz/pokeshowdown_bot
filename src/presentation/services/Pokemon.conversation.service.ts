@@ -1,3 +1,4 @@
+import { randomUUID } from "node:crypto";
 import type { DBService } from "./db.service.js";
 import { addConversation } from "./addConversation.decorator.js";
 import type { AppContext } from "../data/types.js";
@@ -181,6 +182,8 @@ export class PokemonConversation {
 
   @addConversation
   public async trade(conv: Conversation, ctx: AppContext) {
+    const tradeId = randomUUID();
+
     const [userReq, userReqPkmn] = await this.prepareUserTrade(
       ctx.from!.username!,
       ctx.from!.id,
@@ -192,11 +195,11 @@ export class PokemonConversation {
     const reqMsg = await ctx.reply(
       `@${userReq.username} wants to trade ${userReqPkmn.name}. Click the button below to accept the trade.`,
       {
-        reply_markup: new InlineKeyboard().text("Accept", "trade-accept"),
+        reply_markup: new InlineKeyboard().text("Accept", `trade-accept:${tradeId}`),
       },
     );
 
-    const userCallback = await conv.waitForCallbackQuery(/trade-accept/);
+    const userCallback = await conv.waitForCallbackQuery(new RegExp(`^trade-accept:${tradeId}$`));
 
     if (userCallback.callbackQuery.from.username === userReq.username) {
       await ctx.api.deleteMessage(ctx.chat!.id, reqMsg.message_id);
@@ -221,7 +224,7 @@ export class PokemonConversation {
       const trainerId =
         userReq.username === user.username ? ctx.from!.id : userCallback.callbackQuery.from.id!;
 
-      if (!(await this.confirmSelection(conv, ctx, user, trainerId, pokemon))) {
+      if (!(await this.confirmSelection(conv, ctx, user, trainerId, pokemon, tradeId))) {
         return;
       }
     }
@@ -320,21 +323,22 @@ export class PokemonConversation {
     user: UserEntity,
     userId: number,
     pokemon: PokemonEntity,
+    tradeId: string,
   ): Promise<boolean> {
     const msg = await ctx.reply(
       `@${user.username}, would you like to trade your ${pokemon.name}?`,
       {
         reply_markup: new InlineKeyboard()
-          .text("Accept", "trade-accept")
-          .text("Reject", "trade-reject"),
+          .text("Accept", `trade-accept:${tradeId}`)
+          .text("Reject", `trade-reject:${tradeId}`),
       },
     );
 
     const tradeResult = await conv
-      .waitForCallbackQuery(/trade-accept|trade-reject/)
+      .waitForCallbackQuery(new RegExp(`^trade-(accept|reject):${tradeId}$`))
       .andFrom(userId);
 
-    if (tradeResult.callbackQuery.data === "trade-reject") {
+    if (tradeResult.callbackQuery.data === `trade-reject:${tradeId}`) {
       await ctx.reply("Trade cancelled!");
       await ctx.api.deleteMessage(ctx.chat!.id, msg.message_id);
       return false;
