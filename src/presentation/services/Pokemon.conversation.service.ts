@@ -13,6 +13,11 @@ export class PokemonConversation {
 
   @addConversation
   public async pokemons(conv: Conversation, ctx: AppContext) {
+    if (ctx.from!.username === null) {
+      await ctx.reply("You are not registered!");
+      return;
+    }
+
     const user = await conv.external((ctx) =>
       this.dbService.findUserByUsername(ctx.from!.username!),
     );

@@ -18,19 +18,19 @@ export class AuthConversation {
 
   @addConversation
   public async register(conv: Conversation, ctx: AppContext) {
+    if (ctx.from!.username === null) {
+      await ctx.reply(
+        "To use this bot, you need to have a username. Once you have one, please try again.",
+      );
+      return;
+    }
+
     const user = await conv.external((ctx) =>
       this.dbService.findUserByUsername(ctx.from!.username!),
     );
 
     if (user) {
       await ctx.reply("You are already registered!");
-      return;
-    }
-
-    if (ctx.from!.username === null) {
-      await ctx.reply(
-        "To use this bot, you need to have a username. Once you have one, please try again.",
-      );
       return;
     }
 
@@ -98,7 +98,12 @@ export class AuthConversation {
 
   @addConversation
   public async deleteAccount(conv: Conversation<AppContext>, ctx: AppContext) {
-    const username = ctx.from?.username as string;
+    const username = ctx.from?.username;
+    if (!username) {
+      await ctx.reply("You are not registered!");
+      return;
+    }
+
     const isUserRegistered = await conv.external(() => this.dbService.findUserByUsername(username));
 
     if (!isUserRegistered) {
