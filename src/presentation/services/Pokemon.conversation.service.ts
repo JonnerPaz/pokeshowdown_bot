@@ -12,303 +12,270 @@ export class PokemonConversation {
 
   @addConversation
   public async pokemons(conv: Conversation, ctx: AppContext) {
-    try {
-      const user = await conv.external((ctx) =>
-        this.dbService.findUserByUsername(ctx.from!.username!),
-      );
+    const user = await conv.external((ctx) =>
+      this.dbService.findUserByUsername(ctx.from!.username!),
+    );
 
-      if (!user) {
-        await ctx.reply("You are not registered!");
-        return;
-      }
-
-      const pokemonPhotos = user.pokemons.map((el) =>
-        InputMediaBuilder.photo(this.getPokemonFrontSprite(el)),
-      );
-
-      await ctx.reply("Your pokemons are:");
-      await ctx.api.sendMediaGroup(ctx.chat!.id, pokemonPhotos);
+    if (!user) {
+      await ctx.reply("You are not registered!");
       return;
-    } catch (err) {
-      ctx.reply("There was an error during request. Please report it");
-      throw err;
     }
+
+    const pokemonPhotos = user.pokemons.map((el) =>
+      InputMediaBuilder.photo(this.getPokemonFrontSprite(el)),
+    );
+
+    await ctx.reply("Your pokemons are:");
+    await ctx.api.sendMediaGroup(ctx.chat!.id, pokemonPhotos);
+    return;
   }
 
   @addConversation
   public async generatePokemon(conv: Conversation<AppContext>, ctx: AppContext) {
-    try {
-      const [pokemonPhoto, keyboard] = await conv.external(() =>
-        this.generateWildPokemon(ctx.from!.id),
-      );
+    const [pokemonPhoto, keyboard] = await conv.external(() =>
+      this.generateWildPokemon(ctx.from!.id),
+    );
 
-      const pokemonMedia = InputMediaBuilder.photo(this.getPokemonFrontSprite(pokemonPhoto));
-      const media = await ctx.api.sendMediaGroup(ctx.chat!.id, [pokemonMedia]);
+    const pokemonMedia = InputMediaBuilder.photo(this.getPokemonFrontSprite(pokemonPhoto));
+    const media = await ctx.api.sendMediaGroup(ctx.chat!.id, [pokemonMedia]);
 
-      await ctx.reply(`A wild pokemon has appeared! Touch the buttom to catch it!`, {
-        reply_markup: keyboard,
-      });
+    await ctx.reply(`A wild pokemon has appeared! Touch the buttom to catch it!`, {
+      reply_markup: keyboard,
+    });
 
-      const choice = await conv.waitForCallbackQuery("catch").andFrom(ctx.from!);
+    const choice = await conv.waitForCallbackQuery("catch").andFrom(ctx.from!);
 
-      const user = await conv.external(() =>
-        this.dbService.findUserByUsername(choice.callbackQuery.from.username!),
-      );
-      if (!user || !user.id) {
-        await ctx.reply("You are not registered!");
-        return;
-      }
-
-      // delete message and photos
-      for (const photo of media) {
-        await ctx.api.deleteMessage(choice.chat!.id, photo.message_id);
-      }
-      await ctx.api.deleteMessage(choice.chat!.id, choice.callbackQuery.message!.message_id);
-
-      const currentPokemon = this.dbService.getCurrentEncounter(ctx.from!.id);
-
-      const { pokemons } = user;
-      if (pokemons.length >= 6) {
-        await ctx.reply(`Your pokemon bag is full! You can't catch ${currentPokemon?.name}`);
-        return;
-      }
-
-      if (!currentPokemon) {
-        await ctx.reply("There was an error during request. Please report it");
-        throw new Error("NO CURRENT POKEMON");
-      }
-
-      const doesPokemonExist = await this.dbService.findUserPokemonByNameAndVariant(
-        user.id,
-        currentPokemon.name,
-        currentPokemon.isShiny,
-      );
-
-      if (doesPokemonExist) {
-        await conv.external(() =>
-          this.dbService.updatePokemon(doesPokemonExist, {
-            timesCaught: doesPokemonExist.timesCaught + 1,
-          }),
-        );
-      } else {
-        // pokemon doesn't exist, create it
-        await conv.external(() => this.dbService.insertPokemonIntoDB(currentPokemon, user));
-      }
-      await ctx.reply(
-        `@${user.username} has caught ${currentPokemon.isShiny ? "a shiny" : "a"} ${currentPokemon.name}.`,
-      );
-
-      this.dbService.setCurrentEncounter(ctx.from!.id, null);
+    const user = await conv.external(() =>
+      this.dbService.findUserByUsername(choice.callbackQuery.from.username!),
+    );
+    if (!user || !user.id) {
+      await ctx.reply("You are not registered!");
       return;
-    } catch (err) {
-      await ctx.reply("There was an error during request. Please report it");
-      throw err;
     }
+
+    // delete message and photos
+    for (const photo of media) {
+      await ctx.api.deleteMessage(choice.chat!.id, photo.message_id);
+    }
+    await ctx.api.deleteMessage(choice.chat!.id, choice.callbackQuery.message!.message_id);
+
+    const currentPokemon = this.dbService.getCurrentEncounter(ctx.from!.id);
+
+    const { pokemons } = user;
+    if (pokemons.length >= 6) {
+      await ctx.reply(`Your pokemon bag is full! You can't catch ${currentPokemon?.name}`);
+      return;
+    }
+
+    if (!currentPokemon) {
+      throw new Error("NO CURRENT POKEMON");
+    }
+
+    const doesPokemonExist = await this.dbService.findUserPokemonByNameAndVariant(
+      user.id,
+      currentPokemon.name,
+      currentPokemon.isShiny,
+    );
+
+    if (doesPokemonExist) {
+      await conv.external(() =>
+        this.dbService.updatePokemon(doesPokemonExist, {
+          timesCaught: doesPokemonExist.timesCaught + 1,
+        }),
+      );
+    } else {
+      // pokemon doesn't exist, create it
+      await conv.external(() => this.dbService.insertPokemonIntoDB(currentPokemon, user));
+    }
+    await ctx.reply(
+      `@${user.username} has caught ${currentPokemon.isShiny ? "a shiny" : "a"} ${currentPokemon.name}.`,
+    );
+
+    this.dbService.setCurrentEncounter(ctx.from!.id, null);
+    return;
   }
 
   @addConversation
   public async evolvePokemon(conv: Conversation<Context, AppContext>, ctx: AppContext) {
-    try {
-      const user = await this.checkUserExists(ctx.from!.username!, ctx);
-      if (!user) return;
+    const user = await this.checkUserExists(ctx.from!.username!, ctx);
+    if (!user) return;
 
-      const pokemonNames = user.pokemons.map((el) => el.name);
-      const pokemonPhotos = user.pokemons.map((el) =>
-        InputMediaBuilder.photo(this.getPokemonFrontSprite(el)),
-      );
+    const pokemonNames = user.pokemons.map((el) => el.name);
+    const pokemonPhotos = user.pokemons.map((el) =>
+      InputMediaBuilder.photo(this.getPokemonFrontSprite(el)),
+    );
 
-      await ctx.api.sendMediaGroup(ctx.chat!.id, pokemonPhotos);
+    await ctx.api.sendMediaGroup(ctx.chat!.id, pokemonPhotos);
+    await ctx.reply(
+      `Which pokemon do you want to evolve? send a message with the name of the pokemon you want to evolve. Your pokemons: ${pokemonNames.join(", ")}`,
+    );
+
+    const choice = await conv.waitFrom(ctx.from!.id).andFor(":text");
+    const pokemon = user.pokemons.find(
+      (el) => el.name.toLowerCase() === choice!.message!.text.toLowerCase(),
+    );
+
+    if (!pokemon || pokemon.timesCaught < EVOLVE_CAP) {
       await ctx.reply(
-        `Which pokemon do you want to evolve? send a message with the name of the pokemon you want to evolve. Your pokemons: ${pokemonNames.join(", ")}`,
+        "Unsuccessful evolution. Wether you haven't caught that pokemon or you haven't caught it enough times, you can't evolve it now.",
       );
-
-      const choice = await conv.waitFrom(ctx.from!.id).andFor(":text");
-      const pokemon = user.pokemons.find(
-        (el) => el.name.toLowerCase() === choice!.message!.text.toLowerCase(),
-      );
-
-      if (!pokemon || pokemon.timesCaught < EVOLVE_CAP) {
-        await ctx.reply(
-          "Unsuccessful evolution. Wether you haven't caught that pokemon or you haven't caught it enough times, you can't evolve it now.",
-        );
-        return;
-      }
-
-      const evolvedPokemon = await this.dbService.evolvePokemon(pokemon);
-
-      if (evolvedPokemon.name === pokemon.name) {
-        await ctx.reply("Your pokemon can't evolve anymore");
-        return;
-      }
-
-      await ctx.reply(`Your ${pokemon.name} evolved to ${evolvedPokemon.name}`);
       return;
-    } catch (err) {
-      await ctx.reply("There was an error during request. Please report it");
-      throw err;
     }
+
+    const evolvedPokemon = await this.dbService.evolvePokemon(pokemon);
+
+    if (evolvedPokemon.name === pokemon.name) {
+      await ctx.reply("Your pokemon can't evolve anymore");
+      return;
+    }
+
+    await ctx.reply(`Your ${pokemon.name} evolved to ${evolvedPokemon.name}`);
+    return;
   }
 
   @addConversation
   public async shinyPokemon(conv: Conversation<Context, AppContext>, ctx: AppContext) {
-    try {
-      const user = await this.checkUserExists(ctx.from!.username!, ctx);
-      if (!user) return;
+    const user = await this.checkUserExists(ctx.from!.username!, ctx);
+    if (!user) return;
 
-      const pokemonNames = user.pokemons.map((el) => el.name);
-      const pokemonPhotos = user.pokemons.map((el) =>
-        InputMediaBuilder.photo(this.getPokemonFrontSprite(el)),
-      );
+    const pokemonNames = user.pokemons.map((el) => el.name);
+    const pokemonPhotos = user.pokemons.map((el) =>
+      InputMediaBuilder.photo(this.getPokemonFrontSprite(el)),
+    );
 
-      await ctx.api.sendMediaGroup(ctx.chat!.id, pokemonPhotos);
-      await ctx.reply(
-        `Which pokemon do you want to make shiny? send a message with the name of the pokemon. Your pokemons: ${pokemonNames.join(", ")}`,
-      );
+    await ctx.api.sendMediaGroup(ctx.chat!.id, pokemonPhotos);
+    await ctx.reply(
+      `Which pokemon do you want to make shiny? send a message with the name of the pokemon. Your pokemons: ${pokemonNames.join(", ")}`,
+    );
 
-      const choice = await conv.waitFrom(ctx.from!.id).andFor(":text");
-      const pokemon = user.pokemons.find(
-        (el) => el.name.toLowerCase() === choice!.message!.text.toLowerCase(),
-      );
+    const choice = await conv.waitFrom(ctx.from!.id).andFor(":text");
+    const pokemon = user.pokemons.find(
+      (el) => el.name.toLowerCase() === choice!.message!.text.toLowerCase(),
+    );
 
-      if (!pokemon) {
-        await ctx.reply("You don't have that pokemon");
-        return;
-      }
-
-      if (pokemon.isShiny) {
-        await ctx.reply(`${pokemon.name} is already shiny.`);
-        return;
-      }
-
-      if (pokemon.timesCaught < SHINY_CAP) {
-        await ctx.reply(`You need at least ${SHINY_CAP} catches to make ${pokemon.name} shiny.`);
-        return;
-      }
-
-      await conv.external(() =>
-        this.dbService.updatePokemon(pokemon, {
-          isShiny: true,
-          timesCaught: pokemon.timesCaught - SHINY_CAP,
-        }),
-      );
-
-      await ctx.reply(`✨ ${pokemon.name} is now shiny!`);
+    if (!pokemon) {
+      await ctx.reply("You don't have that pokemon");
       return;
-    } catch (err) {
-      await ctx.reply("There was an error during request. Please report it");
-      throw err;
     }
+
+    if (pokemon.isShiny) {
+      await ctx.reply(`${pokemon.name} is already shiny.`);
+      return;
+    }
+
+    if (pokemon.timesCaught < SHINY_CAP) {
+      await ctx.reply(`You need at least ${SHINY_CAP} catches to make ${pokemon.name} shiny.`);
+      return;
+    }
+
+    await conv.external(() =>
+      this.dbService.updatePokemon(pokemon, {
+        isShiny: true,
+        timesCaught: pokemon.timesCaught - SHINY_CAP,
+      }),
+    );
+
+    await ctx.reply(`✨ ${pokemon.name} is now shiny!`);
+    return;
   }
 
   @addConversation
   public async trade(conv: Conversation, ctx: AppContext) {
-    try {
-      const [userReq, userReqPkmn] = await this.prepareUserTrade(
-        ctx.from!.username!,
-        ctx.from!.id,
-        conv,
-        ctx,
-      );
-      if (!userReq || !userReqPkmn) return;
+    const [userReq, userReqPkmn] = await this.prepareUserTrade(
+      ctx.from!.username!,
+      ctx.from!.id,
+      conv,
+      ctx,
+    );
+    if (!userReq || !userReqPkmn) return;
 
-      const reqMsg = await ctx.reply(
-        `@${userReq.username} wants to trade ${userReqPkmn.name}. Click the button below to accept the trade.`,
-        {
-          reply_markup: new InlineKeyboard().text("Accept", "trade-accept"),
-        },
-      );
+    const reqMsg = await ctx.reply(
+      `@${userReq.username} wants to trade ${userReqPkmn.name}. Click the button below to accept the trade.`,
+      {
+        reply_markup: new InlineKeyboard().text("Accept", "trade-accept"),
+      },
+    );
 
-      const userCallback = await conv.waitForCallbackQuery(/trade-accept/);
+    const userCallback = await conv.waitForCallbackQuery(/trade-accept/);
 
-      if (userCallback.callbackQuery.from.username === userReq.username) {
-        await ctx.api.deleteMessage(ctx.chat!.id, reqMsg.message_id);
-        await ctx.reply("You can't trade with yourself!");
+    if (userCallback.callbackQuery.from.username === userReq.username) {
+      await ctx.api.deleteMessage(ctx.chat!.id, reqMsg.message_id);
+      await ctx.reply("You can't trade with yourself!");
+      return;
+    }
+
+    const [userRes, userResPkmn] = await this.prepareUserTrade(
+      userCallback.callbackQuery.from.username!,
+      userCallback.callbackQuery.from.id!,
+      conv,
+      ctx,
+    );
+    if (!userRes || !userResPkmn) return;
+
+    const trainers = {
+      1: { user: userReq, pokemon: userReqPkmn },
+      2: { user: userRes, pokemon: userResPkmn },
+    };
+
+    for (const { user, pokemon } of Object.values(trainers)) {
+      const trainerId =
+        userReq.username === user.username ? ctx.from!.id : userCallback.callbackQuery.from.id!;
+
+      if (!(await this.confirmSelection(conv, ctx, user, trainerId, pokemon))) {
         return;
       }
-
-      const [userRes, userResPkmn] = await this.prepareUserTrade(
-        userCallback.callbackQuery.from.username!,
-        userCallback.callbackQuery.from.id!,
-        conv,
-        ctx,
-      );
-      if (!userRes || !userResPkmn) return;
-
-      const trainers = {
-        1: { user: userReq, pokemon: userReqPkmn },
-        2: { user: userRes, pokemon: userResPkmn },
-      };
-
-      for (const { user, pokemon } of Object.values(trainers)) {
-        const trainerId =
-          userReq.username === user.username ? ctx.from!.id : userCallback.callbackQuery.from.id!;
-
-        if (!(await this.confirmSelection(conv, ctx, user, trainerId, pokemon))) {
-          return;
-        }
-      }
-
-      await conv.external(() =>
-        this.dbService.tradePokemon(userReq, userReqPkmn, userRes, userResPkmn),
-      );
-
-      await ctx.reply("Trade successful!");
-    } catch (err) {
-      await ctx.reply("There was an error during request. Please report it");
-      throw err;
     }
+
+    await conv.external(() =>
+      this.dbService.tradePokemon(userReq, userReqPkmn, userRes, userResPkmn),
+    );
+
+    await ctx.reply("Trade successful!");
   }
 
   @addConversation
   public async nickname(conv: Conversation, ctx: AppContext) {
-    try {
-      const user = await this.checkUserExists(ctx.from!.username!, ctx);
-      if (!user) return;
+    const user = await this.checkUserExists(ctx.from!.username!, ctx);
+    if (!user) return;
 
-      const pokemonNames = user.pokemons.map((el) => el.name);
-      const pokemonPhotos = user.pokemons.map((el) =>
-        InputMediaBuilder.photo(this.getPokemonFrontSprite(el)),
-      );
+    const pokemonNames = user.pokemons.map((el) => el.name);
+    const pokemonPhotos = user.pokemons.map((el) =>
+      InputMediaBuilder.photo(this.getPokemonFrontSprite(el)),
+    );
 
-      await ctx.api.sendMediaGroup(ctx.chat!.id, pokemonPhotos);
-      await ctx.reply(
-        `Which pokemon do you want to give a nickname? (${pokemonNames.join(", ")}):`,
-      );
+    await ctx.api.sendMediaGroup(ctx.chat!.id, pokemonPhotos);
+    await ctx.reply(`Which pokemon do you want to give a nickname? (${pokemonNames.join(", ")}):`);
 
-      const choice = await conv.waitFrom(ctx.from!.id).andFor(":text");
-      const pokemon = user.pokemons.find(
-        (el) => el.name.toLowerCase() === choice!.message!.text.toLowerCase(),
-      );
+    const choice = await conv.waitFrom(ctx.from!.id).andFor(":text");
+    const pokemon = user.pokemons.find(
+      (el) => el.name.toLowerCase() === choice!.message!.text.toLowerCase(),
+    );
 
-      if (!pokemon) {
-        await ctx.reply("You don't have that pokemon");
-        return;
-      }
-
-      await ctx.reply(`Enter the nickname you want to give to ${pokemon.name}:`);
-      const nickname = await conv.waitFrom(ctx.from!.id).andFor(":text");
-
-      await ctx.reply(
-        `Are you sure you want to give ${pokemon.name} the nickname "${nickname.message!.text}"? (yes/no):`,
-      );
-
-      const confirm = await conv.waitFrom(ctx.from!.id).andFor(":text");
-      if (confirm.message!.text.toLowerCase() !== "yes") {
-        await ctx.reply("Nickname not changed!");
-        return;
-      }
-
-      await conv.external(() =>
-        this.dbService.updatePokemon(pokemon, {
-          nickname: nickname.message!.text,
-        }),
-      );
-
-      await ctx.reply(`Success! ${pokemon.name} is now known as ${nickname.message!.text}.`);
-    } catch (error) {
-      await ctx.reply("There was an error during request. Please report it");
-      throw error;
+    if (!pokemon) {
+      await ctx.reply("You don't have that pokemon");
+      return;
     }
+
+    await ctx.reply(`Enter the nickname you want to give to ${pokemon.name}:`);
+    const nickname = await conv.waitFrom(ctx.from!.id).andFor(":text");
+
+    await ctx.reply(
+      `Are you sure you want to give ${pokemon.name} the nickname "${nickname.message!.text}"? (yes/no):`,
+    );
+
+    const confirm = await conv.waitFrom(ctx.from!.id).andFor(":text");
+    if (confirm.message!.text.toLowerCase() !== "yes") {
+      await ctx.reply("Nickname not changed!");
+      return;
+    }
+
+    await conv.external(() =>
+      this.dbService.updatePokemon(pokemon, {
+        nickname: nickname.message!.text,
+      }),
+    );
+
+    await ctx.reply(`Success! ${pokemon.name} is now known as ${nickname.message!.text}.`);
   }
 
   private async prepareUserTrade(

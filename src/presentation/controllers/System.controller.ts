@@ -27,7 +27,7 @@ export class SystemController extends BaseCommandController<AppContext> {
         });
         await ctx.reply(msg + "\nFor more information, type /start");
       } catch (error) {
-        super.displayError(error as Error, ctx);
+        this.displayError(error as Error, ctx);
       }
     };
 

@@ -12,7 +12,7 @@ export class PokemonController extends BaseCommandController<AppContext> {
       try {
         return await ctx.conversation.enter("pokemons");
       } catch (error) {
-        super.displayError(error as Error, ctx);
+        this.displayError(error as Error, ctx);
       }
     };
 
@@ -58,7 +58,7 @@ export class PokemonController extends BaseCommandController<AppContext> {
       try {
         return await ctx.conversation.enter("trade");
       } catch (error) {
-        super.displayError(error as Error, ctx);
+        this.displayError(error as Error, ctx);
       }
     };
 
@@ -70,7 +70,7 @@ export class PokemonController extends BaseCommandController<AppContext> {
       try {
         return await ctx.conversation.enter("nickname");
       } catch (error) {
-        super.displayError(error as Error, ctx);
+        this.displayError(error as Error, ctx);
       }
     };
 

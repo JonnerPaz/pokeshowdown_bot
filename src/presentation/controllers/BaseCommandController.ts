@@ -31,7 +31,8 @@ export abstract class BaseCommandController<T extends AppContext> {
   }
 
   protected async displayError(e: Error, ctx: T, msg?: string) {
-    console.error(e);
+    const username = ctx.from?.username ?? ctx.chat?.id?.toString() ?? "unknown";
+    console.error("command failed", { username, error: e.message, cause: e.cause });
     return msg ? ctx.reply(msg) : ctx.reply("There was an error during request. Please report it");
   }
 }

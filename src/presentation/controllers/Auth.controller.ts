@@ -12,7 +12,7 @@ export class AuthController extends BaseCommandController<AppContext> {
       try {
         return await ctx.conversation.enter("start");
       } catch (error) {
-        super.displayError(error as Error, ctx);
+        this.displayError(error as Error, ctx);
       }
     };
 
@@ -24,7 +24,7 @@ export class AuthController extends BaseCommandController<AppContext> {
       try {
         await ctx.conversation.enter("register");
       } catch (error) {
-        super.displayError(error as Error, ctx);
+        this.displayError(error as Error, ctx);
       }
     };
 
@@ -36,7 +36,7 @@ export class AuthController extends BaseCommandController<AppContext> {
       try {
         await ctx.conversation.enter("deleteAccount");
       } catch (error) {
-        super.displayError(error as Error, ctx);
+        this.displayError(error as Error, ctx);
       }
     };
 
