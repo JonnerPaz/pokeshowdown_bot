@@ -1,12 +1,9 @@
 import { prisma } from "../../data/postgres/index.js";
 import { UserDataSource } from "../../domain/datasource/user.datasource.js";
 import { UserEntity } from "../../domain/entities/users.entity.js";
-import { ErrorEntity } from "../../domain/entities/error.entity.js";
 import { PokemonEntity } from "../../domain/entities/pokemon.entity.js";
 
 export class UserDataSourceImpl implements UserDataSource {
-  constructor(public readonly error: ErrorEntity = new ErrorEntity("Generic Error")) {}
-
   public async findUserByUsername(username: string): Promise<UserEntity | null> {
     const user = await prisma.user.findUnique({
       where: { username },
