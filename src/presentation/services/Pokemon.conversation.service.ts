@@ -4,7 +4,12 @@ import { addConversation } from "./addConversation.decorator.js";
 import type { AppContext } from "../data/types.js";
 import { Conversation } from "@grammyjs/conversations";
 import { Context, InlineKeyboard, InputMediaBuilder } from "grammy";
-import { EVOLVE_CAP, SHINY_CAP, CONVERSATION_TIMEOUT_MS } from "../../domain/data/constants.js";
+import {
+  CONVERSATION_TIMEOUT_MS,
+  EVOLVE_CAP,
+  MAX_PKMN_PARTY,
+  SHINY_CAP,
+} from "../../domain/data/constants.js";
 import type { UserEntity } from "../../domain/entities/users.entity.js";
 import type { PokemonEntity } from "../../domain/entities/pokemon.entity.js";
 
@@ -66,7 +71,7 @@ export class PokemonConversation {
     await ctx.api.deleteMessage(choice.chat!.id, choice.callbackQuery.message!.message_id);
 
     const { pokemons } = user;
-    if (pokemons.length >= 6) {
+    if (pokemons.length >= MAX_PKMN_PARTY) {
       await ctx.reply(`Your pokemon bag is full! You can't catch ${currentPokemon.name}`);
       return;
     }
