@@ -180,17 +180,17 @@
 
 ---
 
-## 16. Roadmap · Phase 5 (Future Work)
+## 16. Roadmap · Phase 5
 
 Previous phases (landed on `main`): P1 tooling/CI + webhook hardening, P2 conversation timeouts + conversation-local encounters, P3 PokeAPI caching + gen-9 pool + dead-code sweep, P4 dead datasource/`ErrorEntity` removal + constants tidy.
 
-Planned Phase 5 (features), not yet started — pick scope with the user before executing:
+Phase 5 (landed on `main`): encounter rate tuning (config-driven `SHINY_ODDS`/`SPAWN_POOL_SIZE` env overrides with constant defaults) and anti-abuse (per-user `RateLimiterService` for spawn/catch, lookups tied to a new `User.telegramId` column via `findUserByTelegramId`, and `timesCaught` economy spend enforced in `PokemonEntity.spendForShiny`). `UserDataSource` is now `findUserByTelegramId` / `createUser` / `deleteUserByTelegramId`.
+
+Deferred (pick scope with the user before executing):
 
 1. **Testing setup**: add Vitest + a minimal suite (repository/DTO/entity unit tests, conversation/service smoke tests). Document `pnpm vitest run` in §2 once added.
 2. **Battles**: design a `BattleController`/`BattleConversation` with turn-based flow; extend `commands.ts` (EN + ES) and scope to group chats.
 3. **Pokedex / pokédex lookup**: new `/pokedex` command backed by `PokeApiService` (cache-friendly), plus a persisted dex-progress column if desired.
-4. **Encounter rate tuning**: expose spawn weights/shininess via constants (`SHINY_ODDS`, `TOTAL_OF_POKEMON`) and make them config-driven if requested.
-5. **Anti-abuse**: rate-limit spawns/catches per user, tie encounters to `userId` instead of username, and add `timesCaught` economy balance checks.
 
 Phase 5 conventions: each feature = one scoped commit set, verified with typecheck/lint/format + `pnpm dev` smoke test, README/AGENTS updated. No new shared mutable state for encounters (keep them conversation-local).
 

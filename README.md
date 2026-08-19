@@ -42,6 +42,8 @@ cp env-sample.env .env
 - `POSTGRES_PASSWORD`: Postgres password
 - `POSTGRES_DB`: Postgres database name
 - `DATABASE_URL`: Prisma connection string
+- `SHINY_ODDS`: (optional) shiny encounter odds; default `512`. Positive integer.
+- `SPAWN_POOL_SIZE`: (optional) size of the wild spawn pool; default `1025`. Positive integer.
 
 > [!NOTE]
 > A .env example has been provided at env-sample.env.
