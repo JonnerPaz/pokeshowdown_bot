@@ -3,16 +3,23 @@ import { SHINY_ODDS, TOTAL_OF_POKEMON } from "../../domain/data/constants.js";
 import { EvolutionClient, type Pokemon, PokemonClient } from "pokenode-ts";
 import { PokemonEntity } from "../../domain/entities/pokemon.entity.js";
 
+interface EncounterConfig {
+  shinyOdds: number;
+  spawnPoolSize: number;
+}
+
 export class PokeApiService {
   private static readonly CACHE_TTL_MS = 60 * 60 * 1000;
   private api: PokemonClient;
   private builder: PokemonBuilder;
   private evolution: EvolutionClient;
+  private encounterConfig: EncounterConfig;
   constructor() {
     const cacheOptions = { ttl: PokeApiService.CACHE_TTL_MS };
     this.api = new PokemonClient({ cacheOptions });
     this.builder = new PokemonBuilder();
     this.evolution = new EvolutionClient({ cacheOptions });
+    this.encounterConfig = PokeApiService.resolveEncounterConfig();
   }
 
   public async createStarterPokemon(): Promise<[PokemonEntity, PokemonEntity, PokemonEntity]> {
@@ -106,7 +113,7 @@ export class PokeApiService {
    * Rolls a random number to determine if the pokemon is shiny
    */
   private rollForShiny(): boolean {
-    return Math.floor(Math.random() * SHINY_ODDS) === 0;
+    return Math.floor(Math.random() * this.encounterConfig.shinyOdds) === 0;
   }
 
   private buildPokemon(pokemon: Pokemon, isShiny = false): PokemonEntity {
@@ -129,6 +136,19 @@ export class PokeApiService {
       // gets a random number from an array
       return array.at(Math.floor(Math.random() * array.length)) ?? 0;
     }
-    return Math.floor(Math.random() * TOTAL_OF_POKEMON + 1);
+    return Math.floor(Math.random() * this.encounterConfig.spawnPoolSize + 1);
+  }
+
+  private static resolveEncounterConfig(): EncounterConfig {
+    return {
+      shinyOdds: PokeApiService.readPositiveInt(process.env.SHINY_ODDS, SHINY_ODDS),
+      spawnPoolSize: PokeApiService.readPositiveInt(process.env.SPAWN_POOL_SIZE, TOTAL_OF_POKEMON),
+    };
+  }
+
+  private static readPositiveInt(raw: string | undefined, fallback: number): number {
+    if (raw === undefined) return fallback;
+    const parsed = Number(raw);
+    return Number.isInteger(parsed) && parsed > 0 ? parsed : fallback;
   }
 }
