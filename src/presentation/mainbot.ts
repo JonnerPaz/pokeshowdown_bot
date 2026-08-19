@@ -13,6 +13,7 @@ import { getAllCommands } from "./controllers/commands.js";
 import { SystemController } from "./controllers/System.controller.js";
 import { AuthConversation } from "./services/Auth.conversation.service.js";
 import { PokemonConversation } from "./services/Pokemon.conversation.service.js";
+import { RateLimiterService } from "./services/rateLimiter.service.js";
 
 export class MainBot {
   private authController: AuthController;
@@ -35,10 +36,11 @@ export class MainBot {
 
     const pokeApi = new PokeApiService();
     const dbService = new DBService(userDatasource, pokemonDatasource, pokeApi);
+    const rateLimiter = new RateLimiterService();
 
     // Setup conversations (decorators register them into botConversations)
     void new AuthConversation(dbService);
-    void new PokemonConversation(dbService);
+    void new PokemonConversation(dbService, rateLimiter);
 
     // Setup controllers
     this.authController = new AuthController(this.bot);

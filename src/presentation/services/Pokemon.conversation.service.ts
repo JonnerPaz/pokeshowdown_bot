@@ -12,9 +12,13 @@ import {
 } from "../../domain/data/constants.js";
 import type { UserEntity } from "../../domain/entities/users.entity.js";
 import type { PokemonEntity } from "../../domain/entities/pokemon.entity.js";
+import type { RateLimiterService } from "./rateLimiter.service.js";
 
 export class PokemonConversation {
-  constructor(private readonly dbService: DBService) {}
+  constructor(
+    private readonly dbService: DBService,
+    private readonly rateLimiter: RateLimiterService,
+  ) {}
 
   @addConversation
   public async pokemons(conv: Conversation, ctx: AppContext) {
@@ -43,7 +47,14 @@ export class PokemonConversation {
 
   @addConversation
   public async generatePokemon(conv: Conversation<AppContext>, ctx: AppContext) {
+    const userId = ctx.from!.id;
+    if (!this.rateLimiter.isAllowed(userId, "spawn")) {
+      await ctx.reply("Slow down! You're spawning too many pokemon.");
+      return;
+    }
+
     const [currentPokemon, keyboard] = await conv.external(() => this.generateWildPokemon());
+    this.rateLimiter.hit(userId, "spawn");
 
     const pokemonMedia = InputMediaBuilder.photo(this.getPokemonFrontSprite(currentPokemon));
     const media = await ctx.api.sendMediaGroup(ctx.chat!.id, [pokemonMedia]);
@@ -76,6 +87,11 @@ export class PokemonConversation {
       return;
     }
 
+    if (!this.rateLimiter.isAllowed(userId, "catch")) {
+      await ctx.reply("Slow down! You're catching too many pokemon.");
+      return;
+    }
+
     const doesPokemonExist = await this.dbService.findUserPokemonByNameAndVariant(
       user.id,
       currentPokemon.name,
@@ -92,6 +108,7 @@ export class PokemonConversation {
       // pokemon doesn't exist, create it
       await conv.external(() => this.dbService.insertPokemonIntoDB(currentPokemon, user));
     }
+    this.rateLimiter.hit(userId, "catch");
     await ctx.reply(
       `@${user.username} has caught ${currentPokemon.isShiny ? "a shiny" : "a"} ${currentPokemon.name}.`,
     );

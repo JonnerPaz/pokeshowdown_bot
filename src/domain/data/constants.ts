@@ -4,3 +4,7 @@ export const EVOLVE_CAP = 3;
 export const SHINY_ODDS = 512;
 export const SHINY_CAP = EVOLVE_CAP;
 export const CONVERSATION_TIMEOUT_MS = 60_000;
+export const SPAWN_RATE_LIMIT_WINDOW_MS = 10_000;
+export const SPAWN_RATE_LIMIT_MAX = 1;
+export const CATCH_RATE_LIMIT_WINDOW_MS = 5_000;
+export const CATCH_RATE_LIMIT_MAX = 1;
