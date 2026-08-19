@@ -50,10 +50,6 @@ export class MainBot {
     this.registerConversations();
   }
 
-  public async register(): Promise<void> {
-    await this.registerControllers();
-  }
-
   private setupErrorHandler() {
     this.bot.catch(({ error, ctx }) => {
       const username = ctx.from?.username ?? ctx.chat?.id?.toString() ?? "unknown";
@@ -65,7 +61,7 @@ export class MainBot {
     });
   }
 
-  private async registerControllers() {
+  public async registerControllers() {
     await Promise.all([
       this.authController.start(),
       this.authController.register(),
