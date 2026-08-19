@@ -6,7 +6,8 @@
 
 ## 0. Quick Facts
 
-- Node 22+, TypeScript ESM (`"type": "module"`, `moduleResolution: nodenext`).
+- Node 22+, TypeScript ESM (`"type": "module"`, `moduleResolution: nodenext`). CI pins Node 26; local runtime should match.
+- `pnpm-workspace.yaml` holds pnpm settings (e.g. `onlyBuiltDependencies` for prisma/esbuild build scripts).
 - Package manager: pnpm 10.x (`corepack enable pnpm`).
 - Stack: grammy bot framework, @grammyjs commands/conversations, Prisma/Postgres, pokenode-ts, Express.
 - Runs in **webhook mode**: Express `Server` registers the webhook with a `secret_token`; no long polling.
