@@ -76,4 +76,19 @@ export class PokemonEntity {
       });
     }
   }
+
+  public spendForShiny(cap: number): PokemonEntity {
+    if (this.isShiny) {
+      throw new Error(`${this.name} is already shiny`);
+    }
+    if (this.timesCaught < cap) {
+      throw new Error(`You need at least ${cap} catches to make ${this.name} shiny`);
+    }
+
+    return new PokemonEntity({
+      ...this,
+      isShiny: true,
+      timesCaught: this.timesCaught - cap,
+    });
+  }
 }

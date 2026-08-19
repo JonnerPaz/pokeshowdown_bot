@@ -186,12 +186,13 @@ export class PokemonConversation {
       return;
     }
 
-    await conv.external(() =>
-      this.dbService.updatePokemon(pokemon, {
-        isShiny: true,
-        timesCaught: pokemon.timesCaught - SHINY_CAP,
-      }),
-    );
+    await conv.external(() => {
+      const shinyPokemon = pokemon.spendForShiny(SHINY_CAP);
+      return this.dbService.updatePokemon(pokemon, {
+        isShiny: shinyPokemon.isShiny,
+        timesCaught: shinyPokemon.timesCaught,
+      });
+    });
 
     await ctx.reply(`✨ ${pokemon.name} is now shiny!`);
     return;
