@@ -1,0 +1,11 @@
+node_modules
+.pnpm-store
+generated
+.env
+.git
+postgres
+.idea
+.vscode
+tmp
+temp
+build

@@ -49,22 +49,24 @@ cp env-sample.env .env
 > A .env example has been provided at env-sample.env.
 > It's default values are suitable for local development.
 
-4. Start Postgres:
+4. Start everything (Postgres + dev server) with Docker Compose:
 
 ```bash
 docker compose up -d
 ```
 
-5. Generate Prisma client and apply migrations:
+This boots the `db` service (Postgres on `2300:5432`) and the `dev` service (the bot on `5000`), installs deps, generates the Prisma client, applies any pending migrations, and runs `pnpm dev` inside the container. It also exposes port `5000` so a host-side tunnel can reach the webhook.
+
+> [!NOTE]
+> If you run `pnpm dev` on the host, stop it first — both would compete for port `5000`.
+
+Alternative host-only workflow (no containerized dev server):
 
 ```bash
+docker compose up -d db       # Postgres only
+pnpm install
 pnpm run prisma:generate
 pnpm run prisma:migrate
-```
-
-6. Run in development mode:
-
-```bash
 pnpm dev
 ```
 
@@ -106,7 +108,7 @@ Typical local flow:
    ```
    Cloudflare quick tunnels print a random `https://<tunnel>.trycloudflare.com` URL (ngrok or Pinggy work too).
 2. Copy that URL into `WEBHOOK_URL` in `.env` (and keep the `WEBHOOK_SECRET` value).
-3. Run `pnpm dev` — the bot registers the webhook automatically at startup, secured with the `X-Telegram-Bot-Api-Secret-Token` header.
+3. Run the bot — either `docker compose up -d` (containerized dev server, port `5000` already published) or `pnpm dev` on the host. The bot registers the webhook automatically at startup, secured with the `X-Telegram-Bot-Api-Secret-Token` header.
 4. Keep the tunnel running while testing commands in Telegram.
 
 > [!NOTE]
