@@ -26,9 +26,7 @@ export class AuthConversation {
       return;
     }
 
-    const user = await conv.external((ctx) =>
-      this.dbService.findUserByUsername(ctx.from!.username!),
-    );
+    const user = await conv.external((ctx) => this.dbService.findUserByTelegramId(ctx.from!.id));
 
     if (user) {
       await ctx.reply("You are already registered!");
@@ -72,6 +70,7 @@ export class AuthConversation {
       this.dbService.createUser(
         new UserEntity({
           id: null,
+          telegramId: ctx.from!.id,
           username: ctx.from!.username as string,
           createdAt: new Date(),
           updatedAt: new Date(),
@@ -99,13 +98,13 @@ export class AuthConversation {
 
   @addConversation
   public async deleteAccount(conv: Conversation<AppContext>, ctx: AppContext) {
-    const username = ctx.from?.username;
-    if (!username) {
+    const userId = ctx.from?.id;
+    if (!userId) {
       await ctx.reply("You are not registered!");
       return;
     }
 
-    const isUserRegistered = await conv.external(() => this.dbService.findUserByUsername(username));
+    const isUserRegistered = await conv.external(() => this.dbService.findUserByTelegramId(userId));
 
     if (!isUserRegistered) {
       await ctx.reply("You are not registered!");
@@ -131,7 +130,7 @@ export class AuthConversation {
       return;
     }
 
-    await conv.external(() => this.dbService.deleteUserByUsername(username));
+    await conv.external(() => this.dbService.deleteUserByTelegramId(userId));
 
     const msg = "Your account was deleted";
     await ctx.api.deleteMessage(choice.chat.id, choice.message_id);

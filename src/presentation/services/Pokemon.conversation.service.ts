@@ -22,14 +22,7 @@ export class PokemonConversation {
 
   @addConversation
   public async pokemons(conv: Conversation, ctx: AppContext) {
-    if (ctx.from!.username === null) {
-      await ctx.reply("You are not registered!");
-      return;
-    }
-
-    const user = await conv.external((ctx) =>
-      this.dbService.findUserByUsername(ctx.from!.username!),
-    );
+    const user = await conv.external((ctx) => this.dbService.findUserByTelegramId(ctx.from!.id));
 
     if (!user) {
       await ctx.reply("You are not registered!");
@@ -68,7 +61,7 @@ export class PokemonConversation {
       .andFrom(ctx.from!);
 
     const user = await conv.external(() =>
-      this.dbService.findUserByUsername(choice.callbackQuery.from.username!),
+      this.dbService.findUserByTelegramId(choice.callbackQuery.from.id),
     );
     if (!user || !user.id) {
       await ctx.reply("You are not registered!");
@@ -118,7 +111,7 @@ export class PokemonConversation {
 
   @addConversation
   public async evolvePokemon(conv: Conversation<Context, AppContext>, ctx: AppContext) {
-    const user = await this.checkUserExists(ctx.from!.username!, ctx);
+    const user = await this.checkUserExists(ctx.from!.id, ctx);
     if (!user) return;
 
     const pokemonNames = user.pokemons.map((el) => el.name);
@@ -158,7 +151,7 @@ export class PokemonConversation {
 
   @addConversation
   public async shinyPokemon(conv: Conversation<Context, AppContext>, ctx: AppContext) {
-    const user = await this.checkUserExists(ctx.from!.username!, ctx);
+    const user = await this.checkUserExists(ctx.from!.id, ctx);
     if (!user) return;
 
     const pokemonNames = user.pokemons.map((el) => el.name);
@@ -208,12 +201,7 @@ export class PokemonConversation {
   public async trade(conv: Conversation, ctx: AppContext) {
     const tradeId = randomUUID();
 
-    const [userReq, userReqPkmn] = await this.prepareUserTrade(
-      ctx.from!.username!,
-      ctx.from!.id,
-      conv,
-      ctx,
-    );
+    const [userReq, userReqPkmn] = await this.prepareUserTrade(ctx.from!.id, conv, ctx);
     if (!userReq || !userReqPkmn) return;
 
     const reqMsg = await ctx.reply(
@@ -227,15 +215,14 @@ export class PokemonConversation {
       maxMilliseconds: CONVERSATION_TIMEOUT_MS,
     });
 
-    if (userCallback.callbackQuery.from.username === userReq.username) {
+    if (userCallback.callbackQuery.from.id === userReq.id) {
       await ctx.api.deleteMessage(ctx.chat!.id, reqMsg.message_id);
       await ctx.reply("You can't trade with yourself!");
       return;
     }
 
     const [userRes, userResPkmn] = await this.prepareUserTrade(
-      userCallback.callbackQuery.from.username!,
-      userCallback.callbackQuery.from.id!,
+      userCallback.callbackQuery.from.id,
       conv,
       ctx,
     );
@@ -247,8 +234,7 @@ export class PokemonConversation {
     };
 
     for (const { user, pokemon } of Object.values(trainers)) {
-      const trainerId =
-        userReq.username === user.username ? ctx.from!.id : userCallback.callbackQuery.from.id!;
+      const trainerId = userReq.id === user.id ? ctx.from!.id : userCallback.callbackQuery.from.id;
 
       if (!(await this.confirmSelection(conv, ctx, user, trainerId, pokemon, tradeId))) {
         return;
@@ -264,7 +250,7 @@ export class PokemonConversation {
 
   @addConversation
   public async nickname(conv: Conversation, ctx: AppContext) {
-    const user = await this.checkUserExists(ctx.from!.username!, ctx);
+    const user = await this.checkUserExists(ctx.from!.id, ctx);
     if (!user) return;
 
     const pokemonNames = user.pokemons.map((el) => el.name);
@@ -314,12 +300,11 @@ export class PokemonConversation {
   }
 
   private async prepareUserTrade(
-    userName: string,
     userId: number,
     conv: Conversation,
     ctx: AppContext,
   ): Promise<[UserEntity, PokemonEntity] | [null, null]> {
-    const user = await conv.external((ctx: AppContext) => this.checkUserExists(userName, ctx));
+    const user = await conv.external((ctx: AppContext) => this.checkUserExists(userId, ctx));
 
     if (!user) {
       await ctx.reply("You are not registered!");
@@ -384,8 +369,8 @@ export class PokemonConversation {
     return true;
   }
 
-  private async checkUserExists(userName: string, ctx: AppContext) {
-    const user = await this.dbService.findUserByUsername(userName);
+  private async checkUserExists(userId: number, ctx: AppContext) {
+    const user = await this.dbService.findUserByTelegramId(userId);
     if (!user) {
       await ctx.reply("You are not registered!");
       return null;

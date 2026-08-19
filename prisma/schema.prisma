@@ -8,11 +8,12 @@ datasource db {
 }
 
 model User {
-  id        Int       @id @default(autoincrement())
-  username  String    @unique
-  createdAt DateTime  @default(now()) @db.Timestamp(6)
-  updatedAt DateTime  @updatedAt @default(now()) @db.Timestamp(6)
-  nickname  String?
+  id         Int      @id @default(autoincrement())
+  telegramId Int?     @unique
+  username   String   @unique
+  createdAt  DateTime @default(now()) @db.Timestamp(6)
+  updatedAt  DateTime @updatedAt @default(now()) @db.Timestamp(6)
+  nickname   String?
 
   pokemons  Pokemon[]
 }

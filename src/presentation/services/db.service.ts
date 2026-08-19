@@ -15,8 +15,8 @@ export class DBService {
     return await this.userDataSource.createUser(user);
   }
 
-  async findUserByUsername(username: string) {
-    return await this.userDataSource.findUserByUsername(username);
+  async findUserByTelegramId(telegramId: number) {
+    return await this.userDataSource.findUserByTelegramId(telegramId);
   }
 
   async findUserPokemonByNameAndVariant(userId: number, name: string, isShiny: boolean) {
@@ -35,8 +35,8 @@ export class DBService {
     return await this.pokemonDataSource.updatePokemon(pokemon, data);
   }
 
-  async deleteUserByUsername(username: string) {
-    return await this.userDataSource.deleteUserByUsername(username);
+  async deleteUserByTelegramId(telegramId: number) {
+    return await this.userDataSource.deleteUserByTelegramId(telegramId);
   }
 
   async evolvePokemon(pokemon: PokemonEntity) {

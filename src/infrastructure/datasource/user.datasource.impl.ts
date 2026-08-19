@@ -4,9 +4,9 @@ import { UserEntity } from "../../domain/entities/users.entity.js";
 import { PokemonEntity } from "../../domain/entities/pokemon.entity.js";
 
 export class UserDataSourceImpl implements UserDataSource {
-  public async findUserByUsername(username: string): Promise<UserEntity | null> {
+  public async findUserByTelegramId(telegramId: number): Promise<UserEntity | null> {
     const user = await prisma.user.findUnique({
-      where: { username },
+      where: { telegramId },
       include: { pokemons: true },
     });
 
@@ -17,7 +17,7 @@ export class UserDataSourceImpl implements UserDataSource {
   }
 
   public async createUser(user: UserEntity): Promise<UserEntity> {
-    const { pokemons, updatedAt, createdAt, username } = user;
+    const { pokemons, updatedAt, createdAt, username, telegramId } = user;
 
     const pokemonData = pokemons.map((pokemon) => {
       const entity = PokemonEntity.fromObject(pokemon);
@@ -33,6 +33,7 @@ export class UserDataSourceImpl implements UserDataSource {
     const createdUser = await prisma.user.create({
       data: {
         username,
+        telegramId,
         createdAt,
         updatedAt,
         pokemons: {
@@ -45,11 +46,7 @@ export class UserDataSourceImpl implements UserDataSource {
     return new UserEntity({ ...createdUser, pokemons });
   }
 
-  public async deleteUserById(id: number): Promise<void> {
-    await prisma.user.delete({ where: { id } });
-  }
-
-  public async deleteUserByUsername(username: string): Promise<void> {
-    await prisma.user.delete({ where: { username } });
+  public async deleteUserByTelegramId(telegramId: number): Promise<void> {
+    await prisma.user.delete({ where: { telegramId } });
   }
 }
