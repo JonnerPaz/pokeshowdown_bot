@@ -120,7 +120,7 @@ If updates are still not arriving, verify `WEBHOOK_URL` matches the tunnel outpu
 - grammY (`@grammyjs/commands`, `@grammyjs/conversations`)
 - Prisma + PostgreSQL
 - Express
-- pokenode-ts + axios
+- pokenode-ts
 
 ## Project layout
 

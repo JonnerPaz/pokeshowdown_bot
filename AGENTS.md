@@ -110,7 +110,7 @@
 ## 9. Networking & External APIs
 
 - `PokeApiService` encapsulates pokenode-ts usage (constructed with no args). Other layers should consume its methods, not the SDK directly.
-- Response caching is explicit: `PokemonClient`/`EvolutionClient` are built with `cacheOptions: { ttl: 1h }` (`CACHE_TTL_MS`). Random wild spawns aren't cacheable; starters, evolutions, and species lookups are.
+- Response caching is explicit: `PokemonClient`/`EvolutionClient` are built with `cache: new MemoryCache({ ttl: 1h })` (`CACHE_TTL_MS`). Random wild spawns aren't cacheable; starters, evolutions, and species lookups are.
 - Batch external requests with `Promise.all` but limit concurrency if calls become heavy.
 - Expose helper methods (e.g., `createStarterPokemon`, `createPokemon`, `evolvePokemon`). Encounters are conversation-local; do not reintroduce a shared `currentPokemon` map.
 

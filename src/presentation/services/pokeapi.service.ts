@@ -1,6 +1,6 @@
 import { PokemonBuilder } from "../../domain/entities/PokemonBuilder.entity.js";
 import { SHINY_ODDS, TOTAL_OF_POKEMON } from "../../domain/data/constants.js";
-import { EvolutionClient, type Pokemon, PokemonClient } from "pokenode-ts";
+import { EvolutionClient, MemoryCache, type Pokemon, PokemonClient } from "pokenode-ts";
 import { PokemonEntity } from "../../domain/entities/pokemon.entity.js";
 
 interface EncounterConfig {
@@ -15,10 +15,10 @@ export class PokeApiService {
   private evolution: EvolutionClient;
   private encounterConfig: EncounterConfig;
   constructor() {
-    const cacheOptions = { ttl: PokeApiService.CACHE_TTL_MS };
-    this.api = new PokemonClient({ cacheOptions });
+    const cache = new MemoryCache({ ttl: PokeApiService.CACHE_TTL_MS });
+    this.api = new PokemonClient({ cache });
     this.builder = new PokemonBuilder();
-    this.evolution = new EvolutionClient({ cacheOptions });
+    this.evolution = new EvolutionClient({ cache });
     this.encounterConfig = PokeApiService.resolveEncounterConfig();
   }
 
