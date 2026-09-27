@@ -13,7 +13,8 @@
     "format": "prettier --write \"src/**/*.ts\" \"*.{json,md}\" compose.yaml prisma.config.ts tsconfig.json",
     "format:check": "prettier --check \"src/**/*.ts\" \"*.{json,md}\" compose.yaml prisma.config.ts tsconfig.json",
     "prisma:generate": "prisma generate",
-    "prisma:migrate": "prisma migrate dev"
+    "prisma:migrate": "prisma migrate dev",
+    "tunnel": "cloudflared tunnel --url http://localhost:5000"
   },
   "keywords": [],
   "author": "",
