@@ -184,14 +184,13 @@
 
 Previous phases (landed on `main`): P1 tooling/CI + webhook hardening, P2 conversation timeouts + conversation-local encounters, P3 PokeAPI caching + gen-9 pool + dead-code sweep, P4 dead datasource/`ErrorEntity` removal + constants tidy.
 
-Phase 5 (landed on `main`): encounter rate tuning (config-driven `SHINY_ODDS`/`SPAWN_POOL_SIZE` env overrides with constant defaults) and anti-abuse (per-user `RateLimiterService` for spawn/catch, lookups tied to a new `User.telegramId` column via `findUserByTelegramId`, and `timesCaught` economy spend enforced in `PokemonEntity.spendForShiny`). `UserDataSource` is now `findUserByTelegramId` / `createUser` / `deleteUserByTelegramId`.
+Phase 5 (landed on `main`): encounter rate tuning (config-driven `SHINY_ODDS`/`SPAWN_POOL_SIZE` env overrides with constant defaults), anti-abuse (per-user `RateLimiterService` for spawn/catch, lookups tied to `User.telegramId` column via `findUserByTelegramId`, and `timesCaught` economy spend enforced in `PokemonEntity.spendForShiny`). BigInt migration for `telegramId`, pure unit test suite with Vitest (28 tests across domain and presentation), and a turn-based **Battle System** (`/battle` / `/batalla`) featuring `BattleEngine` (18-type effectiveness chart, physical/special/defend/charge combat moves, visual HP bar), `BattleService` (PokeAPI base stats resolver with memoization + fallback, combat level scaling and victory experience reward), and `BattleConversation` / `BattleController` (scoped callbacks, in-place message editing via `editMessageText`, interactive turn flow).
 
 Deferred (pick scope with the user before executing):
 
-1. **Testing setup**: add Vitest + a minimal suite (repository/DTO/entity unit tests, conversation/service smoke tests). Document `pnpm vitest run` in §2 once added.
-2. **Battles**: design a `BattleController`/`BattleConversation` with turn-based flow; extend `commands.ts` (EN + ES) and scope to group chats.
-3. **Pokedex / pokédex lookup**: new `/pokedex` command backed by `PokeApiService` (cache-friendly), plus a persisted dex-progress column if desired.
+1. **Pokedex / pokédex lookup**: new `/pokedex` command backed by `PokeApiService` (cache-friendly), plus a persisted dex-progress column if desired.
+2. **Battle Leaderboard**: persisted PvP win/loss stats in Prisma schema if competitive tracking is desired.
 
-Phase 5 conventions: each feature = one scoped commit set, verified with typecheck/lint/format + `pnpm dev` smoke test, README/AGENTS updated. No new shared mutable state for encounters (keep them conversation-local).
+Phase 5 conventions: each feature = one scoped commit set, verified with typecheck/lint/format + `pnpm test`, README/AGENTS updated. No new shared mutable state for encounters or battles (keep them conversation-local).
 
 Stay disciplined, document discoveries, and keep this guide trustworthy for the next agent.

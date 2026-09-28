@@ -282,16 +282,19 @@ Copy the generated `https://...ngrok-free.app` URL into `WEBHOOK_URL` in `.env`.
 
 All commands are case sensitive and must start with `/`.
 
-| English Command     | Spanish Alias      | Description                              |
-| :------------------ | :----------------- | :--------------------------------------- |
-| `/start`            | `/comenzar`        | Start the bot                            |
-| `/register`         | `/registrarse`     | Register user and choose starter Pokemon |
-| `/delete_account`   | `/borrar_cuenta`   | Delete account and associated data       |
-| `/help`             | `/ayuda`           | Display command list and instructions    |
-| `/generate_pokemon` | `/generar_pokemon` | Spawn a wild Pokemon encounter           |
-| `/pokemons`         | `/pokemons`        | View your Pokemon collection             |
-| `/evolve`           | `/evolucionar`     | Evolve an owned Pokemon                  |
-| `/trade`            | `/intercambiar`    | Trade a Pokemon with another user        |
+| English Command     | Spanish Alias      | Description                                      |
+| :------------------ | :----------------- | :----------------------------------------------- |
+| `/start`            | `/comenzar`        | Start the bot                                    |
+| `/register`         | `/registrarse`     | Register user and choose starter Pokemon         |
+| `/delete_account`   | `/borrar_cuenta`   | Delete account and associated data               |
+| `/help`             | `/ayuda`           | Display command list and instructions            |
+| `/generate_pokemon` | `/generar_pokemon` | Spawn a wild Pokemon encounter                   |
+| `/pokemons`         | `/pokemons`        | View your Pokemon collection                     |
+| `/evolve`           | `/evolucionar`     | Evolve an owned Pokemon                          |
+| `/shiny`            | `/brillante`       | Make one of your pokemons shiny                  |
+| `/nickname`         | `/nickname`        | Add a custom nickname to your pokemon            |
+| `/trade`            | `/intercambiar`    | Trade a Pokemon with another user                |
+| `/battle`           | `/batalla`         | Challenge another trainer to a turn-based battle |
 
 ---
 
