@@ -225,7 +225,7 @@ export class PokemonConversation {
       maxMilliseconds: CONVERSATION_TIMEOUT_MS,
     });
 
-    if (userCallback.callbackQuery.from.id === userReq.id) {
+    if (userCallback.callbackQuery.from.id === userReq.telegramId) {
       await ctx.api.deleteMessage(ctx.chat!.id, reqMsg.message_id);
       await ctx.reply("You can't trade with yourself!");
       return;
@@ -244,7 +244,8 @@ export class PokemonConversation {
     };
 
     for (const { user, pokemon } of Object.values(trainers)) {
-      const trainerId = userReq.id === user.id ? ctx.from!.id : userCallback.callbackQuery.from.id;
+      const trainerId =
+        userReq.telegramId === user.telegramId ? ctx.from!.id : userCallback.callbackQuery.from.id;
 
       if (!(await this.confirmSelection(conv, ctx, user, trainerId, pokemon, tradeId))) {
         return;
@@ -283,30 +284,36 @@ export class PokemonConversation {
       return;
     }
 
-    await ctx.reply(`Enter the nickname you want to give to ${pokemon.name}:`);
+    await ctx.reply(`Enter the nickname you want to give to ${pokemon.name} (max 20 characters):`);
     const nickname = await conv
       .waitFrom(ctx.from!.id, { maxMilliseconds: CONVERSATION_TIMEOUT_MS })
       .andFor(":text");
 
+    const newNick = nickname.message?.text?.trim();
+    if (!newNick || newNick.length > 20) {
+      await ctx.reply("Invalid nickname! It must be between 1 and 20 characters.");
+      return;
+    }
+
     await ctx.reply(
-      `Are you sure you want to give ${pokemon.name} the nickname "${nickname.message!.text}"? (yes/no):`,
+      `Are you sure you want to give ${pokemon.name} the nickname "${newNick}"? (yes/no):`,
     );
 
     const confirm = await conv
       .waitFrom(ctx.from!.id, { maxMilliseconds: CONVERSATION_TIMEOUT_MS })
       .andFor(":text");
-    if (confirm.message!.text.toLowerCase() !== "yes") {
+    if (confirm.message?.text?.trim().toLowerCase() !== "yes") {
       await ctx.reply("Nickname not changed!");
       return;
     }
 
     await conv.external(() =>
       this.dbService.updatePokemon(pokemon, {
-        nickname: nickname.message!.text,
+        nickname: newNick,
       }),
     );
 
-    await ctx.reply(`Success! ${pokemon.name} is now known as ${nickname.message!.text}.`);
+    await ctx.reply(`Success! ${pokemon.name} is now known as ${newNick}.`);
   }
 
   private async prepareUserTrade(
