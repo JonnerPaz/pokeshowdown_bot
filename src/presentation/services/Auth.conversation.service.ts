@@ -19,14 +19,14 @@ export class AuthConversation {
 
   @addConversation
   public async register(conv: Conversation, ctx: AppContext) {
-    if (ctx.from!.username === null) {
+    if (!ctx.from?.username) {
       await ctx.reply(
-        "To use this bot, you need to have a username. Once you have one, please try again.",
+        "To use this bot, you need to have a Telegram username. Please set one in your Telegram settings and try again.",
       );
       return;
     }
 
-    const user = await conv.external((ctx) => this.dbService.findUserByTelegramId(ctx.from!.id));
+    const user = await conv.external(() => this.dbService.findUserByTelegramId(ctx.from!.id));
 
     if (user) {
       await ctx.reply("You are already registered!");
@@ -37,14 +37,19 @@ export class AuthConversation {
 
     const [photos, keyboard] = await conv.external(() => this.getStarterKeyboard());
 
-    await ctx.api.sendMediaGroup(ctx.chat!.id, photos);
-    await ctx.reply("Please select one of the following:", {
+    const media = await ctx.api.sendMediaGroup(ctx.chat!.id, photos);
+    const promptMsg = await ctx.reply("Please select one of the following:", {
       reply_markup: keyboard,
     });
 
     const startedSelected = await conv
       .waitForCallbackQuery(/starter(?:0|1|2|Cancel)/, { maxMilliseconds: CONVERSATION_TIMEOUT_MS })
       .andFrom(ctx.from!);
+
+    for (const photo of media) {
+      await ctx.api.deleteMessage(ctx.chat!.id, photo.message_id).catch(() => {});
+    }
+    await ctx.api.deleteMessage(ctx.chat!.id, promptMsg.message_id).catch(() => {});
 
     const selectedPokemon = keyboard.inline_keyboard.flat().find((_, idx) => {
       const selectedIdx = Number(startedSelected.callbackQuery.data.at(-1));
@@ -54,8 +59,6 @@ export class AuthConversation {
         selectedIdx <= keyboard.inline_keyboard.flat().length
       );
     });
-
-    await startedSelected.deleteMessage();
 
     if (!selectedPokemon) {
       await ctx.reply("Registration cancelled!");

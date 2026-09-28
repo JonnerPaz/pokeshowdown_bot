@@ -62,6 +62,8 @@ export class MainBot {
   }
 
   public async registerControllers() {
+    await this.bot.init();
+
     await Promise.all([
       this.authController.start(),
       this.authController.register(),
@@ -84,6 +86,19 @@ export class MainBot {
   }
 
   public async registerBotMenuCommands(): Promise<void> {
+    const scopesToClean = [
+      { type: "all_private_chats" as const },
+      { type: "all_group_chats" as const },
+      { type: "all_chat_administrators" as const },
+    ];
+
+    for (const scope of scopesToClean) {
+      await this.bot.api.deleteMyCommands({ scope }).catch(() => {});
+      await this.bot.api
+        .deleteMyCommands({ scope, language_code: LanguageCodes.Spanish })
+        .catch(() => {});
+    }
+
     await this.bot.api.setMyCommands(getAllCommands(LanguageCodes.English));
 
     await this.bot.api.setMyCommands(getAllCommands(LanguageCodes.Spanish), {
