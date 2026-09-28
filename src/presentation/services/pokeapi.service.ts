@@ -83,28 +83,35 @@ export class PokeApiService {
   }
 
   public async evolvePokemon(pokemon: PokemonEntity): Promise<PokemonEntity> {
-    // input pokemon
     const pokemonToEvolve = await this.api.getPokemonSpeciesByName(pokemon.name);
-
-    // retrieves id used for evolution chain
-    const evoQuery = +pokemonToEvolve.evolution_chain.url.split("/").at(-2)!;
-
-    // evolution chain
-    const { chain } = await this.evolution.getEvolutionChainById(evoQuery);
-    const evolutionChain = {
-      firstForm: chain.species.name,
-      secondForm: chain.evolves_to.at(0)?.species.name,
-      thirdForm: chain.evolves_to.at(0)?.evolves_to.at(0)?.species.name,
-    };
-
-    // evolution resolver
-    if (pokemon.name === evolutionChain.firstForm) {
-      return await this.createPokemon(evolutionChain.secondForm);
-    } else if (pokemon.name === evolutionChain.secondForm) {
-      return await this.createPokemon(evolutionChain.thirdForm);
-    } else {
+    if (!pokemonToEvolve.evolution_chain?.url) {
       return pokemon;
     }
+
+    const evoQuery = +pokemonToEvolve.evolution_chain.url.split("/").at(-2)!;
+    const { chain } = await this.evolution.getEvolutionChainById(evoQuery);
+
+    let nextSpeciesName: string | undefined;
+
+    if (pokemon.name === chain.species.name) {
+      if (chain.evolves_to.length > 0) {
+        const branch = chain.evolves_to[Math.floor(Math.random() * chain.evolves_to.length)];
+        nextSpeciesName = branch?.species.name;
+      }
+    } else {
+      const currentBranch = chain.evolves_to.find((e) => e.species.name === pokemon.name);
+      if (currentBranch && currentBranch.evolves_to.length > 0) {
+        const nextBranch =
+          currentBranch.evolves_to[Math.floor(Math.random() * currentBranch.evolves_to.length)];
+        nextSpeciesName = nextBranch?.species.name;
+      }
+    }
+
+    if (!nextSpeciesName) {
+      return pokemon;
+    }
+
+    return await this.createPokemon(nextSpeciesName);
   }
 
   /**

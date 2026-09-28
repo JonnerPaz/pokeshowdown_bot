@@ -2,6 +2,7 @@ import type { PokemonDataSource } from "../../domain/datasource/pokemon.datasour
 import type { UserDataSource } from "../../domain/datasource/user.datasource.js";
 import type { PokemonEntity } from "../../domain/entities/pokemon.entity.js";
 import type { UserEntity } from "../../domain/entities/users.entity.js";
+import { EVOLVE_CAP } from "../../domain/data/constants.js";
 import { PokeApiService } from "./pokeapi.service.js";
 
 export class DBService {
@@ -41,13 +42,17 @@ export class DBService {
 
   async evolvePokemon(pokemon: PokemonEntity) {
     const evolvedPokemon = await this.pokemonService.evolvePokemon(pokemon);
+    if (evolvedPokemon.name === pokemon.name) {
+      return pokemon;
+    }
+
     const updatedPokemon = await this.updatePokemon(pokemon, {
       name: evolvedPokemon.name,
       types: evolvedPokemon.types,
       ability: evolvedPokemon.ability,
       sprites: evolvedPokemon.sprites,
       isShiny: pokemon.isShiny,
-      timesCaught: pokemon.timesCaught,
+      timesCaught: Math.max(0, pokemon.timesCaught - EVOLVE_CAP),
     });
     return updatedPokemon;
   }
