@@ -1,4 +1,5 @@
 import { randomUUID } from "node:crypto";
+import type { InputMediaPhoto } from "grammy/types";
 import type { DBService } from "./db.service.js";
 import { addConversation } from "./addConversation.decorator.js";
 import type { AppContext } from "../data/types.js";
@@ -22,10 +23,15 @@ export class PokemonConversation {
 
   @addConversation
   public async pokemons(conv: Conversation, ctx: AppContext) {
-    const user = await conv.external((ctx) => this.dbService.findUserByTelegramId(ctx.from!.id));
+    const user = await conv.external(() => this.dbService.findUserByTelegramId(ctx.from!.id));
 
     if (!user) {
       await ctx.reply("You are not registered!");
+      return;
+    }
+
+    if (user.pokemons.length === 0) {
+      await ctx.reply("You don't have any pokemon yet!");
       return;
     }
 
@@ -34,7 +40,7 @@ export class PokemonConversation {
     );
 
     await ctx.reply("Your pokemons are:");
-    await ctx.api.sendMediaGroup(ctx.chat!.id, pokemonPhotos);
+    await this.sendPokemonPhotos(ctx, pokemonPhotos);
     return;
   }
 
@@ -49,12 +55,17 @@ export class PokemonConversation {
     const [currentPokemon, keyboard] = await conv.external(() => this.generateWildPokemon());
     this.rateLimiter.hit(userId, "spawn");
 
-    const pokemonMedia = InputMediaBuilder.photo(this.getPokemonFrontSprite(currentPokemon));
-    const media = await ctx.api.sendMediaGroup(ctx.chat!.id, [pokemonMedia]);
+    const photoMsg = await ctx.api.sendPhoto(
+      ctx.chat!.id,
+      this.getPokemonFrontSprite(currentPokemon),
+    );
 
-    await ctx.reply(`A wild pokemon has appeared! Touch the buttom to catch it!`, {
-      reply_markup: keyboard,
-    });
+    const promptMsg = await ctx.reply(
+      `A wild pokemon has appeared! Touch the button to catch it!`,
+      {
+        reply_markup: keyboard,
+      },
+    );
 
     const choice = await conv
       .waitForCallbackQuery("catch", { maxMilliseconds: CONVERSATION_TIMEOUT_MS })
@@ -68,14 +79,18 @@ export class PokemonConversation {
       return;
     }
 
-    // delete message and photos
-    for (const photo of media) {
-      await ctx.api.deleteMessage(choice.chat!.id, photo.message_id);
-    }
-    await ctx.api.deleteMessage(choice.chat!.id, choice.callbackQuery.message!.message_id);
+    // delete prompt and photo
+    await ctx.api.deleteMessage(choice.chat!.id, photoMsg.message_id).catch(() => {});
+    await ctx.api.deleteMessage(choice.chat!.id, promptMsg.message_id).catch(() => {});
+
+    const doesPokemonExist = await this.dbService.findUserPokemonByNameAndVariant(
+      user.id,
+      currentPokemon.name,
+      currentPokemon.isShiny,
+    );
 
     const { pokemons } = user;
-    if (pokemons.length >= MAX_PKMN_PARTY) {
+    if (!doesPokemonExist && pokemons.length >= MAX_PKMN_PARTY) {
       await ctx.reply(`Your pokemon bag is full! You can't catch ${currentPokemon.name}`);
       return;
     }
@@ -84,12 +99,6 @@ export class PokemonConversation {
       await ctx.reply("Slow down! You're catching too many pokemon.");
       return;
     }
-
-    const doesPokemonExist = await this.dbService.findUserPokemonByNameAndVariant(
-      user.id,
-      currentPokemon.name,
-      currentPokemon.isShiny,
-    );
 
     if (doesPokemonExist) {
       await conv.external(() =>
@@ -119,7 +128,7 @@ export class PokemonConversation {
       InputMediaBuilder.photo(this.getPokemonFrontSprite(el)),
     );
 
-    await ctx.api.sendMediaGroup(ctx.chat!.id, pokemonPhotos);
+    await this.sendPokemonPhotos(ctx, pokemonPhotos);
     await ctx.reply(
       `Which pokemon do you want to evolve? send a message with the name of the pokemon you want to evolve. Your pokemons: ${pokemonNames.join(", ")}`,
     );
@@ -159,7 +168,7 @@ export class PokemonConversation {
       InputMediaBuilder.photo(this.getPokemonFrontSprite(el)),
     );
 
-    await ctx.api.sendMediaGroup(ctx.chat!.id, pokemonPhotos);
+    await this.sendPokemonPhotos(ctx, pokemonPhotos);
     await ctx.reply(
       `Which pokemon do you want to make shiny? send a message with the name of the pokemon. Your pokemons: ${pokemonNames.join(", ")}`,
     );
@@ -259,7 +268,7 @@ export class PokemonConversation {
       InputMediaBuilder.photo(this.getPokemonFrontSprite(el)),
     );
 
-    await ctx.api.sendMediaGroup(ctx.chat!.id, pokemonPhotos);
+    await this.sendPokemonPhotos(ctx, pokemonPhotos);
     await ctx.reply(`Which pokemon do you want to give a nickname? (${pokemonNames.join(", ")}):`);
 
     const choice = await conv
@@ -317,7 +326,7 @@ export class PokemonConversation {
     );
     const userPkmnNames = user.pokemons.map((el) => el.name);
 
-    await ctx.api.sendMediaGroup(ctx.chat!.id, userPhotos);
+    await this.sendPokemonPhotos(ctx, userPhotos);
     await ctx.reply(
       `Which pokemon do you want to trade? send a message with the name of the pokemon you want to trade. Your pokemons: ${userPkmnNames.join(", ")}`,
     );
@@ -388,5 +397,18 @@ export class PokemonConversation {
 
   private getPokemonFrontSprite(pokemon: PokemonEntity): string {
     return pokemon.isShiny ? pokemon.sprites.frontShiny : pokemon.sprites.frontDefault;
+  }
+
+  private async sendPokemonPhotos(
+    ctx: AppContext,
+    photos: InputMediaPhoto[],
+  ): Promise<Array<{ message_id: number }>> {
+    if (photos.length === 0) return [];
+    const single = photos[0];
+    if (photos.length === 1 && single) {
+      const sent = await ctx.api.sendPhoto(ctx.chat!.id, single.media);
+      return [sent];
+    }
+    return await ctx.api.sendMediaGroup(ctx.chat!.id, photos);
   }
 }
