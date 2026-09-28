@@ -8,6 +8,15 @@ interface EncounterConfig {
   spawnPoolSize: number;
 }
 
+export interface BasePokemonStats {
+  hp: number;
+  attack: number;
+  defense: number;
+  specialAttack: number;
+  specialDefense: number;
+  speed: number;
+}
+
 export class PokeApiService {
   private static readonly CACHE_TTL_MS = 60 * 60 * 1000;
   private api: PokemonClient;
@@ -112,6 +121,36 @@ export class PokeApiService {
     }
 
     return await this.createPokemon(nextSpeciesName);
+  }
+
+  public async getPokemonBaseStats(name: string): Promise<BasePokemonStats> {
+    const fallbackStats: BasePokemonStats = {
+      hp: 60,
+      attack: 60,
+      defense: 60,
+      specialAttack: 60,
+      specialDefense: 60,
+      speed: 60,
+    };
+
+    try {
+      const pokemon = await this.api.getPokemonByName(name.toLowerCase());
+      const statsMap = new Map<string, number>();
+      for (const s of pokemon.stats) {
+        statsMap.set(s.stat.name, s.base_stat);
+      }
+
+      return {
+        hp: statsMap.get("hp") ?? fallbackStats.hp,
+        attack: statsMap.get("attack") ?? fallbackStats.attack,
+        defense: statsMap.get("defense") ?? fallbackStats.defense,
+        specialAttack: statsMap.get("special-attack") ?? fallbackStats.specialAttack,
+        specialDefense: statsMap.get("special-defense") ?? fallbackStats.specialDefense,
+        speed: statsMap.get("speed") ?? fallbackStats.speed,
+      };
+    } catch {
+      return fallbackStats;
+    }
   }
 
   /**
