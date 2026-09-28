@@ -47,13 +47,18 @@ export class PokemonConversation {
   @addConversation
   public async generatePokemon(conv: Conversation<AppContext>, ctx: AppContext) {
     const userId = ctx.from!.id;
-    if (!this.rateLimiter.isAllowed(userId, "spawn")) {
+    const canSpawn = await conv.external(() => {
+      if (!this.rateLimiter.isAllowed(userId, "spawn")) return false;
+      this.rateLimiter.hit(userId, "spawn");
+      return true;
+    });
+
+    if (!canSpawn) {
       await ctx.reply("Slow down! You're spawning too many pokemon.");
       return;
     }
 
     const [currentPokemon, keyboard] = await conv.external(() => this.generateWildPokemon());
-    this.rateLimiter.hit(userId, "spawn");
 
     const photoMsg = await ctx.api.sendPhoto(
       ctx.chat!.id,
@@ -95,7 +100,13 @@ export class PokemonConversation {
       return;
     }
 
-    if (!this.rateLimiter.isAllowed(userId, "catch")) {
+    const canCatch = await conv.external(() => {
+      if (!this.rateLimiter.isAllowed(userId, "catch")) return false;
+      this.rateLimiter.hit(userId, "catch");
+      return true;
+    });
+
+    if (!canCatch) {
       await ctx.reply("Slow down! You're catching too many pokemon.");
       return;
     }

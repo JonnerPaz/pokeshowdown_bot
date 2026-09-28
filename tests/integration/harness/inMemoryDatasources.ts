@@ -76,9 +76,14 @@ export class InMemoryPokemonDataSource implements PokemonDataSource {
       id,
     });
 
-    if (user && user.id !== null) {
+    if (user && user.id !== null && user.id !== undefined) {
       this.pokemons.set(id, { pokemon: created, userId: user.id });
-      user.pokemons.push(created);
+      const storedUser = this.userDataSource.users.get(user.id);
+      if (storedUser) {
+        storedUser.pokemons.push(created);
+      } else {
+        user.pokemons.push(created);
+      }
     } else {
       this.pokemons.set(id, { pokemon: created });
     }

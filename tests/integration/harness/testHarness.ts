@@ -182,11 +182,18 @@ export async function createTestBot(): Promise<TestBotContext> {
 
   const dispatchCallback = async (
     data: string,
-    opts: { fromId?: number; username?: string; chatId?: number; messageId?: number } = {},
+    opts: {
+      fromId?: number;
+      username?: string;
+      chatId?: number;
+      messageId?: number;
+      isGroup?: boolean;
+    } = {},
   ) => {
     const fromId = opts.fromId ?? 99901;
     const username = opts.username ?? `user_${fromId}`;
-    const chatId = opts.chatId ?? -10099901;
+    const chatId = opts.chatId ?? (opts.isGroup ? -10099901 : fromId);
+    const isGroup = opts.isGroup ?? chatId < 0;
     const messageId = opts.messageId ?? 1000;
 
     const from: User = {
@@ -195,6 +202,17 @@ export async function createTestBot(): Promise<TestBotContext> {
       first_name: `Trainer_${fromId}`,
       username,
     };
+
+    const chat: Chat = (
+      isGroup
+        ? { id: chatId, type: "group", title: "Pokemon Battle Arena" }
+        : {
+            id: chatId,
+            type: "private",
+            first_name: from.first_name,
+            ...(from.username !== undefined && { username: from.username }),
+          }
+    ) as Chat;
 
     const update = {
       update_id: updateIdCounter++,
@@ -206,7 +224,7 @@ export async function createTestBot(): Promise<TestBotContext> {
         message: {
           message_id: messageId,
           date: Math.floor(Date.now() / 1000),
-          chat: { id: chatId, type: "group", title: "Pokemon Battle Arena" },
+          chat,
           text: "Interactive message",
         },
       },
