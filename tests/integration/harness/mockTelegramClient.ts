@@ -181,6 +181,19 @@ export class MockTelegramClient {
     }));
   }
 
+  public getAnsweredCallbacks(): Array<{
+    callback_query_id?: string | undefined;
+    text?: string | undefined;
+    show_alert?: boolean | undefined;
+  }> {
+    return this.getCalls("answerCallbackQuery").map((c) => ({
+      callback_query_id:
+        typeof c.payload.callback_query_id === "string" ? c.payload.callback_query_id : undefined,
+      text: typeof c.payload.text === "string" ? c.payload.text : undefined,
+      show_alert: typeof c.payload.show_alert === "boolean" ? c.payload.show_alert : undefined,
+    }));
+  }
+
   public clear(): void {
     this.calls = [];
   }

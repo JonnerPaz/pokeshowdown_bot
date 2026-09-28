@@ -43,7 +43,13 @@ export interface TestBotContext {
   ) => Promise<void>;
   dispatchCallback: (
     data: string,
-    opts?: { fromId?: number; username?: string; chatId?: number; messageId?: number },
+    opts?: {
+      fromId?: number;
+      username?: string;
+      chatId?: number;
+      messageId?: number;
+      isGroup?: boolean;
+    },
   ) => Promise<void>;
   dispatchText: (
     text: string,
@@ -51,12 +57,14 @@ export interface TestBotContext {
   ) => Promise<void>;
 }
 
-export async function createTestBot(): Promise<TestBotContext> {
+export async function createTestBot(options?: {
+  pokeApiService?: Partial<PokeApiService>;
+}): Promise<TestBotContext> {
   const client = new MockTelegramClient();
   const userDataSource = new InMemoryUserDataSource();
   const pokemonDataSource = new InMemoryPokemonDataSource(userDataSource);
 
-  const mockPokeApi = {
+  const defaultPokeApi = {
     createStarterPokemon: async () => [
       createMockPokemon("bulbasaur", "grass", { id: null }),
       createMockPokemon("charmander", "fire", { id: null }),
@@ -83,6 +91,11 @@ export async function createTestBot(): Promise<TestBotContext> {
       specialDefense: 70,
       speed: 70,
     }),
+  };
+
+  const mockPokeApi = {
+    ...defaultPokeApi,
+    ...options?.pokeApiService,
   } as unknown as PokeApiService;
 
   const dbService = new DBService(userDataSource, pokemonDataSource, mockPokeApi);

@@ -39,7 +39,7 @@ export class BattleConversation {
       return;
     }
 
-    const battleId = randomUUID().slice(0, 8);
+    const battleId = await conv.external(() => randomUUID().slice(0, 8));
     const challengerName = challengerUser.username;
 
     const acceptKeyboard = new InlineKeyboard().text(
@@ -159,20 +159,22 @@ export class BattleConversation {
       ]),
     );
 
-    let battleState = BattleEngine.initBattle(
-      battleId,
-      {
-        id: "trainerA",
-        telegramId: challengerTelegramId,
-        name: challengerName,
-        pokemon: battlePokemonA,
-      },
-      {
-        id: "trainerB",
-        telegramId: opponentTelegramId,
-        name: opponentName,
-        pokemon: battlePokemonB,
-      },
+    let battleState = await conv.external(() =>
+      BattleEngine.initBattle(
+        battleId,
+        {
+          id: "trainerA",
+          telegramId: challengerTelegramId,
+          name: challengerName,
+          pokemon: battlePokemonA,
+        },
+        {
+          id: "trainerB",
+          telegramId: opponentTelegramId,
+          name: opponentName,
+          pokemon: battlePokemonB,
+        },
+      ),
     );
 
     const renderBattlefield = (state: BattleState, combatLog?: string) => {
@@ -247,7 +249,9 @@ export class BattleConversation {
       await actionCtx.answerCallbackQuery();
       const action = actionCtx.match[1] as BattleActionType;
 
-      const { state: nextState, result } = BattleEngine.executeTurn(battleState, action);
+      const { state: nextState, result } = await conv.external(() =>
+        BattleEngine.executeTurn(battleState, action),
+      );
       battleState = nextState;
 
       if (battleState.isFinished) {

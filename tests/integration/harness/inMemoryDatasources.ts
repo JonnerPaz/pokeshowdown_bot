@@ -111,6 +111,17 @@ export class InMemoryPokemonDataSource implements PokemonDataSource {
           user.pokemons = user.pokemons.map((p) => (p.id === id ? updated : p));
         }
       }
+    } else {
+      for (const user of this.userDataSource.users.values()) {
+        const idx = user.pokemons.findIndex((p) => p.id === id);
+        if (idx !== -1) {
+          user.pokemons[idx] = updated;
+          this.pokemons.set(id, {
+            pokemon: updated,
+            ...(user.id !== null ? { userId: user.id } : {}),
+          });
+        }
+      }
     }
 
     return updated;
