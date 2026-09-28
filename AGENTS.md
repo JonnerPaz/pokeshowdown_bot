@@ -35,8 +35,7 @@
 - **Lint / format**: `pnpm lint`, `pnpm lint:fix`, `pnpm format`, `pnpm format:check` (Prettier; formatted paths are scoped in package.json to avoid `postgres/` permission issues).
 - **Migrations**: `pnpm run prisma:migrate -- --name <desc>` (requires live DB connection).
 - **Codegen**: `pnpm run prisma:generate` after migrations/schema edits.
-- **Testing**: No official suite yet. For now, add targeted scripts (e.g., `src/devtools/*.ts`) and execute with `pnpm tsx path/to/script.ts`.
-- **Single test guidance (future-ready)**: once a runner (Vitest/Jest) is added, document commands like `pnpm vitest run src/foo.test.ts -t "case"`. Until then, mimic single-test behavior by scoping devtool scripts narrowly.
+- **Testing**: Vitest suite available. Run all tests with `pnpm test`, or single file with `pnpm vitest run tests/<path>`.
 
 ---
 
