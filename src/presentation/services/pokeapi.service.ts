@@ -11,13 +11,11 @@ interface EncounterConfig {
 export class PokeApiService {
   private static readonly CACHE_TTL_MS = 60 * 60 * 1000;
   private api: PokemonClient;
-  private builder: PokemonBuilder;
   private evolution: EvolutionClient;
   private encounterConfig: EncounterConfig;
   constructor() {
     const cache = new MemoryCache({ ttl: PokeApiService.CACHE_TTL_MS });
     this.api = new PokemonClient({ cache });
-    this.builder = new PokemonBuilder();
     this.evolution = new EvolutionClient({ cache });
     this.encounterConfig = PokeApiService.resolveEncounterConfig();
   }
@@ -117,16 +115,25 @@ export class PokeApiService {
   }
 
   private buildPokemon(pokemon: Pokemon, isShiny = false): PokemonEntity {
-    return this.builder
+    const builder = new PokemonBuilder();
+    const frontDefault =
+      pokemon.sprites.other?.["official-artwork"]?.front_default ??
+      pokemon.sprites.front_default ??
+      "";
+    const frontShiny = pokemon.sprites.front_shiny ?? frontDefault;
+    const backDefault = pokemon.sprites.back_default ?? frontDefault;
+    const backShiny = pokemon.sprites.back_shiny ?? frontShiny;
+
+    return builder
       .setName(pokemon.name)
       .setTypes(pokemon.types.map((type) => type.type.name))
-      .setAbility(pokemon.abilities[0]!.ability.name)
+      .setAbility(pokemon.abilities[0]?.ability?.name ?? "unknown")
       .setShiny(isShiny)
       .setSprite({
-        frontShiny: String(pokemon.sprites.front_shiny),
-        frontDefault: String(pokemon.sprites.other?.["official-artwork"].front_default),
-        backShiny: String(pokemon.sprites.back_shiny),
-        backDefault: String(pokemon.sprites.back_default),
+        frontShiny,
+        frontDefault,
+        backShiny,
+        backDefault,
       })
       .build();
   }
