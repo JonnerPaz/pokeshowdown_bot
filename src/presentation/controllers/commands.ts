@@ -101,6 +101,16 @@ export const commands = {
       description: "Añade un nickname a tu pokemon",
     },
   },
+  BATTLE: {
+    [LanguageCodes.English]: {
+      command: "battle",
+      description: "Challenge another trainer to a pokemon battle!",
+    },
+    [LanguageCodes.Spanish]: {
+      command: "batalla",
+      description: "¡Desafía a otro entrenador a una batalla pokemon!",
+    },
+  },
 } as const;
 
 export type CommandKeys = keyof typeof commands;

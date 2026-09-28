@@ -11,13 +11,17 @@ import { AuthController } from "./controllers/Auth.controller.js";
 import { PokemonController } from "./controllers/Pokemon.controller.js";
 import { getAllCommands } from "./controllers/commands.js";
 import { SystemController } from "./controllers/System.controller.js";
+import { BattleController } from "./controllers/Battle.controller.js";
 import { AuthConversation } from "./services/Auth.conversation.service.js";
 import { PokemonConversation } from "./services/Pokemon.conversation.service.js";
+import { BattleConversation } from "./services/Battle.conversation.service.js";
+import { BattleService } from "./services/battle.service.js";
 import { RateLimiterService } from "./services/rateLimiter.service.js";
 
 export class MainBot {
   private authController: AuthController;
   private pokemonController: PokemonController;
+  private battleController: BattleController;
   private systemController: SystemController;
 
   public readonly bot: Bot<AppContext>;
@@ -37,14 +41,17 @@ export class MainBot {
     const pokeApi = new PokeApiService();
     const dbService = new DBService(userDatasource, pokemonDatasource, pokeApi);
     const rateLimiter = new RateLimiterService();
+    const battleService = new BattleService(pokeApi, dbService);
 
     // Setup conversations (decorators register them into botConversations)
     void new AuthConversation(dbService);
     void new PokemonConversation(dbService, rateLimiter);
+    void new BattleConversation(dbService, battleService);
 
     // Setup controllers
     this.authController = new AuthController(this.bot);
     this.pokemonController = new PokemonController(this.bot);
+    this.battleController = new BattleController(this.bot);
     this.systemController = new SystemController(this.bot);
 
     this.registerConversations();
@@ -75,9 +82,15 @@ export class MainBot {
       this.pokemonController.shiny(),
       this.pokemonController.trade(),
       this.pokemonController.nickname(),
+      this.battleController.battle(),
     ]);
 
-    const controllers = [this.authController, this.pokemonController, this.systemController];
+    const controllers = [
+      this.authController,
+      this.pokemonController,
+      this.battleController,
+      this.systemController,
+    ];
     for (const controller of controllers) {
       this.bot.use(controller.middleware());
     }
