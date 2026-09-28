@@ -16,7 +16,7 @@ export class DBService {
     return await this.userDataSource.createUser(user);
   }
 
-  async findUserByTelegramId(telegramId: number) {
+  async findUserByTelegramId(telegramId: number | bigint) {
     return await this.userDataSource.findUserByTelegramId(telegramId);
   }
 
@@ -36,7 +36,7 @@ export class DBService {
     return await this.pokemonDataSource.updatePokemon(pokemon, data);
   }
 
-  async deleteUserByTelegramId(telegramId: number) {
+  async deleteUserByTelegramId(telegramId: number | bigint) {
     return await this.userDataSource.deleteUserByTelegramId(telegramId);
   }
 

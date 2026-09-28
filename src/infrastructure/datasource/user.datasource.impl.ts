@@ -4,9 +4,9 @@ import { UserEntity } from "../../domain/entities/users.entity.js";
 import { PokemonEntity } from "../../domain/entities/pokemon.entity.js";
 
 export class UserDataSourceImpl implements UserDataSource {
-  public async findUserByTelegramId(telegramId: number): Promise<UserEntity | null> {
+  public async findUserByTelegramId(telegramId: number | bigint): Promise<UserEntity | null> {
     const user = await prisma.user.findUnique({
-      where: { telegramId },
+      where: { telegramId: BigInt(telegramId) },
       include: { pokemons: true },
     });
 
@@ -21,7 +21,11 @@ export class UserDataSourceImpl implements UserDataSource {
         ...(nickname && { nickname }),
       });
     });
-    return new UserEntity({ ...user, pokemons });
+    return new UserEntity({
+      ...user,
+      telegramId: user.telegramId !== null ? Number(user.telegramId) : null,
+      pokemons,
+    });
   }
 
   public async createUser(user: UserEntity): Promise<UserEntity> {
@@ -41,7 +45,7 @@ export class UserDataSourceImpl implements UserDataSource {
     const createdUser = await prisma.user.create({
       data: {
         username,
-        telegramId,
+        telegramId: telegramId !== null ? BigInt(telegramId) : null,
         createdAt,
         updatedAt,
         pokemons: {
@@ -61,10 +65,14 @@ export class UserDataSourceImpl implements UserDataSource {
       });
     });
 
-    return new UserEntity({ ...createdUser, pokemons: createdPokemons });
+    return new UserEntity({
+      ...createdUser,
+      telegramId: createdUser.telegramId !== null ? Number(createdUser.telegramId) : null,
+      pokemons: createdPokemons,
+    });
   }
 
-  public async deleteUserByTelegramId(telegramId: number): Promise<void> {
-    await prisma.user.delete({ where: { telegramId } });
+  public async deleteUserByTelegramId(telegramId: number | bigint): Promise<void> {
+    await prisma.user.delete({ where: { telegramId: BigInt(telegramId) } });
   }
 }

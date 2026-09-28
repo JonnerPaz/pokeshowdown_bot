@@ -2,7 +2,7 @@ import type { PokemonEntity } from "./pokemon.entity.js";
 
 export interface UserEntityProps {
   id: number | null;
-  telegramId: number | null;
+  telegramId: number | bigint | null;
   username: string;
   createdAt: Date;
   updatedAt: Date;
@@ -11,7 +11,7 @@ export interface UserEntityProps {
 
 export class UserEntity {
   id: number | null = null;
-  telegramId: number | null = null;
+  telegramId: number | bigint | null = null;
   username: string;
   readonly createdAt: Date;
   updatedAt: Date;
