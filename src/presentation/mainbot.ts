@@ -1,10 +1,12 @@
 import type { AppContext } from "./data/types.js";
-import { Bot } from "grammy";
+import { Bot, type BotConfig } from "grammy";
 import { commands, LanguageCodes } from "@grammyjs/commands";
 import { conversations, createConversation } from "@grammyjs/conversations";
 import { PokeApiService } from "./services/pokeapi.service.js";
 import { UserDataSourceImpl } from "../infrastructure/datasource/user.datasource.impl.js";
 import { PokemonDataSourceImpl } from "../infrastructure/datasource/pokemon.datasource.impl.js";
+import type { UserDataSource } from "../domain/datasource/user.datasource.js";
+import type { PokemonDataSource } from "../domain/datasource/pokemon.datasource.js";
 import { botConversations } from "./services/addConversation.decorator.js";
 import { DBService } from "./services/db.service.js";
 import { AuthController } from "./controllers/Auth.controller.js";
@@ -18,6 +20,16 @@ import { BattleConversation } from "./services/Battle.conversation.service.js";
 import { BattleService } from "./services/battle.service.js";
 import { RateLimiterService } from "./services/rateLimiter.service.js";
 
+export interface MainBotOptions {
+  botConfig?: BotConfig<AppContext>;
+  userDatasource?: UserDataSource;
+  pokemonDatasource?: PokemonDataSource;
+  pokeApi?: PokeApiService;
+  dbService?: DBService;
+  rateLimiter?: RateLimiterService;
+  battleService?: BattleService;
+}
+
 export class MainBot {
   private authController: AuthController;
   private pokemonController: PokemonController;
@@ -27,21 +39,22 @@ export class MainBot {
   public readonly bot: Bot<AppContext>;
   public static instance: MainBot;
 
-  constructor(apiKey: string = process.env.API_KEY as string) {
-    this.bot = new Bot<AppContext>(apiKey);
+  constructor(apiKey: string = process.env.API_KEY as string, options: MainBotOptions = {}) {
+    this.bot = new Bot<AppContext>(apiKey, options.botConfig);
     this.setupErrorHandler();
 
     // Setup core services
     this.bot.use(commands());
     this.bot.use(conversations());
 
-    const userDatasource = new UserDataSourceImpl();
-    const pokemonDatasource = new PokemonDataSourceImpl();
+    const userDatasource = options.userDatasource ?? new UserDataSourceImpl();
+    const pokemonDatasource = options.pokemonDatasource ?? new PokemonDataSourceImpl();
 
-    const pokeApi = new PokeApiService();
-    const dbService = new DBService(userDatasource, pokemonDatasource, pokeApi);
-    const rateLimiter = new RateLimiterService();
-    const battleService = new BattleService(pokeApi, dbService);
+    const pokeApi = options.pokeApi ?? new PokeApiService();
+    const dbService =
+      options.dbService ?? new DBService(userDatasource, pokemonDatasource, pokeApi);
+    const rateLimiter = options.rateLimiter ?? new RateLimiterService();
+    const battleService = options.battleService ?? new BattleService(pokeApi, dbService);
 
     // Setup conversations (decorators register them into botConversations)
     void new AuthConversation(dbService);
