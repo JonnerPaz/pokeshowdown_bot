@@ -12,7 +12,15 @@ export class UserDataSourceImpl implements UserDataSource {
 
     if (!user) return null;
 
-    const pokemons = JSON.parse(JSON.stringify(user.pokemons));
+    const pokemons = user.pokemons.map((pokemon) => {
+      const { nickname, ...pokemonData } = pokemon;
+      const sprites = JSON.parse(JSON.stringify(pokemon.sprites));
+      return PokemonEntity.fromObject({
+        ...pokemonData,
+        sprites,
+        ...(nickname && { nickname }),
+      });
+    });
     return new UserEntity({ ...user, pokemons });
   }
 
@@ -43,7 +51,17 @@ export class UserDataSourceImpl implements UserDataSource {
       include: { pokemons: true },
     });
 
-    return new UserEntity({ ...createdUser, pokemons });
+    const createdPokemons = createdUser.pokemons.map((pokemon) => {
+      const { nickname, ...createdData } = pokemon;
+      const sprites = JSON.parse(JSON.stringify(pokemon.sprites));
+      return PokemonEntity.fromObject({
+        ...createdData,
+        sprites,
+        ...(nickname && { nickname }),
+      });
+    });
+
+    return new UserEntity({ ...createdUser, pokemons: createdPokemons });
   }
 
   public async deleteUserByTelegramId(telegramId: number): Promise<void> {
