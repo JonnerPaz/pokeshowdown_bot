@@ -298,6 +298,25 @@ All commands are case sensitive and must start with `/`.
 
 ---
 
+## Testing
+
+The project includes unit and end-to-end integration test suites powered by [Vitest](https://vitest.dev/):
+
+```bash
+# Run all tests (unit + integration)
+pnpm test
+
+# Run tests in watch mode
+pnpm vitest
+
+# Run only integration tests
+pnpm vitest run tests/integration
+```
+
+Integration tests utilize grammY's `ApiClientOptions.fetch` to intercept outgoing Telegram Bot API requests locally in-memory, paired with an in-memory repository harness. No external network credentials, live Telegram servers, or PostgreSQL instances are required to run the test suite.
+
+---
+
 ## Tech Stack
 
 - **Runtime**: Node.js 22+ (TypeScript ESM, `moduleResolution: nodenext`)

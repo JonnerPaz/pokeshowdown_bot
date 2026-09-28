@@ -35,7 +35,7 @@
 - **Lint / format**: `pnpm lint`, `pnpm lint:fix`, `pnpm format`, `pnpm format:check` (Prettier; formatted paths are scoped in package.json to avoid `postgres/` permission issues).
 - **Migrations**: `pnpm run prisma:migrate -- --name <desc>` (requires live DB connection).
 - **Codegen**: `pnpm run prisma:generate` after migrations/schema edits.
-- **Testing**: Vitest suite available. Run all tests with `pnpm test`, or single file with `pnpm vitest run tests/<path>`.
+- **Testing**: Vitest suite available (48 tests: unit + integration). Run all tests with `pnpm test`, or single file with `pnpm vitest run tests/<path>`. Integration tests mock Telegram via `ApiClientOptions.fetch` and use in-memory datasources (`tests/integration/harness/`). CI runs `pnpm test`.
 
 ---
 
@@ -180,17 +180,17 @@
 
 ---
 
-## 16. Roadmap · Phase 5
+## 16. Roadmap · Phase 6
 
-Previous phases (landed on `main`): P1 tooling/CI + webhook hardening, P2 conversation timeouts + conversation-local encounters, P3 PokeAPI caching + gen-9 pool + dead-code sweep, P4 dead datasource/`ErrorEntity` removal + constants tidy.
+Previous phases (landed on `main`): P1 tooling/CI + webhook hardening, P2 conversation timeouts + conversation-local encounters, P3 PokeAPI caching + gen-9 pool + dead-code sweep, P4 dead datasource/`ErrorEntity` removal + constants tidy, P5 turn-based Battle System + rate-limiter & unit tests.
 
-Phase 5 (landed on `main`): encounter rate tuning (config-driven `SHINY_ODDS`/`SPAWN_POOL_SIZE` env overrides with constant defaults), anti-abuse (per-user `RateLimiterService` for spawn/catch, lookups tied to `User.telegramId` column via `findUserByTelegramId`, and `timesCaught` economy spend enforced in `PokemonEntity.spendForShiny`). BigInt migration for `telegramId`, pure unit test suite with Vitest (28 tests across domain and presentation), and a turn-based **Battle System** (`/battle` / `/batalla`) featuring `BattleEngine` (18-type effectiveness chart, physical/special/defend/charge combat moves, visual HP bar), `BattleService` (PokeAPI base stats resolver with memoization + fallback, combat level scaling and victory experience reward), and `BattleConversation` / `BattleController` (scoped callbacks, in-place message editing via `editMessageText`, interactive turn flow).
+Phase 6 (landed on `main`): Comprehensive Integration Test Suite with grammY's `ApiClientOptions.fetch` mock harness, testing system commands (`/start`, `/help`), authentication (`/register`, `/delete_account`), Pokémon operations (`/pokemons`, `/generate_pokemon`), and turn-based battles (`/battle`). Uses `unplugin-swc` for Stage 3 TS decorators in Vitest, in-memory repository doubles (`InMemoryUserDataSource`, `InMemoryPokemonDataSource`), and deterministic conversation replay with `conv.external`. Integrated directly into `.github/workflows/ci.yml` via `pnpm test`.
 
 Deferred (pick scope with the user before executing):
 
 1. **Pokedex / pokédex lookup**: new `/pokedex` command backed by `PokeApiService` (cache-friendly), plus a persisted dex-progress column if desired.
 2. **Battle Leaderboard**: persisted PvP win/loss stats in Prisma schema if competitive tracking is desired.
 
-Phase 5 conventions: each feature = one scoped commit set, verified with typecheck/lint/format + `pnpm test`, README/AGENTS updated. No new shared mutable state for encounters or battles (keep them conversation-local).
+Conventions: each feature = one scoped commit set, verified with typecheck/lint/format + `pnpm test`, README/AGENTS updated. No new shared mutable state for encounters or battles (keep them conversation-local).
 
 Stay disciplined, document discoveries, and keep this guide trustworthy for the next agent.
