@@ -42,7 +42,15 @@ export async function sendPokemonPhotos(
     const sent = await ctx.api.sendPhoto(ctx.chat!.id, single.media);
     return [sent];
   }
-  return await ctx.api.sendMediaGroup(ctx.chat!.id, photos);
+
+  const results: Array<{ message_id: number }> = [];
+  const MAX_PER_GROUP = 10;
+  for (let i = 0; i < photos.length; i += MAX_PER_GROUP) {
+    const chunk = photos.slice(i, i + MAX_PER_GROUP);
+    const sentGroup = await ctx.api.sendMediaGroup(ctx.chat!.id, chunk);
+    results.push(...sentGroup);
+  }
+  return results;
 }
 
 async function checkUserExists(

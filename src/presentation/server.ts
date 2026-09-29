@@ -31,6 +31,7 @@ export class Server {
   public async setup() {
     this.app.use(express.json());
 
+    // to ping the bot on a regular basis
     this.app.get("/health", (_req, res) => {
       res.status(200).json({ status: "ok" });
     });

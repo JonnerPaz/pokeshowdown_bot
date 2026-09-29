@@ -17,6 +17,20 @@ export interface BasePokemonStats {
   speed: number;
 }
 
+export interface PokedexEntryData {
+  id: number;
+  name: string;
+  types: string[];
+  heightM: number;
+  weightKg: number;
+  ability: string;
+  flavorText: string;
+  spriteUrl: string;
+  stats: BasePokemonStats;
+  isLegendary: boolean;
+  isMythical: boolean;
+}
+
 export class PokeApiService {
   private static readonly CACHE_TTL_MS = 60 * 60 * 1000;
   private api: PokemonClient;
@@ -150,6 +164,57 @@ export class PokeApiService {
       };
     } catch {
       return fallbackStats;
+    }
+  }
+
+  public async getPokedexEntry(pokemonNameOrId: string | number): Promise<PokedexEntryData | null> {
+    try {
+      const query =
+        typeof pokemonNameOrId === "string"
+          ? pokemonNameOrId.trim().toLowerCase()
+          : pokemonNameOrId;
+      const pokemon =
+        typeof query === "string"
+          ? await this.api.getPokemonByName(query)
+          : await this.api.getPokemonById(query);
+      const stats = await this.getPokemonBaseStats(pokemon.name);
+
+      let flavorText = "No Pokédex data recorded.";
+      let isLegendary = false;
+      let isMythical = false;
+
+      try {
+        const species = await this.api.getPokemonSpeciesByName(pokemon.name);
+        isLegendary = species.is_legendary;
+        isMythical = species.is_mythical;
+        const enEntry = species.flavor_text_entries.find((entry) => entry.language.name === "en");
+        if (enEntry?.flavor_text) {
+          flavorText = enEntry.flavor_text.replace(/[\n\f]/g, " ").trim();
+        }
+      } catch {
+        // species lookup fallback
+      }
+
+      const spriteUrl =
+        pokemon.sprites.other?.["official-artwork"]?.front_default ??
+        pokemon.sprites.front_default ??
+        "";
+
+      return {
+        id: pokemon.id,
+        name: pokemon.name,
+        types: pokemon.types.map((t) => t.type.name),
+        heightM: pokemon.height / 10,
+        weightKg: pokemon.weight / 10,
+        ability: pokemon.abilities[0]?.ability?.name ?? "unknown",
+        flavorText,
+        spriteUrl,
+        stats,
+        isLegendary,
+        isMythical,
+      };
+    } catch {
+      return null;
     }
   }
 

@@ -111,6 +111,16 @@ export const commands = {
       description: "¡Desafía a otro entrenador a una batalla pokemon!",
     },
   },
+  POKEDEX: {
+    [LanguageCodes.English]: {
+      command: "pokedex",
+      description: "Look up a Pokemon in the national Pokedex",
+    },
+    [LanguageCodes.Spanish]: {
+      command: "pokedex",
+      description: "Consulta un Pokemon en la Pokedex nacional",
+    },
+  },
 } as const;
 
 export type CommandKeys = keyof typeof commands;

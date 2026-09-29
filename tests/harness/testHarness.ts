@@ -89,6 +89,30 @@ export async function createTestBot(options?: {
       specialDefense: 70,
       speed: 70,
     }),
+    getPokedexEntry: async (query: string | number) => {
+      const q = String(query).toLowerCase();
+      if (q.includes("unknown")) return null;
+      return {
+        id: 25,
+        name: q,
+        types: ["electric"],
+        heightM: 0.4,
+        weightKg: 6.0,
+        ability: "static",
+        flavorText: "When several of these Pokemon gather, electricity builds up.",
+        spriteUrl: "https://example.com/sprite.png",
+        stats: {
+          hp: 35,
+          attack: 55,
+          defense: 40,
+          specialAttack: 50,
+          specialDefense: 50,
+          speed: 90,
+        },
+        isLegendary: false,
+        isMythical: false,
+      };
+    },
   };
 
   const mockPokeApi = {

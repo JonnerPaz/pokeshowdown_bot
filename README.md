@@ -295,6 +295,7 @@ All commands are case sensitive and must start with `/`.
 | `/nickname`         | `/nickname`        | Add a custom nickname to your pokemon            |
 | `/trade`            | `/intercambiar`    | Trade a Pokemon with another user                |
 | `/battle`           | `/batalla`         | Challenge another trainer to a turn-based battle |
+| `/pokedex`          | `/pokedex`         | Look up any Pokemon in the national Pokedex      |
 
 ---
 

@@ -165,11 +165,18 @@ export class MockTelegramClient {
   }
 
   public getSentMessages(): SentMessageSummary[] {
-    return this.getCalls("sendMessage").map((c) => ({
-      chatId: Number(c.payload.chat_id),
-      text: typeof c.payload.text === "string" ? c.payload.text : undefined,
-      reply_markup: c.payload.reply_markup,
-    }));
+    return this.calls
+      .filter((c) => c.method === "sendMessage" || c.method === "sendPhoto")
+      .map((c) => ({
+        chatId: Number(c.payload.chat_id),
+        text:
+          typeof c.payload.text === "string"
+            ? c.payload.text
+            : typeof c.payload.caption === "string"
+              ? c.payload.caption
+              : undefined,
+        reply_markup: c.payload.reply_markup,
+      }));
   }
 
   public getEditedMessages(): EditedMessageSummary[] {

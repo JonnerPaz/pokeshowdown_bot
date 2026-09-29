@@ -12,6 +12,7 @@ import { createSystemFeature } from "../features/system/system.feature.js";
 import { createAuthFeature } from "../features/auth/auth.feature.js";
 import { createBattleFeature } from "../features/battle/battle.feature.js";
 import { createPokemonFeature } from "../features/pokemon/pokemon.feature.js";
+import { createPokedexFeature } from "../features/pokedex/pokedex.feature.js";
 import { BattleService } from "../features/battle/battle.service.js";
 import { RateLimiterService } from "./services/rateLimiter.service.js";
 
@@ -56,6 +57,7 @@ export class MainBot {
         rateLimiter,
       }),
     );
+    this.bot.use(createPokedexFeature({ pokeApi, userDataSource: userDatasource }));
   }
 
   private setupErrorHandler() {

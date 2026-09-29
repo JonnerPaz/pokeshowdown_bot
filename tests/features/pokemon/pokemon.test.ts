@@ -55,6 +55,30 @@ describe("Pokemon Operations Integration (/pokemons, /generate_pokemon)", () => 
     expect(sent.some((m) => m.text?.includes("Your pokemons are"))).toBe(true);
   });
 
+  it("handles collections with more than 10 pokemons without exceeding Telegram group limits", async () => {
+    const { dispatchCommand, client, userDataSource } = await createTestBot();
+
+    const userId = 809;
+    const pokemons = Array.from({ length: 15 }, (_, i) =>
+      createMockPokemon(`pkm_${i}`, "normal", { id: i + 1 }),
+    );
+    userDataSource.seedUser(
+      new UserEntity({
+        id: 29,
+        telegramId: BigInt(userId),
+        username: "collector_gary",
+        createdAt: new Date(),
+        updatedAt: new Date(),
+        pokemons,
+      }),
+    );
+
+    await dispatchCommand("/pokemons", { fromId: userId });
+
+    const sent = client.getSentMessages();
+    expect(sent.some((m) => m.text?.includes("Your pokemons are"))).toBe(true);
+  });
+
   it("completes wild encounter and catch flow successfully", async () => {
     const { dispatchCommand, dispatchCallback, client, userDataSource } = await createTestBot();
 

@@ -184,18 +184,18 @@
 
 ---
 
-## 16. Roadmap · Phases 6 & 7
+## 16. Roadmap · Phases 6, 7 & 8
 
-Previous phases: P1 tooling/CI + webhook hardening, P2 conversation timeouts + conversation-local encounters, P3 PokeAPI caching + gen-9 pool + dead-code sweep, P4 dead datasource/`ErrorEntity` removal + constants tidy, P5 turn-based Battle System + rate-limiter & unit tests.
-
-Phase 6: Comprehensive Integration Test Suite with grammY's `ApiClientOptions.fetch` mock harness, testing system commands (`/start`, `/help`), authentication (`/register`, `/delete_account`), Pokémon operations (`/pokemons`, `/generate_pokemon`), and turn-based battles (`/battle`). Uses in-memory repository doubles (`InMemoryUserDataSource`, `InMemoryPokemonDataSource`), and deterministic conversation replay with `conv.external`.
+Previous phases: P1 tooling/CI + webhook hardening, P2 conversation timeouts + conversation-local encounters, P3 PokeAPI caching + gen-9 pool + dead-code sweep, P4 dead datasource/`ErrorEntity` removal + constants tidy, P5 turn-based Battle System + rate-limiter & unit tests, P6 comprehensive integration test harness with `ApiClientOptions.fetch`.
 
 Phase 7 (landed on `main`): Architectural Migration to Feature-Based Composers (Vertical Slices: `auth`, `battle`, `pokemon`, `system`). Removed class-heavy controllers, `BaseCommandController`, `DBService`, and `@addConversation` decorator. Converted conversations to pure composable functions. Reorganized test directory (`tests/domain`, `tests/features`, `tests/harness`, `tests/presentation`) and removed `unplugin-swc` from Vitest (runs native ESM).
 
-Deferred (pick scope with the user before executing):
+Phase 8 (landed on `main`): Pokedex Vertical Slice (`src/features/pokedex/` with `/pokedex` lookup, stat visualizers, lore flavor text, bag-ownership detection), 10-media collection batching fix in `sendPokemonPhotos`, and production graceful shutdown (`SIGINT`/`SIGTERM`) with clean Prisma and server teardown.
 
-1. **Pokedex / pokédex lookup**: new `/pokedex` command backed by `PokeApiService` (cache-friendly), plus a persisted dex-progress column if desired.
-2. **Battle Leaderboard**: persisted PvP win/loss stats in Prisma schema if competitive tracking is desired.
+Deferred:
+
+1. **Battle Leaderboard & Trainer Cards**: `/profile` and `/leaderboard` tracking wins, losses, win rates, and buddy Pokémon.
+2. **Pokéball Tiers & Catch Rates**: Pokéball, Great Ball, Ultra Ball, Master Ball mechanics and `/daily` reward streaks.
 
 Conventions: each feature = one scoped commit set, verified with typecheck/lint/format + `pnpm test`, README/AGENTS updated. No new shared mutable state for encounters or battles (keep them conversation-local).
 
