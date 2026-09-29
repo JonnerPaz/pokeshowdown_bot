@@ -16,7 +16,7 @@ import { createSystemFeature } from "../features/system/system.feature.js";
 import { createAuthFeature } from "../features/auth/auth.feature.js";
 import { PokemonConversation } from "./services/Pokemon.conversation.service.js";
 import { BattleConversation } from "./services/Battle.conversation.service.js";
-import { BattleService } from "./services/battle.service.js";
+import { BattleService } from "../features/battle/battle.service.js";
 import { RateLimiterService } from "./services/rateLimiter.service.js";
 
 export interface MainBotOptions {

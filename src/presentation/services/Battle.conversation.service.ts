@@ -11,7 +11,7 @@ import type {
 import type { UserEntity } from "../../domain/entities/users.entity.js";
 import type { AppContext } from "../data/types.js";
 import { addConversation } from "./addConversation.decorator.js";
-import type { BattleService } from "./battle.service.js";
+import type { BattleService } from "../../features/battle/battle.service.js";
 import type { DBService } from "./db.service.js";
 
 export class BattleConversation {

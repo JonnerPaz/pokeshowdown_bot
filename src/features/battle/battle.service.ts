@@ -1,7 +1,7 @@
 import type { BattlePokemonStats } from "../../domain/battle/types.js";
 import type { PokemonEntity } from "../../domain/entities/pokemon.entity.js";
-import type { DBService } from "./db.service.js";
-import type { PokeApiService } from "./pokeapi.service.js";
+import type { DBService } from "../../presentation/services/db.service.js";
+import type { PokeApiService } from "../../presentation/services/pokeapi.service.js";
 
 export class BattleService {
   constructor(

@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from "vitest";
-import { BattleService } from "../../src/presentation/services/battle.service.js";
+import { BattleService } from "../../src/features/battle/battle.service.js";
 import { PokemonEntity } from "../../src/domain/entities/pokemon.entity.js";
 import type { PokeApiService } from "../../src/presentation/services/pokeapi.service.js";
 import type { DBService } from "../../src/presentation/services/db.service.js";

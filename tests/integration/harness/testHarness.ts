@@ -4,7 +4,7 @@ import { MockTelegramClient } from "./mockTelegramClient.js";
 import { InMemoryPokemonDataSource, InMemoryUserDataSource } from "./inMemoryDatasources.js";
 import { DBService } from "../../../src/presentation/services/db.service.js";
 import { RateLimiterService } from "../../../src/presentation/services/rateLimiter.service.js";
-import { BattleService } from "../../../src/presentation/services/battle.service.js";
+import { BattleService } from "../../../src/features/battle/battle.service.js";
 import type { PokeApiService } from "../../../src/presentation/services/pokeapi.service.js";
 import { PokemonEntity } from "../../../src/domain/entities/pokemon.entity.js";
 
