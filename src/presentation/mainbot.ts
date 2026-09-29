@@ -1,13 +1,12 @@
 import type { AppContext } from "./data/types.js";
 import { Bot, type BotConfig } from "grammy";
 import { commands, LanguageCodes } from "@grammyjs/commands";
-import { conversations, createConversation } from "@grammyjs/conversations";
+import { conversations } from "@grammyjs/conversations";
 import { PokeApiService } from "./services/pokeapi.service.js";
 import { UserDataSourceImpl } from "../infrastructure/datasource/user.datasource.impl.js";
 import { PokemonDataSourceImpl } from "../infrastructure/datasource/pokemon.datasource.impl.js";
 import type { UserDataSource } from "../domain/datasource/user.datasource.js";
 import type { PokemonDataSource } from "../domain/datasource/pokemon.datasource.js";
-import { botConversations } from "./services/addConversation.decorator.js";
 import { getAllCommands } from "./controllers/commands.js";
 import { createSystemFeature } from "../features/system/system.feature.js";
 import { createAuthFeature } from "../features/auth/auth.feature.js";
@@ -57,8 +56,6 @@ export class MainBot {
         rateLimiter,
       }),
     );
-
-    this.registerConversations();
   }
 
   private setupErrorHandler() {
@@ -96,11 +93,5 @@ export class MainBot {
     await this.bot.api.setMyCommands(getAllCommands(LanguageCodes.Spanish), {
       language_code: LanguageCodes.Spanish,
     });
-  }
-
-  private registerConversations() {
-    for (const [name, conversation] of botConversations.entries()) {
-      this.bot.use(createConversation(conversation, name));
-    }
   }
 }
