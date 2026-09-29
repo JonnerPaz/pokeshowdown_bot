@@ -1,11 +1,11 @@
 import type { Update, User, Chat, UserFromGetMe } from "grammy/types";
-import { MainBot } from "../../../src/presentation/mainbot.js";
+import { MainBot } from "../../src/presentation/mainbot.js";
 import { MockTelegramClient } from "./mockTelegramClient.js";
 import { InMemoryPokemonDataSource, InMemoryUserDataSource } from "./inMemoryDatasources.js";
-import { RateLimiterService } from "../../../src/presentation/services/rateLimiter.service.js";
-import { BattleService } from "../../../src/features/battle/battle.service.js";
-import type { PokeApiService } from "../../../src/presentation/services/pokeapi.service.js";
-import { PokemonEntity } from "../../../src/domain/entities/pokemon.entity.js";
+import { RateLimiterService } from "../../src/presentation/services/rateLimiter.service.js";
+import { BattleService } from "../../src/features/battle/battle.service.js";
+import type { PokeApiService } from "../../src/presentation/services/pokeapi.service.js";
+import { PokemonEntity } from "../../src/domain/entities/pokemon.entity.js";
 
 export const createMockPokemon = (
   name: string,

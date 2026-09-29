@@ -1,10 +1,10 @@
 import { describe, expect, it, vi } from "vitest";
-import { BattleService } from "../../src/features/battle/battle.service.js";
-import { PokemonEntity } from "../../src/domain/entities/pokemon.entity.js";
-import type { PokeApiService } from "../../src/presentation/services/pokeapi.service.js";
-import type { UserDataSource } from "../../src/domain/datasource/user.datasource.js";
-import type { PokemonDataSource } from "../../src/domain/datasource/pokemon.datasource.js";
-import { UserEntity } from "../../src/domain/entities/users.entity.js";
+import { BattleService } from "../../../src/features/battle/battle.service.js";
+import { PokemonEntity } from "../../../src/domain/entities/pokemon.entity.js";
+import type { PokeApiService } from "../../../src/presentation/services/pokeapi.service.js";
+import type { UserDataSource } from "../../../src/domain/datasource/user.datasource.js";
+import type { PokemonDataSource } from "../../../src/domain/datasource/pokemon.datasource.js";
+import { UserEntity } from "../../../src/domain/entities/users.entity.js";
 
 const makePokemon = (overrides: Partial<PokemonEntity> = {}): PokemonEntity =>
   new PokemonEntity({

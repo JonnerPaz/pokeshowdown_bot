@@ -1,6 +1,6 @@
 import { describe, it, expect } from "vitest";
-import { createTestBot, createMockPokemon } from "./harness/testHarness.js";
-import { UserEntity } from "../../src/domain/entities/users.entity.js";
+import { createTestBot, createMockPokemon } from "../../harness/testHarness.js";
+import { UserEntity } from "../../../src/domain/entities/users.entity.js";
 
 describe("Turn-Based Battle Integration (/battle)", () => {
   it("rejects /battle when initiator is not registered", async () => {

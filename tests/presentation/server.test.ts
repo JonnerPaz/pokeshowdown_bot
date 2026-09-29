@@ -3,7 +3,7 @@ import { afterEach, describe, expect, it } from "vitest";
 import { Bot } from "grammy";
 import type { AppContext } from "../../src/presentation/data/types.js";
 import { Server } from "../../src/presentation/server.js";
-import { MockTelegramClient } from "../integration/harness/mockTelegramClient.js";
+import { MockTelegramClient } from "../harness/mockTelegramClient.js";
 
 describe("Server", () => {
   let server: Server | undefined;
@@ -43,7 +43,7 @@ describe("Server", () => {
     const body = (await res.json()) as { status: string };
     expect(body).toEqual({ status: "ok" });
 
-    const setWebhookCall = mockClient.calls.find((call) => call.method === "setWebhook");
+    const setWebhookCall = mockClient.getCalls().find((call) => call.method === "setWebhook");
     expect(setWebhookCall).toBeDefined();
     expect(setWebhookCall?.payload).toMatchObject({
       url: "https://example.com/webhook",

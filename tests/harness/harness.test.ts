@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { createTestBot } from "./harness/testHarness.js";
+import { createTestBot } from "./testHarness.js";
 
 describe("Integration Test Harness (ApiClientOptions)", () => {
   it("initializes MainBot with mocked Telegram API client and registers commands", async () => {

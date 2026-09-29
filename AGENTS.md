@@ -35,18 +35,18 @@
 - **Lint / format**: `pnpm lint`, `pnpm lint:fix`, `pnpm format`, `pnpm format:check` (Prettier; formatted paths are scoped in package.json to avoid `postgres/` permission issues).
 - **Migrations**: `pnpm run prisma:migrate -- --name <desc>` (requires live DB connection).
 - **Codegen**: `pnpm run prisma:generate` after migrations/schema edits.
-- **Testing**: Vitest suite available (48 tests: unit + integration). Run all tests with `pnpm test`, or single file with `pnpm vitest run tests/<path>`. Integration tests mock Telegram via `ApiClientOptions.fetch` and use in-memory datasources (`tests/integration/harness/`). CI runs `pnpm test`.
+- **Testing**: Vitest suite (49 tests: domain, feature integration, presentation). Run all tests with `pnpm test`, or single file with `pnpm vitest run tests/<path>`. Tests run natively with no extra compiler plugins. Feature tests use grammY's `ApiClientOptions.fetch` mock harness and in-memory datasources (`tests/harness/`). CI runs `pnpm test`.
 
 ---
 
 ## 3. Architecture & Wiring
 
-- `src/index.ts` validates env (`API_KEY`, `WEBHOOK_URL`, `WEBHOOK_SECRET`), then `await botInstance.register()` and `await server.setup()`. No `AppContainer` — wiring lives in `MainBot` + `Server`.
-- Layers are explicit: `src/domain` (entities/contracts/constants) → `src/infrastructure` (Prisma-backed datasources) → `src/presentation` (controllers, services, bot, server). Keep PRs scoped to the correct layer.
-- Controllers (`AuthController`, `PokemonController`, `SystemController`) extend `BaseCommandController` (`src/presentation/controllers/BaseCommandController.ts`), which owns a `CommandGroup`, auto-localizes EN/ES descriptions via `registerCommand(cmdName, handler)`, and scopes commands to group chats. `displayError` is the single error reporter.
-- `MainBot` (`src/presentation/mainbot.ts`) wires `UserDataSourceImpl` + `PokemonDataSourceImpl`, instantiates `PokeApiService` + `DBService`, instantiates `AuthConversation`/`PokemonConversation` (their `@addConversation` methods register into `botConversations`), then `registerConversations()` installs `createConversation` for each. `register()` (public, awaited) registers controllers + installs command middleware + `setMyCommands` (EN + ES).
-- Conversations live in `AuthConversation` (`src/presentation/services/Auth.conversation.service.ts`) and `PokemonConversation` (`src/presentation/services/Pokemon.conversation.service.ts`) with the `@addConversation` decorator (`src/presentation/services/addConversation.decorator.ts`). Controllers trigger them with `ctx.conversation.enter("name")`; only register conversations through `botConversations`.
-- Encounters are conversation-local: `generatePokemon` holds the wild `PokemonEntity` in its own scope (grammY preserves locals across suspensions). There is **no shared encounter map** — do not reintroduce one.
+- `src/index.ts` validates env (`API_KEY`, `WEBHOOK_URL`, `WEBHOOK_SECRET`), then `await botInstance.register()` and `await server.setup()`. Wiring lives in `MainBot` + `Server`.
+- Layers: `src/domain` (entities/contracts/constants) → `src/infrastructure` (Prisma-backed datasources) → `src/features` (vertical slices: `auth`, `battle`, `pokemon`, `system`) → `src/presentation` (mainbot, server, shared types).
+- Feature Composers: Each feature folder (`src/features/<feature>/`) encapsulates its keyboards, standalone conversation functions, and a composer factory (`create<Feature>Feature(deps): Composer<AppContext>`). No classes or decorators.
+- `MainBot` (`src/presentation/mainbot.ts`) wires `UserDataSourceImpl` + `PokemonDataSourceImpl`, `PokeApiService`, `RateLimiterService`, and `BattleService`, mounts each feature composer onto `this.bot`, and registers localized menu commands via `registerBotMenuCommands()`.
+- Conversations: Plain async functions taking `(conv, ctx, deps)`. Mounted within each feature composer via `createConversation<AppContext, AppContext>(...)`. Controllers trigger or enter conversations directly via `ctx.conversation.enter("name")`.
+- Encounters are conversation-local: `generatePokemonConversation` holds the wild `PokemonEntity` in its own scope (grammY preserves locals across suspensions). There is **no shared encounter map** — do not reintroduce one.
 - Domain entities (`PokemonEntity`, `UserEntity`) enforce invariants end-to-end. Datasources and services construct these entities directly (no DTO layer). Always return domain entities from persistence.
 - When persisting user-owned pokémon (starters, catches, trades, evolutions), include the owning `userId` in the Prisma insert/connect and wrap the pokémon create + user update in a single transaction so `pokemonIds` stay in sync.
 - `Server` (`src/presentation/server.ts`) is a thin Express wrapper: mount JSON middleware, register the webhook with `secret_token` (fail-fast on error), mount `webhookCallback`, then listen. `index.ts` owns startup; avoid starting the bot anywhere else to prevent double polling.
@@ -78,18 +78,20 @@
 ## 6. Error Handling & Logging
 
 - `MainBot.setupErrorHandler()` installs a `bot.catch` global handler (structured log + best-effort reply). Unhandled conversation/command errors propagate here.
-- Conversation steps do **not** wrap with try/catch — let errors bubble to `bot.catch`. Controllers use `this.displayError(e, ctx, msg?)` (from `BaseCommandController`) as the single error reporter with structured logging.
+- `MainBot.setupErrorHandler()` installs a `bot.catch` global handler (structured log + best-effort reply). Unhandled conversation/command errors propagate here.
+- Conversation steps do **not** wrap with try/catch — let errors bubble to `bot.catch`. Commands and conversations report errors using `displayCommandError(e, ctx, msg?)` (`src/features/common/errorHandler.ts`) with structured logging.
 - Use contextual logs: `console.error("pokemon.generate failed", { username, error })` rather than plain stack output.
 - Differentiate user mistakes (not registered) from system faults (Prisma/PokeAPI issues). Never leak stack traces or secrets into Telegram chats.
 - When calling `conv.external`, ensure the inner function throws informative errors so upstream handlers can act.
 
 ---
 
-## 7. Conversations & Command Decorators
+## 7. Feature Composers & Conversations
 
-- Commands live in controllers (`AuthController`, `PokemonController`, `SystemController`); extend `BaseCommandController` and reuse its `registerCommand(cmdName, handler)` helper so scopes/translations stay consistent.
+- Features live under `src/features/<name>/` (`system`, `auth`, `battle`, `pokemon`). Each exports a factory `create<Name>Feature(deps): Composer<AppContext>`.
+- Commands registered using `registerFeatureCommand` or `registerFeatureConversationCommand` (`src/features/common/commandHelper.ts`) to configure localized command metadata with `CommandGroup`.
 - Add translations for every command inside `src/presentation/controllers/commands.ts` (English + Spanish). Remove placeholder or offensive entries immediately.
-- Conversations: annotate `AuthConversation`/`PokemonConversation` methods with `@addConversation`; `botConversations` map drives registration inside `MainBot.registerConversations()`.
+- Conversations: Standalone functions taking `(conv: AppConversation, ctx: AppContext, deps: ...)`, mounted via `feature.use(createConversation<AppContext, AppContext>(...))`. No classes or decorators.
 - Guard callback queries with `.andFrom(ctx.from!)` or `.andFrom(userCallback.callbackQuery.from)` so other users cannot hijack flows.
 - Namespace trade callbacks with a per-trade `tradeId` (e.g. `trade-accept:${tradeId}` / `trade-reject:${tradeId}`) so buttons can't be reused across chats.
 - Add `{ maxMilliseconds: CONVERSATION_TIMEOUT_MS }` to every `waitForCallbackQuery`/`waitFrom` so hung conversations don't leak memory.
@@ -134,13 +136,15 @@
 
 ## 12. Operational Playbooks
 
-1. **Add command:**
+1. **Add command / feature:**
    - Define metadata in `controllers/commands.ts` (EN + ES).
-   - Implement handler method in the appropriate controller (`AuthController`, `PokemonController`, `SystemController`) and register via `registerCommand` inside the controller's `start()`/`register()` method.
+   - Implement handler or conversation in `src/features/<feature>/`.
+   - Register command in `create<Feature>Feature`, and mount in `MainBot.ts`.
    - Update README/AGENTS if command footprint changes.
 2. **Add conversation:**
-   - Implement method in `AuthConversation`/`PokemonConversation`, decorate with `@addConversation`.
-   - Invoke via controller (`ctx.conversation.enter("name")`), ensure inline keyboards/callbacks are namespaced and every wait has a `maxMilliseconds` timeout.
+   - Implement standalone function `myConversation(conv, ctx, deps)` in `src/features/<feature>/<feature>.conversations.ts`.
+   - Mount with `feature.use(createConversation<AppContext, AppContext>(myConversation, "name"))`.
+   - Ensure inline keyboards/callbacks are namespaced and every wait has a `maxMilliseconds` timeout.
 3. **Repository/DTO change:**
    - Update interfaces in `src/domain/datasource` or `src/domain/entities`.
    - Implement adjustments in infrastructure datasources, plus tests/dev scripts.
@@ -180,11 +184,13 @@
 
 ---
 
-## 16. Roadmap · Phase 6
+## 16. Roadmap · Phases 6 & 7
 
-Previous phases (landed on `main`): P1 tooling/CI + webhook hardening, P2 conversation timeouts + conversation-local encounters, P3 PokeAPI caching + gen-9 pool + dead-code sweep, P4 dead datasource/`ErrorEntity` removal + constants tidy, P5 turn-based Battle System + rate-limiter & unit tests.
+Previous phases: P1 tooling/CI + webhook hardening, P2 conversation timeouts + conversation-local encounters, P3 PokeAPI caching + gen-9 pool + dead-code sweep, P4 dead datasource/`ErrorEntity` removal + constants tidy, P5 turn-based Battle System + rate-limiter & unit tests.
 
-Phase 6 (landed on `main`): Comprehensive Integration Test Suite with grammY's `ApiClientOptions.fetch` mock harness, testing system commands (`/start`, `/help`), authentication (`/register`, `/delete_account`), Pokémon operations (`/pokemons`, `/generate_pokemon`), and turn-based battles (`/battle`). Uses `unplugin-swc` for Stage 3 TS decorators in Vitest, in-memory repository doubles (`InMemoryUserDataSource`, `InMemoryPokemonDataSource`), and deterministic conversation replay with `conv.external`. Integrated directly into `.github/workflows/ci.yml` via `pnpm test`.
+Phase 6: Comprehensive Integration Test Suite with grammY's `ApiClientOptions.fetch` mock harness, testing system commands (`/start`, `/help`), authentication (`/register`, `/delete_account`), Pokémon operations (`/pokemons`, `/generate_pokemon`), and turn-based battles (`/battle`). Uses in-memory repository doubles (`InMemoryUserDataSource`, `InMemoryPokemonDataSource`), and deterministic conversation replay with `conv.external`.
+
+Phase 7 (landed on `main`): Architectural Migration to Feature-Based Composers (Vertical Slices: `auth`, `battle`, `pokemon`, `system`). Removed class-heavy controllers, `BaseCommandController`, `DBService`, and `@addConversation` decorator. Converted conversations to pure composable functions. Reorganized test directory (`tests/domain`, `tests/features`, `tests/harness`, `tests/presentation`) and removed `unplugin-swc` from Vitest (runs native ESM).
 
 Deferred (pick scope with the user before executing):
 

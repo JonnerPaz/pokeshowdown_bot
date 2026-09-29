@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { createTestBot } from "./harness/testHarness.js";
+import { createTestBot } from "../../harness/testHarness.js";
 
 describe("System Commands Integration (/start, /help)", () => {
   it("responds to /start and /comenzar with welcome message", async () => {

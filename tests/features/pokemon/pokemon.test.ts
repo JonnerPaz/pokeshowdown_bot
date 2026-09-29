@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
-import { createMockPokemon, createTestBot } from "./harness/testHarness.js";
-import { UserEntity } from "../../src/domain/entities/users.entity.js";
+import { createMockPokemon, createTestBot } from "../../harness/testHarness.js";
+import { UserEntity } from "../../../src/domain/entities/users.entity.js";
 
 describe("Pokemon Operations Integration (/pokemons, /generate_pokemon)", () => {
   it("shows error when unregistered user attempts to view pokemons", async () => {

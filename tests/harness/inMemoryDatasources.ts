@@ -1,7 +1,7 @@
-import type { UserDataSource } from "../../../src/domain/datasource/user.datasource.js";
-import type { PokemonDataSource } from "../../../src/domain/datasource/pokemon.datasource.js";
-import { UserEntity } from "../../../src/domain/entities/users.entity.js";
-import { PokemonEntity } from "../../../src/domain/entities/pokemon.entity.js";
+import type { UserDataSource } from "../../src/domain/datasource/user.datasource.js";
+import type { PokemonDataSource } from "../../src/domain/datasource/pokemon.datasource.js";
+import { UserEntity } from "../../src/domain/entities/users.entity.js";
+import { PokemonEntity } from "../../src/domain/entities/pokemon.entity.js";
 
 export class InMemoryUserDataSource implements UserDataSource {
   public users = new Map<number, UserEntity>();

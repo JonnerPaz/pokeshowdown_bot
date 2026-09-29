@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
-import { createTestBot } from "./harness/testHarness.js";
-import { UserEntity } from "../../src/domain/entities/users.entity.js";
+import { createTestBot } from "../../harness/testHarness.js";
+import { UserEntity } from "../../../src/domain/entities/users.entity.js";
 
 describe("Auth & Registration Integration (/register, /delete_account)", () => {
   it("rejects registration when user has no telegram username", async () => {

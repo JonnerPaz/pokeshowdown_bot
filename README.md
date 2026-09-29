@@ -31,7 +31,7 @@ flowchart LR
     A["Telegram User"] --> B["Telegram Servers"]
     B -- "HTTPS POST (Webhook + Secret Token)" --> C["Cloudflare Tunnel<br/>(cloudflared)"]
     C -- "HTTP localhost:5000" --> D["Express Server<br/>(src/presentation/server.ts)"]
-    D --> E["grammY Bot Middleware<br/>(MainBot & Controllers)"]
+    D --> E["grammY Bot Middleware<br/>(MainBot & Feature Composers)"]
     E --> F[("PostgreSQL Database")]
 ```
 
@@ -309,8 +309,8 @@ pnpm test
 # Run tests in watch mode
 pnpm vitest
 
-# Run only integration tests
-pnpm vitest run tests/integration
+# Run only feature tests
+pnpm vitest run tests/features
 ```
 
 Integration tests utilize grammY's `ApiClientOptions.fetch` to intercept outgoing Telegram Bot API requests locally in-memory, paired with an in-memory repository harness. No external network credentials, live Telegram servers, or PostgreSQL instances are required to run the test suite.
@@ -331,9 +331,10 @@ Integration tests utilize grammY's `ApiClientOptions.fetch` to intercept outgoin
 
 ```text
 src/
-├── domain/            # Entities, repository contracts, and domain constants
+├── domain/            # Entities, repository contracts, battle engine, and domain constants
+├── features/          # Feature slices (auth, battle, pokemon, system) with composers & conversations
 ├── infrastructure/    # Prisma-backed repository implementations
-├── presentation/      # Bot controllers, conversation flows, services, and Express server
+├── presentation/      # MainBot wiring, Express server shell, and shared types
 prisma/                # Prisma schema and database migrations
 generated/prisma/      # Auto-generated Prisma client
 ```
