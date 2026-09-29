@@ -2,6 +2,7 @@ import { Command, CommandGroup, LanguageCodes } from "@grammyjs/commands";
 import type { AppContext } from "../data/types.js";
 import { Bot } from "grammy";
 import { type CommandKeys, getCommandInfo } from "./commands.js";
+import { displayCommandError } from "../../features/common/errorHandler.js";
 
 export abstract class BaseCommandController<T extends AppContext> {
   protected bot: Bot<T>;
@@ -44,10 +45,6 @@ export abstract class BaseCommandController<T extends AppContext> {
   }
 
   protected async displayError(e: Error, ctx: T, msg?: string) {
-    const username = ctx.from?.username ?? ctx.chat?.id?.toString() ?? "unknown";
-    console.error("command failed", { username, error: e.message, cause: e.cause });
-    return msg
-      ? await ctx.reply(msg)
-      : await ctx.reply("There was an error during request. Please report it");
+    return displayCommandError(e, ctx, msg);
   }
 }
