@@ -7,9 +7,9 @@ import { PokeApiService } from "./pokeapi.service.js";
 
 export class DBService {
   constructor(
-    private readonly userDataSource: UserDataSource,
-    private readonly pokemonDataSource: PokemonDataSource,
-    private readonly pokemonService: PokeApiService,
+    public readonly userDataSource: UserDataSource,
+    public readonly pokemonDataSource: PokemonDataSource,
+    public readonly pokemonService: PokeApiService,
   ) {}
 
   async createUser(user: UserEntity) {
