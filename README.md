@@ -5,10 +5,11 @@ A Telegram bot to catch, evolve, and trade Pokemon with your friends.
 ## What it does
 
 - Register users and choose a starter Pokemon.
-- Spawn wild Pokemon encounters and catch them.
+- Spawn wild Pokemon encounters and catch them (solo or spontaneous multiplayer group chat encounters).
 - View and manage your Pokemon collection.
-- Evolve Pokemon.
-- Player-to-player Pokemon trading.
+- Evolve Pokemon and set companion buddy Pokemon.
+- Player-to-player Pokemon trading and turn-based PvP battles with rank leaderboards.
+- Inventory system with Pokeball tiers, daily rewards, and Pokedex encyclopedia.
 - Delete account and related user data.
 
 ---

@@ -196,6 +196,8 @@ Phase 9 (landed on `main`): Pokéball Tiers, Catch Rate Mechanics & Inventory Sl
 
 Phase 10 (landed on `main`): Battle Leaderboard & Trainer Profile Slice (`src/features/profile/` with `/profile` Trainer Card displaying win rates, rank titles, collection counts, and buddy sprite; `/leaderboard` top-10 ranking with medal icons and caller position; `/buddy` setting and favorite companion selection; Prisma schema migration for `wins`, `losses`, and `buddyPokemonId`; and automated battle outcome recording).
 
+Phase 11 (landed on `main`): Group Chat Spawns, Group Encounter Service & Webhook Hardening (`src/features/pokemon/groupEncounter.service.ts` tracking group chat activity with message thresholds, anti-spam burst protection, spontaneous wild spawns, multiplayer ball throws with catch/spook/flee mechanics, despawn timers, and race-condition mutexes; group-aware `/generate_pokemon`; markdown entity sanitization via `escapeMarkdown` in `src/features/common/stringHelper.ts` to prevent Telegram entity parse errors; and top-level bot middleware error boundary ensuring 200 OK responses to prevent webhook retry deadlocks).
+
 Conventions: each feature = one scoped commit set, verified with typecheck/lint/format + `pnpm test`, README/AGENTS updated. No new shared mutable state for encounters or battles (keep them conversation-local).
 
 Stay disciplined, document discoveries, and keep this guide trustworthy for the next agent.
