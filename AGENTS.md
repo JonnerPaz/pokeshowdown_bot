@@ -198,6 +198,8 @@ Phase 10 (landed on `main`): Battle Leaderboard & Trainer Profile Slice (`src/fe
 
 Phase 11 (landed on `main`): Group Chat Spawns, Group Encounter Service & Webhook Hardening (`src/features/pokemon/groupEncounter.service.ts` tracking group chat activity with message thresholds, anti-spam burst protection, spontaneous wild spawns, multiplayer ball throws with catch/spook/flee mechanics, despawn timers, and race-condition mutexes; group-aware `/generate_pokemon`; markdown entity sanitization via `escapeMarkdown` in `src/features/common/stringHelper.ts` to prevent Telegram entity parse errors; and top-level bot middleware error boundary ensuring 200 OK responses to prevent webhook retry deadlocks).
 
+Phase 12 (landed on `main`): Professional Repository Infrastructure & Release Automation (`CONTRIBUTING.md`, `CODE_OF_CONDUCT.md`, `SECURITY.md`, `CHANGELOG.md`, `.github/pull_request_template.md`, structured issue forms, Husky hooks for `pre-commit` [lint-staged], `commit-msg` [@commitlint], and `pre-push` [typecheck & test], Google Release Please action with `.release-please-config.json` and `.release-please-manifest.json`, Dependabot security updates, `.editorconfig`, and `package.json` SemVer `1.1.0` with `private: true` and `engines`).
+
 Conventions: each feature = one scoped commit set, verified with typecheck/lint/format + `pnpm test`, README/AGENTS updated. No new shared mutable state for encounters or battles (keep them conversation-local).
 
 Stay disciplined, document discoveries, and keep this guide trustworthy for the next agent.
