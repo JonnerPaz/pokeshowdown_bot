@@ -3,6 +3,10 @@ import type { PokemonEntity } from "../../domain/entities/pokemon.entity.js";
 import { EVOLVE_CAP } from "../../domain/data/constants.js";
 import type { PokeApiService } from "../../presentation/services/pokeapi.service.js";
 
+export function getPokemonFrontSprite(pokemon: PokemonEntity): string {
+  return pokemon.isShiny ? pokemon.sprites.frontShiny : pokemon.sprites.frontDefault;
+}
+
 export async function evolvePokemonOperation(
   pokemon: PokemonEntity,
   pokeApi: PokeApiService,

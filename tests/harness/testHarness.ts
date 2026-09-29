@@ -34,6 +34,7 @@ export interface TestBotContext {
   userDataSource: InMemoryUserDataSource;
   pokemonDataSource: InMemoryPokemonDataSource;
   battleService: BattleService;
+  pokeApi: PokeApiService;
   dispatchUpdate: (update: Update) => Promise<void>;
   dispatchCommand: (
     command: string,
@@ -55,8 +56,11 @@ export interface TestBotContext {
   ) => Promise<void>;
 }
 
+import type { GroupEncounterService } from "../../src/features/pokemon/groupEncounter.service.js";
+
 export async function createTestBot(options?: {
   pokeApiService?: Partial<PokeApiService>;
+  groupEncounterService?: GroupEncounterService;
 }): Promise<TestBotContext> {
   const client = new MockTelegramClient();
   const userDataSource = new InMemoryUserDataSource();
@@ -152,6 +156,7 @@ export async function createTestBot(options?: {
     pokeApi: mockPokeApi,
     rateLimiter,
     battleService,
+    groupEncounterService: options?.groupEncounterService,
   });
 
   await mainBot.registerControllers();
@@ -316,6 +321,7 @@ export async function createTestBot(options?: {
     userDataSource,
     pokemonDataSource,
     battleService,
+    pokeApi: mockPokeApi,
     dispatchUpdate,
     dispatchCommand,
     dispatchCallback,

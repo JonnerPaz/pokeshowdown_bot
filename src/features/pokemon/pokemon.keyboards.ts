@@ -17,6 +17,15 @@ export function createCatchKeyboard(user?: UserEntity): InlineKeyboard {
     .text("🏃 Run", "catch:run");
 }
 
+export function createGroupCatchKeyboard(encounterId: string): InlineKeyboard {
+  return new InlineKeyboard()
+    .text("🔴 Pokéball", `gcatch:${encounterId}:pokeball`)
+    .text("🔵 Great Ball", `gcatch:${encounterId}:greatball`)
+    .row()
+    .text("🟡 Ultra Ball", `gcatch:${encounterId}:ultraball`)
+    .text("🟣 Master Ball", `gcatch:${encounterId}:masterball`);
+}
+
 export function createTradeInviteKeyboard(tradeId: string): InlineKeyboard {
   return new InlineKeyboard().text("Accept", `trade-accept:${tradeId}`);
 }

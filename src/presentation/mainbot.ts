@@ -17,14 +17,16 @@ import { createInventoryFeature } from "../features/inventory/inventory.feature.
 import { createProfileFeature } from "../features/profile/profile.feature.js";
 import { BattleService } from "../features/battle/battle.service.js";
 import { RateLimiterService } from "./services/rateLimiter.service.js";
+import { GroupEncounterService } from "../features/pokemon/groupEncounter.service.js";
 
 export interface MainBotOptions {
-  botConfig?: BotConfig<AppContext>;
-  userDatasource?: UserDataSource;
-  pokemonDatasource?: PokemonDataSource;
-  pokeApi?: PokeApiService;
-  rateLimiter?: RateLimiterService;
-  battleService?: BattleService;
+  botConfig?: BotConfig<AppContext> | undefined;
+  userDatasource?: UserDataSource | undefined;
+  pokemonDatasource?: PokemonDataSource | undefined;
+  pokeApi?: PokeApiService | undefined;
+  rateLimiter?: RateLimiterService | undefined;
+  battleService?: BattleService | undefined;
+  groupEncounterService?: GroupEncounterService | undefined;
 }
 
 export class MainBot {
@@ -46,6 +48,7 @@ export class MainBot {
     const rateLimiter = options.rateLimiter ?? new RateLimiterService();
     const battleService =
       options.battleService ?? new BattleService(pokeApi, userDatasource, pokemonDatasource);
+    const groupEncounterService = options.groupEncounterService ?? new GroupEncounterService();
 
     // Setup features
     this.bot.use(createSystemFeature());
@@ -57,6 +60,7 @@ export class MainBot {
         pokemonDataSource: pokemonDatasource,
         pokeApi,
         rateLimiter,
+        groupEncounterService,
       }),
     );
     this.bot.use(createPokedexFeature({ pokeApi, userDataSource: userDatasource }));

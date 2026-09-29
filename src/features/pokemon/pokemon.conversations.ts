@@ -14,7 +14,8 @@ import {
   MAX_PKMN_PARTY,
   SHINY_CAP,
 } from "../../domain/data/constants.js";
-import { evolvePokemonOperation } from "./pokemon.service.js";
+import { evolvePokemonOperation, getPokemonFrontSprite } from "./pokemon.service.js";
+import type { GroupEncounterService } from "./groupEncounter.service.js";
 import {
   createCatchKeyboard,
   createTradeConfirmKeyboard,
@@ -34,11 +35,10 @@ export interface PokemonConversationDeps {
   pokemonDataSource: PokemonDataSource;
   pokeApi: PokeApiService;
   rateLimiter: RateLimiterService;
+  groupEncounterService?: GroupEncounterService;
 }
 
-export function getPokemonFrontSprite(pokemon: PokemonEntity): string {
-  return pokemon.isShiny ? pokemon.sprites.frontShiny : pokemon.sprites.frontDefault;
-}
+export { getPokemonFrontSprite };
 
 export async function sendPokemonPhotos(
   ctx: AppContext,
@@ -120,6 +120,16 @@ export async function generatePokemonConversation(
   const user = await conv.external(() => deps.userDataSource.findUserByTelegramId(userId));
   if (!user || !user.id) {
     await ctx.reply("You are not registered!");
+    return;
+  }
+
+  const isGroup = ctx.chat?.type === "group" || ctx.chat?.type === "supergroup";
+  if (isGroup && deps.groupEncounterService) {
+    await conv.external(async () => {
+      await deps.groupEncounterService!.spawnGroupPokemon(ctx.api, ctx.chat!.id, {
+        pokeApi: deps.pokeApi,
+      });
+    });
     return;
   }
 
