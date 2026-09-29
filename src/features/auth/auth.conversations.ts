@@ -1,5 +1,4 @@
-import type { Conversation } from "@grammyjs/conversations";
-import type { AppContext } from "../../presentation/data/types.js";
+import type { AppContext, AppConversation } from "../../presentation/data/types.js";
 import type { UserDataSource } from "../../domain/datasource/user.datasource.js";
 import type { PokeApiService } from "../../presentation/services/pokeapi.service.js";
 import { UserEntity } from "../../domain/entities/users.entity.js";
@@ -11,14 +10,14 @@ export interface AuthConversationDeps {
   pokeApi: PokeApiService;
 }
 
-export async function startConversation(_conv: Conversation<AppContext>, ctx: AppContext) {
+export async function startConversation(_conv: AppConversation, ctx: AppContext) {
   const msg =
     "Welcome to PokeBotShowdown. This is a bot for pokemon battle and trade. For more information, type /help";
   return await ctx.reply(msg);
 }
 
 export async function registerConversation(
-  conv: Conversation<AppContext>,
+  conv: AppConversation,
   ctx: AppContext,
   deps: AuthConversationDeps,
 ) {
@@ -89,7 +88,7 @@ export async function registerConversation(
 }
 
 export async function deleteAccountConversation(
-  conv: Conversation<AppContext>,
+  conv: AppConversation,
   ctx: AppContext,
   deps: AuthConversationDeps,
 ) {

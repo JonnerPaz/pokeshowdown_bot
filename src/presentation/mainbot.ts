@@ -9,12 +9,11 @@ import type { UserDataSource } from "../domain/datasource/user.datasource.js";
 import type { PokemonDataSource } from "../domain/datasource/pokemon.datasource.js";
 import { botConversations } from "./services/addConversation.decorator.js";
 import { DBService } from "./services/db.service.js";
-import { AuthController } from "./controllers/Auth.controller.js";
 import { PokemonController } from "./controllers/Pokemon.controller.js";
 import { getAllCommands } from "./controllers/commands.js";
 import { BattleController } from "./controllers/Battle.controller.js";
 import { createSystemFeature } from "../features/system/system.feature.js";
-import { AuthConversation } from "./services/Auth.conversation.service.js";
+import { createAuthFeature } from "../features/auth/auth.feature.js";
 import { PokemonConversation } from "./services/Pokemon.conversation.service.js";
 import { BattleConversation } from "./services/Battle.conversation.service.js";
 import { BattleService } from "./services/battle.service.js";
@@ -31,7 +30,6 @@ export interface MainBotOptions {
 }
 
 export class MainBot {
-  private authController: AuthController;
   private pokemonController: PokemonController;
   private battleController: BattleController;
 
@@ -56,15 +54,14 @@ export class MainBot {
     const battleService = options.battleService ?? new BattleService(pokeApi, dbService);
 
     // Setup conversations (decorators register them into botConversations)
-    void new AuthConversation(dbService);
     void new PokemonConversation(dbService, rateLimiter);
     void new BattleConversation(dbService, battleService);
 
     // Setup features
     this.bot.use(createSystemFeature());
+    this.bot.use(createAuthFeature({ userDataSource: userDatasource, pokeApi }));
 
     // Setup controllers
-    this.authController = new AuthController(this.bot);
     this.pokemonController = new PokemonController(this.bot);
     this.battleController = new BattleController(this.bot);
 
@@ -86,9 +83,6 @@ export class MainBot {
     await this.bot.init();
 
     await Promise.all([
-      this.authController.start(),
-      this.authController.register(),
-      this.authController.deleteAccount(),
       this.pokemonController.pokemons(),
       this.pokemonController.generatePokemon(),
       this.pokemonController.evolve(),
@@ -98,7 +92,7 @@ export class MainBot {
       this.battleController.battle(),
     ]);
 
-    const controllers = [this.authController, this.pokemonController, this.battleController];
+    const controllers = [this.pokemonController, this.battleController];
     for (const controller of controllers) {
       this.bot.use(controller.middleware());
     }
