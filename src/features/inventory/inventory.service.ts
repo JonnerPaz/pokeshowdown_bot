@@ -1,4 +1,5 @@
 import type { UserEntity } from "../../domain/entities/users.entity.js";
+import { escapeMarkdown } from "../common/stringHelper.js";
 
 export interface DailyRewards {
   pokeballs: number;
@@ -94,8 +95,10 @@ export function formatBagMessage(user: UserEntity, now: Date = new Date()): stri
     }
   }
 
+  const username = escapeMarkdown(user.username);
+
   return (
-    `🎒 *Trainer's Bag* — @${user.username}\n\n` +
+    `🎒 *Trainer's Bag* — @${username}\n\n` +
     `*Pokéballs:*\n` +
     `🔴 Pokéball: ${user.pokeballs}\n` +
     `🔵 Great Ball: ${user.greatballs}\n` +

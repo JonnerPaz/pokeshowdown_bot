@@ -50,7 +50,7 @@ describe("Profile & Leaderboard Service Unit Tests", () => {
     });
 
     const card = formatProfileCard(user);
-    expect(card.text).toContain("🪪 *Trainer Card* — @red_kanto");
+    expect(card.text).toContain("🪪 *Trainer Card* — @red\\_kanto");
     expect(card.text).toContain("🥇 Ace Trainer");
     expect(card.text).toContain("Record: 15W - 5L");
     expect(card.text).toContain("Win Rate: 75%");
@@ -141,7 +141,7 @@ describe("Profile & Leaderboard Bot Commands Integration", () => {
     await botCtx.dispatchCommand("/profile", { fromId: 902, username: "blue_oak" });
     const sent = botCtx.client.getSentMessages();
     expect(sent.length).toBe(1);
-    expect(sent[0]?.text).toContain("🪪 *Trainer Card* — @blue_oak");
+    expect(sent[0]?.text).toContain("🪪 *Trainer Card* — @blue\\_oak");
     expect(sent[0]?.text).toContain("Gym Challenger");
     expect(sent[0]?.text).toContain("80%");
     expect(sent[0]?.text).toContain("squirtle");
@@ -181,8 +181,8 @@ describe("Profile & Leaderboard Bot Commands Integration", () => {
 
     await botCtx.dispatchCommand("/leaderboard", { fromId: 911 });
     const sent = botCtx.client.getSentMessages();
-    expect(sent[0]?.text).toContain("🥇 *@champion_cynthia* — 55W / 2L");
-    expect(sent[0]?.text).toContain("🥈 *@challenger_paul* — 10W / 8L");
+    expect(sent[0]?.text).toContain("🥇 *@champion\\_cynthia* — 55W / 2L");
+    expect(sent[0]?.text).toContain("🥈 *@challenger\\_paul* — 10W / 8L");
     expect(sent[0]?.text).toContain("Your Position:* #2");
   });
 

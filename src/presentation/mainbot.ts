@@ -65,6 +65,20 @@ export class MainBot {
   }
 
   private setupErrorHandler() {
+    this.bot.use(async (ctx, next) => {
+      try {
+        await next();
+      } catch (err) {
+        const username = ctx.from?.username ?? ctx.chat?.id?.toString() ?? "unknown";
+        console.error("bot error caught in root middleware", { username, error: err });
+        await ctx
+          .reply("There was an error during request. Please report it")
+          .catch((replyError) => {
+            console.error("failed to notify user of error", { username, error: replyError });
+          });
+      }
+    });
+
     this.bot.catch(({ error, ctx }) => {
       const username = ctx.from?.username ?? ctx.chat?.id?.toString() ?? "unknown";
       console.error("bot.catch: unhandled error", { username, error });

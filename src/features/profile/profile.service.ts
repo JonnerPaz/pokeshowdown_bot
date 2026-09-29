@@ -1,5 +1,6 @@
 import type { UserEntity } from "../../domain/entities/users.entity.js";
 import type { PokemonEntity } from "../../domain/entities/pokemon.entity.js";
+import { escapeMarkdown } from "../common/stringHelper.js";
 
 export function getTrainerRankTitle(wins: number): string {
   if (wins >= 50) return "👑 Champion";
@@ -36,15 +37,18 @@ export function formatProfileCard(user: UserEntity): { text: string; spriteUrl?:
   let spriteUrl: string | undefined;
 
   if (buddy) {
-    const buddyName = buddy.nickname ? `${buddy.nickname} (${buddy.name})` : buddy.name;
+    const rawBuddyName = buddy.nickname ? `${buddy.nickname} (${buddy.name})` : buddy.name;
+    const buddyName = escapeMarkdown(rawBuddyName);
     const buddyLevel = Math.min(100, 20 + buddy.timesCaught * 5);
     const shinyMarker = buddy.isShiny ? " ✨" : "";
     buddySection = `⭐ *Buddy:* ${buddyName}${shinyMarker}\nLevel ${buddyLevel} • Caught ${buddy.timesCaught}x`;
     spriteUrl = buddy.isShiny ? buddy.sprites.frontShiny : buddy.sprites.frontDefault;
   }
 
+  const escapedUsername = escapeMarkdown(user.username);
+
   const text =
-    `🪪 *Trainer Card* — @${user.username}\n` +
+    `🪪 *Trainer Card* — @${escapedUsername}\n` +
     `${title}\n\n` +
     `⚔️ *Battle Record:*\n` +
     `• Total Battles: ${totalBattles}\n` +
@@ -79,9 +83,10 @@ export function formatLeaderboard(
     const rankLabel = medals[index] ?? `${index + 1}.`;
     const winRate = calculateWinRate(u.wins, u.losses);
     const buddy = getBuddyPokemon(u);
-    const buddyStr = buddy ? ` • ${buddy.name}${buddy.isShiny ? " ✨" : ""}` : "";
+    const buddyStr = buddy ? ` • ${escapeMarkdown(buddy.name)}${buddy.isShiny ? " ✨" : ""}` : "";
+    const username = escapeMarkdown(u.username);
     lines.push(
-      `${rankLabel} *@${u.username}* — ${u.wins}W / ${u.losses}L (${winRate}% WR)${buddyStr}`,
+      `${rankLabel} *@${username}* — ${u.wins}W / ${u.losses}L (${winRate}% WR)${buddyStr}`,
     );
   });
 
@@ -91,7 +96,9 @@ export function formatLeaderboard(
       (u) => u.telegramId !== null && BigInt(u.telegramId) === BigInt(callerTelegramId),
     );
     if (callerRank !== -1) {
-      footer = `\n\n📍 *Your Position:* #${callerRank + 1} (@${topUsers[callerRank]?.username})`;
+      const caller = topUsers[callerRank];
+      const callerUsername = caller ? escapeMarkdown(caller.username) : "";
+      footer = `\n\n📍 *Your Position:* #${callerRank + 1} (@${callerUsername})`;
     }
   }
 

@@ -3,6 +3,7 @@ import { CommandGroup } from "@grammyjs/commands";
 import type { AppContext } from "../../presentation/data/types.js";
 import type { UserDataSource } from "../../domain/datasource/user.datasource.js";
 import { registerFeatureCommand } from "../common/commandHelper.js";
+import { escapeMarkdown } from "../common/stringHelper.js";
 import {
   findPokemonForBuddy,
   formatLeaderboard,
@@ -34,10 +35,14 @@ export function createProfileFeature(deps: ProfileFeatureDeps): Composer<AppCont
           parse_mode: "Markdown",
         })
         .catch(async () => {
-          await ctx.reply(card.text, { parse_mode: "Markdown" });
+          await ctx.reply(card.text, { parse_mode: "Markdown" }).catch(async () => {
+            await ctx.reply(card.text.replace(/[*_`\\[]/g, ""));
+          });
         });
     } else {
-      await ctx.reply(card.text, { parse_mode: "Markdown" });
+      await ctx.reply(card.text, { parse_mode: "Markdown" }).catch(async () => {
+        await ctx.reply(card.text.replace(/[*_`\\[]/g, ""));
+      });
     }
   });
 
@@ -81,9 +86,9 @@ export function createProfileFeature(deps: ProfileFeatureDeps): Composer<AppCont
       buddyPokemonId: result.found.id,
     });
 
-    const displayName = result.found.nickname
-      ? `${result.found.nickname} (${result.found.name})`
-      : result.found.name;
+    const displayName = escapeMarkdown(
+      result.found.nickname ? `${result.found.nickname} (${result.found.name})` : result.found.name,
+    );
     const shinyStr = result.found.isShiny ? " ✨" : "";
 
     await ctx.reply(`⭐ Great choice! You set *${displayName}*${shinyStr} as your buddy Pokémon!`, {
