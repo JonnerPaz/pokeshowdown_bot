@@ -14,7 +14,7 @@
   },
   "homepage": "https://github.com/JonnerPaz/pokeshowdown_bot#readme",
   "author": "JonnerPaz",
-  "license": "ISC",
+  "license": "MIT",
   "packageManager": "pnpm@10.16.0",
   "engines": {
     "node": ">=22.0.0",
@@ -39,6 +39,8 @@
     "telegram",
     "bot",
     "pokemon",
+    "battle",
+    "trade",
     "showdown",
     "grammy",
     "prisma",

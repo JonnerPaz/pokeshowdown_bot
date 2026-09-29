@@ -6,7 +6,7 @@
 ![pnpm](https://img.shields.io/badge/pnpm-10.x-orange)
 ![TypeScript](https://img.shields.io/badge/TypeScript-ESM-blue)
 [![code style: prettier](https://img.shields.io/badge/code_style-prettier-ff69b4.svg)](https://github.com/prettier/prettier)
-![License](https://img.shields.io/badge/license-ISC-blue)
+![License](https://img.shields.io/badge/license-MIT-blue)
 
 A Telegram bot to catch, evolve, and trade Pokemon with your friends.
 
@@ -364,3 +364,9 @@ We welcome contributions from the community! Please consult the following guides
 - [Code of Conduct](CODE_OF_CONDUCT.md) — Standards and community pledge (Contributor Covenant v2.1).
 - [Security Policy](SECURITY.md) — Vulnerability reporting and credential guidelines.
 - [Changelog](CHANGELOG.md) — Documented release history and updates.
+
+---
+
+## License
+
+This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
