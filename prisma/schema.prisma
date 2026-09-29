@@ -22,6 +22,10 @@ model User {
   lastDailyAt DateTime? @db.Timestamp(6)
   dailyStreak Int       @default(0)
 
+  wins           Int   @default(0)
+  losses         Int   @default(0)
+  buddyPokemonId Int?
+
   pokemons  Pokemon[]
 }
 

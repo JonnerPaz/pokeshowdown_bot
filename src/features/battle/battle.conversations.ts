@@ -200,12 +200,18 @@ export async function battleConversation(
         battleState.winnerTrainerId === battleState.trainerA.id
           ? battleState.trainerA
           : battleState.trainerB;
+      const loser =
+        battleState.winnerTrainerId === battleState.trainerA.id
+          ? battleState.trainerB
+          : battleState.trainerA;
 
-      if (winner.pokemon.id) {
-        await conv.external(() =>
-          deps.battleService.awardVictory(winner.telegramId!, winner.pokemon.id!),
-        );
-      }
+      await conv.external(() =>
+        deps.battleService.recordBattleOutcome(
+          winner.telegramId!,
+          loser.telegramId!,
+          winner.pokemon.id ?? undefined,
+        ),
+      );
 
       await ctx.api
         .editMessageText(

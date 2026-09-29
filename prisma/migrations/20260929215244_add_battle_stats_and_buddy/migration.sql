@@ -1,0 +1,4 @@
+-- AlterTable
+ALTER TABLE "User" ADD COLUMN     "buddyPokemonId" INTEGER,
+ADD COLUMN     "losses" INTEGER NOT NULL DEFAULT 0,
+ADD COLUMN     "wins" INTEGER NOT NULL DEFAULT 0;

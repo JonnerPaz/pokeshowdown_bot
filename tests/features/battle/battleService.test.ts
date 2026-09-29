@@ -71,6 +71,7 @@ describe("BattleService", () => {
 
     const mockUserDataSource = {
       findUserByTelegramId: vi.fn().mockResolvedValue(mockUser),
+      updateUser: vi.fn().mockResolvedValue(mockUser),
     } as unknown as UserDataSource;
 
     const mockPokemonDataSource = {
@@ -83,9 +84,62 @@ describe("BattleService", () => {
     const result = await battleService.awardVictory(99999n, 42);
 
     expect(mockUserDataSource.findUserByTelegramId).toHaveBeenCalledWith(99999n);
+    expect(mockUserDataSource.updateUser).toHaveBeenCalledWith(mockUser, { wins: 1 });
     expect(mockUpdatePokemon).toHaveBeenCalledWith(mockPokemon, { timesCaught: 6 });
     expect(result).toBeDefined();
     expect(result?.timesCaught).toBe(6);
+  });
+
+  it("records battle outcome with winner victory and loser defeat", async () => {
+    const winnerPokemon = makePokemon({ id: 10, timesCaught: 2 });
+    const winner = new UserEntity({
+      id: 1,
+      telegramId: 100n,
+      username: "winner_ash",
+      createdAt: new Date(),
+      updatedAt: new Date(),
+      pokemons: [winnerPokemon],
+      wins: 3,
+      losses: 1,
+    });
+    const loser = new UserEntity({
+      id: 2,
+      telegramId: 200n,
+      username: "loser_gary",
+      createdAt: new Date(),
+      updatedAt: new Date(),
+      pokemons: [],
+      wins: 2,
+      losses: 2,
+    });
+
+    const mockUserDataSource = {
+      findUserByTelegramId: vi.fn((id: bigint) => {
+        if (id === 100n) return Promise.resolve(winner);
+        if (id === 200n) return Promise.resolve(loser);
+        return Promise.resolve(null);
+      }),
+      updateUser: vi.fn((_user: UserEntity, data: Partial<UserEntity>) =>
+        Promise.resolve({ ..._user, ...data }),
+      ),
+    } as unknown as UserDataSource;
+
+    const mockPokemonDataSource = {
+      updatePokemon: vi.fn((pokemon: PokemonEntity, data: Partial<PokemonEntity>) =>
+        Promise.resolve({ ...pokemon, ...data }),
+      ),
+    } as unknown as PokemonDataSource;
+
+    const battleService = new BattleService(
+      {} as PokeApiService,
+      mockUserDataSource,
+      mockPokemonDataSource,
+    );
+
+    const outcome = await battleService.recordBattleOutcome(100n, 200n, 10);
+    expect(outcome.winner?.wins).toBe(4);
+    expect(outcome.loser?.losses).toBe(3);
+    expect(outcome.upgradedPokemon?.timesCaught).toBe(3);
   });
 
   it("returns null when user or pokemon is not found during victory award", async () => {

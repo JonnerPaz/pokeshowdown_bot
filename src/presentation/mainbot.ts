@@ -14,6 +14,7 @@ import { createBattleFeature } from "../features/battle/battle.feature.js";
 import { createPokemonFeature } from "../features/pokemon/pokemon.feature.js";
 import { createPokedexFeature } from "../features/pokedex/pokedex.feature.js";
 import { createInventoryFeature } from "../features/inventory/inventory.feature.js";
+import { createProfileFeature } from "../features/profile/profile.feature.js";
 import { BattleService } from "../features/battle/battle.service.js";
 import { RateLimiterService } from "./services/rateLimiter.service.js";
 
@@ -60,6 +61,7 @@ export class MainBot {
     );
     this.bot.use(createPokedexFeature({ pokeApi, userDataSource: userDatasource }));
     this.bot.use(createInventoryFeature({ userDataSource: userDatasource }));
+    this.bot.use(createProfileFeature({ userDataSource: userDatasource }));
   }
 
   private setupErrorHandler() {

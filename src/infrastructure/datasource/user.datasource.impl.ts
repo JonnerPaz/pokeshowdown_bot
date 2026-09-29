@@ -66,6 +66,9 @@ export class UserDataSourceImpl implements UserDataSource {
         masterballs,
         lastDailyAt,
         dailyStreak,
+        wins: user.wins,
+        losses: user.losses,
+        buddyPokemonId: user.buddyPokemonId,
         pokemons: {
           create: pokemonData,
         },
@@ -102,6 +105,9 @@ export class UserDataSourceImpl implements UserDataSource {
       masterballs?: number;
       lastDailyAt?: Date | null;
       dailyStreak?: number;
+      wins?: number;
+      losses?: number;
+      buddyPokemonId?: number | null;
       updatedAt?: Date;
     } = {};
 
@@ -112,6 +118,9 @@ export class UserDataSourceImpl implements UserDataSource {
     if (data.masterballs !== undefined) updateData.masterballs = data.masterballs;
     if (data.lastDailyAt !== undefined) updateData.lastDailyAt = data.lastDailyAt;
     if (data.dailyStreak !== undefined) updateData.dailyStreak = data.dailyStreak;
+    if (data.wins !== undefined) updateData.wins = data.wins;
+    if (data.losses !== undefined) updateData.losses = data.losses;
+    if (data.buddyPokemonId !== undefined) updateData.buddyPokemonId = data.buddyPokemonId;
     updateData.updatedAt = new Date();
 
     const updatedUser = await prisma.user.update({
@@ -134,6 +143,34 @@ export class UserDataSourceImpl implements UserDataSource {
       ...updatedUser,
       telegramId: updatedUser.telegramId !== null ? Number(updatedUser.telegramId) : null,
       pokemons,
+    });
+  }
+
+  public async getLeaderboard(limit: number = 10): Promise<UserEntity[]> {
+    const users = await prisma.user.findMany({
+      where: {
+        OR: [{ wins: { gt: 0 } }, { losses: { gt: 0 } }],
+      },
+      orderBy: [{ wins: "desc" }, { losses: "asc" }],
+      take: limit,
+      include: { pokemons: true },
+    });
+
+    return users.map((user) => {
+      const pokemons = user.pokemons.map((pokemon) => {
+        const { nickname, ...pokemonData } = pokemon;
+        const sprites = JSON.parse(JSON.stringify(pokemon.sprites));
+        return PokemonEntity.fromObject({
+          ...pokemonData,
+          sprites,
+          ...(nickname && { nickname }),
+        });
+      });
+      return new UserEntity({
+        ...user,
+        telegramId: user.telegramId !== null ? Number(user.telegramId) : null,
+        pokemons,
+      });
     });
   }
 

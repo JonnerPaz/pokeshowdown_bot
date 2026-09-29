@@ -32,6 +32,9 @@ export class InMemoryUserDataSource implements UserDataSource {
       masterballs: user.masterballs,
       lastDailyAt: user.lastDailyAt,
       dailyStreak: user.dailyStreak,
+      wins: user.wins,
+      losses: user.losses,
+      buddyPokemonId: user.buddyPokemonId,
     });
     this.users.set(id, createdUser);
     return createdUser;
@@ -55,9 +58,23 @@ export class InMemoryUserDataSource implements UserDataSource {
       masterballs: data.masterballs ?? existing.masterballs,
       lastDailyAt: data.lastDailyAt !== undefined ? data.lastDailyAt : existing.lastDailyAt,
       dailyStreak: data.dailyStreak ?? existing.dailyStreak,
+      wins: data.wins ?? existing.wins,
+      losses: data.losses ?? existing.losses,
+      buddyPokemonId:
+        data.buddyPokemonId !== undefined ? data.buddyPokemonId : existing.buddyPokemonId,
     });
     this.users.set(existing.id, updated);
     return updated;
+  }
+
+  public async getLeaderboard(limit: number = 10): Promise<UserEntity[]> {
+    return Array.from(this.users.values())
+      .filter((u) => u.wins > 0 || u.losses > 0)
+      .sort((a, b) => {
+        if (b.wins !== a.wins) return b.wins - a.wins;
+        return a.losses - b.losses;
+      })
+      .slice(0, limit);
   }
 
   public async deleteUserByTelegramId(telegramId: number | bigint): Promise<void> {

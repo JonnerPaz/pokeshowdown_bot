@@ -184,7 +184,7 @@
 
 ---
 
-## 16. Roadmap · Phases 6, 7, 8 & 9
+## 16. Roadmap · Phases 6, 7, 8, 9 & 10
 
 Previous phases: P1 tooling/CI + webhook hardening, P2 conversation timeouts + conversation-local encounters, P3 PokeAPI caching + gen-9 pool + dead-code sweep, P4 dead datasource/`ErrorEntity` removal + constants tidy, P5 turn-based Battle System + rate-limiter & unit tests, P6 comprehensive integration test harness with `ApiClientOptions.fetch`.
 
@@ -194,9 +194,7 @@ Phase 8 (landed on `main`): Pokedex Vertical Slice (`src/features/pokedex/` with
 
 Phase 9 (landed on `main`): Pokéball Tiers, Catch Rate Mechanics & Inventory Slice (`src/domain/items/ballTypes.ts` with authentic catch formulas, `src/features/inventory/` with `/bag` and `/daily` reward streaks, Prisma schema migration for user ball counts and streaks, and dynamic multi-ball encounter loop with run, alert on empty balls, and flee chances).
 
-Deferred:
-
-1. **Battle Leaderboard & Trainer Cards**: `/profile` and `/leaderboard` tracking wins, losses, win rates, and buddy Pokémon.
+Phase 10 (landed on `main`): Battle Leaderboard & Trainer Profile Slice (`src/features/profile/` with `/profile` Trainer Card displaying win rates, rank titles, collection counts, and buddy sprite; `/leaderboard` top-10 ranking with medal icons and caller position; `/buddy` setting and favorite companion selection; Prisma schema migration for `wins`, `losses`, and `buddyPokemonId`; and automated battle outcome recording).
 
 Conventions: each feature = one scoped commit set, verified with typecheck/lint/format + `pnpm test`, README/AGENTS updated. No new shared mutable state for encounters or battles (keep them conversation-local).
 

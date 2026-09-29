@@ -13,6 +13,9 @@ export interface UserEntityProps {
   masterballs?: number;
   lastDailyAt?: Date | null;
   dailyStreak?: number;
+  wins?: number;
+  losses?: number;
+  buddyPokemonId?: number | null;
 }
 
 export class UserEntity {
@@ -31,6 +34,9 @@ export class UserEntity {
   masterballs: number;
   lastDailyAt: Date | null;
   dailyStreak: number;
+  wins: number;
+  losses: number;
+  buddyPokemonId: number | null;
 
   constructor(props: UserEntityProps) {
     const {
@@ -46,6 +52,9 @@ export class UserEntity {
       masterballs = 0,
       lastDailyAt = null,
       dailyStreak = 0,
+      wins = 0,
+      losses = 0,
+      buddyPokemonId = null,
     } = props;
     this.id = id;
     this.telegramId = telegramId;
@@ -59,5 +68,8 @@ export class UserEntity {
     this.masterballs = masterballs;
     this.lastDailyAt = lastDailyAt;
     this.dailyStreak = dailyStreak;
+    this.wins = wins;
+    this.losses = losses;
+    this.buddyPokemonId = buddyPokemonId;
   }
 }

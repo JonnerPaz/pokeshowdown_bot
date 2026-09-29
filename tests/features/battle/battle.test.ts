@@ -225,5 +225,10 @@ describe("Turn-Based Battle Integration (/battle)", () => {
     const winner = await userDataSource.findUserByTelegramId(challengerId);
     const winningPokemon = winner?.pokemons.find((p) => p.id === 41);
     expect(winningPokemon?.timesCaught).toBe(2);
+    expect(winner?.wins).toBe(1);
+
+    // 9. Verify loser recorded +1 loss
+    const loser = await userDataSource.findUserByTelegramId(opponentId);
+    expect(loser?.losses).toBe(1);
   });
 });

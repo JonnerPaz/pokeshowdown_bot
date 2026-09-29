@@ -3,6 +3,7 @@ import type { PokemonEntity } from "../../domain/entities/pokemon.entity.js";
 import type { PokeApiService } from "../../presentation/services/pokeapi.service.js";
 import type { UserDataSource } from "../../domain/datasource/user.datasource.js";
 import type { PokemonDataSource } from "../../domain/datasource/pokemon.datasource.js";
+import type { UserEntity } from "../../domain/entities/users.entity.js";
 
 export class BattleService {
   constructor(
@@ -53,11 +54,55 @@ export class BattleService {
     const user = await this.userDataSource.findUserByTelegramId(winnerTelegramId);
     if (!user) return null;
 
+    await this.userDataSource.updateUser(user, {
+      wins: user.wins + 1,
+    });
+
     const winningPokemon = user.pokemons.find((p) => p.id === pokemonId);
     if (!winningPokemon) return null;
 
     return await this.pokemonDataSource.updatePokemon(winningPokemon, {
       timesCaught: winningPokemon.timesCaught + 1,
     });
+  }
+
+  public async recordBattleOutcome(
+    winnerTelegramId: number | bigint,
+    loserTelegramId: number | bigint,
+    winningPokemonId?: number,
+  ): Promise<{
+    winner: UserEntity | null;
+    loser: UserEntity | null;
+    upgradedPokemon: PokemonEntity | null;
+  }> {
+    const winner = await this.userDataSource.findUserByTelegramId(winnerTelegramId);
+    const loser = await this.userDataSource.findUserByTelegramId(loserTelegramId);
+
+    let updatedWinner: UserEntity | null = null;
+    let updatedLoser: UserEntity | null = null;
+    let upgradedPokemon: PokemonEntity | null = null;
+
+    if (winner) {
+      updatedWinner = await this.userDataSource.updateUser(winner, {
+        wins: winner.wins + 1,
+      });
+
+      if (winningPokemonId) {
+        const winningPokemon = winner.pokemons.find((p) => p.id === winningPokemonId);
+        if (winningPokemon) {
+          upgradedPokemon = await this.pokemonDataSource.updatePokemon(winningPokemon, {
+            timesCaught: winningPokemon.timesCaught + 1,
+          });
+        }
+      }
+    }
+
+    if (loser) {
+      updatedLoser = await this.userDataSource.updateUser(loser, {
+        losses: loser.losses + 1,
+      });
+    }
+
+    return { winner: updatedWinner, loser: updatedLoser, upgradedPokemon };
   }
 }

@@ -141,6 +141,36 @@ export const commands = {
       description: "Reclama tus Pokeballs diarias y bono de racha",
     },
   },
+  PROFILE: {
+    [LanguageCodes.English]: {
+      command: "profile",
+      description: "View your Trainer Card, battle records, and buddy",
+    },
+    [LanguageCodes.Spanish]: {
+      command: "perfil",
+      description: "Ver tu Tarjeta de Entrenador, historial de batallas y companero",
+    },
+  },
+  LEADERBOARD: {
+    [LanguageCodes.English]: {
+      command: "leaderboard",
+      description: "View the battle leaderboard and top trainers",
+    },
+    [LanguageCodes.Spanish]: {
+      command: "ranking",
+      description: "Ver la tabla de clasificacion y mejores entrenadores",
+    },
+  },
+  BUDDY: {
+    [LanguageCodes.English]: {
+      command: "buddy",
+      description: "Set your favorite buddy Pokemon",
+    },
+    [LanguageCodes.Spanish]: {
+      command: "companero",
+      description: "Establece tu Pokemon companero favorito",
+    },
+  },
 } as const;
 
 export type CommandKeys = keyof typeof commands;
