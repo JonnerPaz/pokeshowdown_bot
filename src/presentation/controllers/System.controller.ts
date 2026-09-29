@@ -27,10 +27,10 @@ export class SystemController extends BaseCommandController<AppContext> {
         });
         await ctx.reply(msg + "\nFor more information, type /start");
       } catch (error) {
-        this.displayError(error as Error, ctx);
+        await this.displayError(error as Error, ctx);
       }
     };
 
-    return this.registerCommand("HELP", async (ctx: AppContext) => await handler(ctx));
+    return this.registerCommand("HELP", handler);
   }
 }

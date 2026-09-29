@@ -30,9 +30,24 @@ export abstract class BaseCommandController<T extends AppContext> {
       .localize(LanguageCodes.Spanish, commandSpa, descriptionSpa);
   }
 
+  protected async registerConversationCommand(
+    cmdName: CommandKeys,
+    conversationName: string,
+  ): Promise<Command<T>> {
+    return this.registerCommand(cmdName, async (ctx: T) => {
+      try {
+        await ctx.conversation.enter(conversationName);
+      } catch (error) {
+        await this.displayError(error as Error, ctx);
+      }
+    });
+  }
+
   protected async displayError(e: Error, ctx: T, msg?: string) {
     const username = ctx.from?.username ?? ctx.chat?.id?.toString() ?? "unknown";
     console.error("command failed", { username, error: e.message, cause: e.cause });
-    return msg ? ctx.reply(msg) : ctx.reply("There was an error during request. Please report it");
+    return msg
+      ? await ctx.reply(msg)
+      : await ctx.reply("There was an error during request. Please report it");
   }
 }

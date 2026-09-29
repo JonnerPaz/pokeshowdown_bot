@@ -8,14 +8,6 @@ export class BattleController extends BaseCommandController<AppContext> {
   }
 
   public async battle() {
-    const handler = async (ctx: AppContext) => {
-      try {
-        return await ctx.conversation.enter("battle");
-      } catch (error) {
-        this.displayError(error as Error, ctx);
-      }
-    };
-
-    return this.registerCommand("BATTLE", async (ctx: AppContext) => await handler(ctx));
+    return this.registerConversationCommand("BATTLE", "battle");
   }
 }

@@ -8,72 +8,26 @@ export class PokemonController extends BaseCommandController<AppContext> {
   }
 
   public async pokemons() {
-    const handler = async (ctx: AppContext) => {
-      try {
-        return await ctx.conversation.enter("pokemons");
-      } catch (error) {
-        this.displayError(error as Error, ctx);
-      }
-    };
-
-    return this.registerCommand("MY_POKEMONS", async (ctx: AppContext) => await handler(ctx));
+    return this.registerConversationCommand("MY_POKEMONS", "pokemons");
   }
 
   public async generatePokemon() {
-    const handler = async (ctx: AppContext) => {
-      try {
-        return await ctx.conversation.enter("generatePokemon");
-      } catch (error) {
-        this.displayError(error as Error, ctx);
-      }
-    };
-    return this.registerCommand("POKEMON_GENERATE", async (ctx: AppContext) => await handler(ctx));
+    return this.registerConversationCommand("POKEMON_GENERATE", "generatePokemon");
   }
 
   public async evolve() {
-    const handler = async (ctx: AppContext) => {
-      try {
-        return await ctx.conversation.enter("evolvePokemon");
-      } catch (error) {
-        this.displayError(error as Error, ctx);
-      }
-    };
-    return this.registerCommand("EVOLVE", async (ctx: AppContext) => await handler(ctx));
+    return this.registerConversationCommand("EVOLVE", "evolvePokemon");
   }
 
   public async shiny() {
-    const handler = async (ctx: AppContext) => {
-      try {
-        return await ctx.conversation.enter("shinyPokemon");
-      } catch (error) {
-        this.displayError(error as Error, ctx);
-      }
-    };
-
-    return this.registerCommand("SHINY", async (ctx: AppContext) => await handler(ctx));
+    return this.registerConversationCommand("SHINY", "shinyPokemon");
   }
 
   public async trade() {
-    const handler = async (ctx: AppContext) => {
-      try {
-        return await ctx.conversation.enter("trade");
-      } catch (error) {
-        this.displayError(error as Error, ctx);
-      }
-    };
-
-    return this.registerCommand("TRADE", async (ctx: AppContext) => await handler(ctx));
+    return this.registerConversationCommand("TRADE", "trade");
   }
 
   public async nickname() {
-    const handler = async (ctx: AppContext) => {
-      try {
-        return await ctx.conversation.enter("nickname");
-      } catch (error) {
-        this.displayError(error as Error, ctx);
-      }
-    };
-
-    return this.registerCommand("NICKNAME", async (ctx: AppContext) => await handler(ctx));
+    return this.registerConversationCommand("NICKNAME", "nickname");
   }
 }
