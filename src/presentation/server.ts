@@ -1,3 +1,5 @@
+import type { Server as HttpServer } from "node:http";
+
 import express from "express";
 import type { Express } from "express";
 import { Bot, BotError, GrammyError, HttpError, webhookCallback } from "grammy";
@@ -16,6 +18,7 @@ export class Server {
   public readonly port: number;
   public readonly webhookUrl: string;
   public readonly webhookSecret: string;
+  public httpServer?: HttpServer;
 
   constructor(options: ServerOptions) {
     this.app = express();
@@ -27,6 +30,10 @@ export class Server {
 
   public async setup() {
     this.app.use(express.json());
+
+    this.app.get("/health", (_req, res) => {
+      res.status(200).json({ status: "ok" });
+    });
 
     try {
       await this.bot.api.setWebhook(this.webhookUrl, {
@@ -50,8 +57,25 @@ export class Server {
         secretToken: this.webhookSecret,
       }),
     );
-    this.app.listen(this.port, () => {
-      console.log(`Server running on port ${this.port}`);
+
+    await new Promise<void>((resolve) => {
+      this.httpServer = this.app.listen(this.port, () => {
+        console.log(`Server running on port ${this.port}`);
+        resolve();
+      });
+    });
+  }
+
+  public async close(): Promise<void> {
+    return new Promise((resolve, reject) => {
+      if (!this.httpServer) {
+        resolve();
+        return;
+      }
+      this.httpServer.close((err) => {
+        if (err) reject(err);
+        else resolve();
+      });
     });
   }
 }

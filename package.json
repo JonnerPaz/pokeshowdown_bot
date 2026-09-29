@@ -14,6 +14,7 @@
     "format:check": "prettier --check \"src/**/*.ts\" \"tests/**/*.ts\" \"*.{json,md}\" compose.yaml prisma.config.ts tsconfig.json",
     "prisma:generate": "prisma generate",
     "prisma:migrate": "prisma migrate dev",
+    "prisma:deploy": "prisma migrate deploy",
     "test": "vitest run",
     "tunnel": "cloudflared tunnel --url http://localhost:5000"
   },
@@ -30,7 +31,6 @@
     "eslint-plugin-prettier": "^5.5.6",
     "prettier": "^3.9.6",
     "prisma": "^7.9.1",
-    "tsx": "^4.23.12",
     "typescript-eslint": "^8.67.0",
     "unplugin-swc": "^2.0.0",
     "vitest": "^5.0.2"
@@ -44,6 +44,7 @@
     "express": "^5.1.0",
     "grammy": "^1.45.1",
     "pg": "^8.23.0",
-    "pokenode-ts": "^2.1.0"
+    "pokenode-ts": "^2.1.0",
+    "tsx": "^4.23.12"
   }
 }
