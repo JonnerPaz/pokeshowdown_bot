@@ -1,9 +1,25 @@
 {
   "name": "showdownbot",
-  "version": "1.0.0",
-  "description": "",
-  "main": "index.js",
+  "version": "1.1.0",
+  "description": "A feature-rich Telegram bot to catch, evolve, trade, and battle Pokemon with friends",
+  "private": true,
+  "main": "src/index.ts",
   "type": "module",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/JonnerPaz/pokeshowdown_bot.git"
+  },
+  "bugs": {
+    "url": "https://github.com/JonnerPaz/pokeshowdown_bot/issues"
+  },
+  "homepage": "https://github.com/JonnerPaz/pokeshowdown_bot#readme",
+  "author": "JonnerPaz",
+  "license": "ISC",
+  "packageManager": "pnpm@10.16.0",
+  "engines": {
+    "node": ">=22.0.0",
+    "pnpm": ">=10.0.0"
+  },
   "scripts": {
     "dev": "tsx watch src/index.ts",
     "start": "tsx src/index.ts",
@@ -16,19 +32,29 @@
     "prisma:migrate": "prisma migrate dev",
     "prisma:deploy": "prisma migrate deploy",
     "test": "vitest run",
-    "tunnel": "cloudflared tunnel --url http://localhost:5000"
+    "tunnel": "cloudflared tunnel --url http://localhost:5000",
+    "prepare": "husky"
   },
-  "keywords": [],
-  "author": "",
-  "license": "ISC",
-  "packageManager": "pnpm@10.16.0",
+  "keywords": [
+    "telegram",
+    "bot",
+    "pokemon",
+    "showdown",
+    "grammy",
+    "prisma",
+    "typescript"
+  ],
   "devDependencies": {
+    "@commitlint/cli": "^21.2.3",
+    "@commitlint/config-conventional": "^21.2.3",
     "@eslint/js": "^10.0.1",
     "@types/express": "^5.0.6",
     "@types/node": "^26.2.0",
     "eslint": "^10.8.1",
     "eslint-config-prettier": "^10.1.8",
     "eslint-plugin-prettier": "^5.5.6",
+    "husky": "^9.1.7",
+    "lint-staged": "^17.6.0",
     "prettier": "^3.9.6",
     "prisma": "^7.9.1",
     "typescript-eslint": "^8.67.0",
