@@ -1,0 +1,38 @@
+{
+  "$schema": "https://json.schemastore.org/commitlintrc",
+  "extends": ["@commitlint/config-conventional"],
+  "rules": {
+    "type-enum": [
+      2,
+      "always",
+      ["build", "chore", "ci", "docs", "feat", "fix", "perf", "refactor", "revert", "style", "test"]
+    ],
+    "scope-enum": [
+      2,
+      "always",
+      [
+        "auth",
+        "battle",
+        "ci",
+        "common",
+        "config",
+        "deps",
+        "docs",
+        "domain",
+        "hooks",
+        "inventory",
+        "pokedex",
+        "pokemon",
+        "profile",
+        "release",
+        "structure",
+        "system",
+        "test",
+        "webhook"
+      ]
+    ],
+    "scope-empty": [0],
+    "scope-case": [0],
+    "subject-case": [0]
+  }
+}
