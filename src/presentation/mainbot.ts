@@ -8,12 +8,11 @@ import { PokemonDataSourceImpl } from "../infrastructure/datasource/pokemon.data
 import type { UserDataSource } from "../domain/datasource/user.datasource.js";
 import type { PokemonDataSource } from "../domain/datasource/pokemon.datasource.js";
 import { botConversations } from "./services/addConversation.decorator.js";
-import { PokemonController } from "./controllers/Pokemon.controller.js";
 import { getAllCommands } from "./controllers/commands.js";
 import { createSystemFeature } from "../features/system/system.feature.js";
 import { createAuthFeature } from "../features/auth/auth.feature.js";
 import { createBattleFeature } from "../features/battle/battle.feature.js";
-import { PokemonConversation } from "./services/Pokemon.conversation.service.js";
+import { createPokemonFeature } from "../features/pokemon/pokemon.feature.js";
 import { BattleService } from "../features/battle/battle.service.js";
 import { RateLimiterService } from "./services/rateLimiter.service.js";
 
@@ -27,8 +26,6 @@ export interface MainBotOptions {
 }
 
 export class MainBot {
-  private pokemonController: PokemonController;
-
   public readonly bot: Bot<AppContext>;
   public static instance: MainBot;
 
@@ -48,16 +45,18 @@ export class MainBot {
     const battleService =
       options.battleService ?? new BattleService(pokeApi, userDatasource, pokemonDatasource);
 
-    // Setup conversations (decorators register them into botConversations)
-    void new PokemonConversation(userDatasource, pokemonDatasource, pokeApi, rateLimiter);
-
     // Setup features
     this.bot.use(createSystemFeature());
     this.bot.use(createAuthFeature({ userDataSource: userDatasource, pokeApi }));
     this.bot.use(createBattleFeature({ userDataSource: userDatasource, battleService }));
-
-    // Setup controllers
-    this.pokemonController = new PokemonController(this.bot);
+    this.bot.use(
+      createPokemonFeature({
+        userDataSource: userDatasource,
+        pokemonDataSource: pokemonDatasource,
+        pokeApi,
+        rateLimiter,
+      }),
+    );
 
     this.registerConversations();
   }
@@ -75,21 +74,6 @@ export class MainBot {
 
   public async registerControllers() {
     await this.bot.init();
-
-    await Promise.all([
-      this.pokemonController.pokemons(),
-      this.pokemonController.generatePokemon(),
-      this.pokemonController.evolve(),
-      this.pokemonController.shiny(),
-      this.pokemonController.trade(),
-      this.pokemonController.nickname(),
-    ]);
-
-    const controllers = [this.pokemonController];
-    for (const controller of controllers) {
-      this.bot.use(controller.middleware());
-    }
-
     await this.registerBotMenuCommands();
   }
 
