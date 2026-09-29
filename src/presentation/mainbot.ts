@@ -8,7 +8,6 @@ import { PokemonDataSourceImpl } from "../infrastructure/datasource/pokemon.data
 import type { UserDataSource } from "../domain/datasource/user.datasource.js";
 import type { PokemonDataSource } from "../domain/datasource/pokemon.datasource.js";
 import { botConversations } from "./services/addConversation.decorator.js";
-import { DBService } from "./services/db.service.js";
 import { PokemonController } from "./controllers/Pokemon.controller.js";
 import { getAllCommands } from "./controllers/commands.js";
 import { createSystemFeature } from "../features/system/system.feature.js";
@@ -23,7 +22,6 @@ export interface MainBotOptions {
   userDatasource?: UserDataSource;
   pokemonDatasource?: PokemonDataSource;
   pokeApi?: PokeApiService;
-  dbService?: DBService;
   rateLimiter?: RateLimiterService;
   battleService?: BattleService;
 }
@@ -46,13 +44,12 @@ export class MainBot {
     const pokemonDatasource = options.pokemonDatasource ?? new PokemonDataSourceImpl();
 
     const pokeApi = options.pokeApi ?? new PokeApiService();
-    const dbService =
-      options.dbService ?? new DBService(userDatasource, pokemonDatasource, pokeApi);
     const rateLimiter = options.rateLimiter ?? new RateLimiterService();
-    const battleService = options.battleService ?? new BattleService(pokeApi, dbService);
+    const battleService =
+      options.battleService ?? new BattleService(pokeApi, userDatasource, pokemonDatasource);
 
     // Setup conversations (decorators register them into botConversations)
-    void new PokemonConversation(dbService, rateLimiter);
+    void new PokemonConversation(userDatasource, pokemonDatasource, pokeApi, rateLimiter);
 
     // Setup features
     this.bot.use(createSystemFeature());

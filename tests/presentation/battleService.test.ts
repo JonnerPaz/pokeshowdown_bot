@@ -2,7 +2,8 @@ import { describe, expect, it, vi } from "vitest";
 import { BattleService } from "../../src/features/battle/battle.service.js";
 import { PokemonEntity } from "../../src/domain/entities/pokemon.entity.js";
 import type { PokeApiService } from "../../src/presentation/services/pokeapi.service.js";
-import type { DBService } from "../../src/presentation/services/db.service.js";
+import type { UserDataSource } from "../../src/domain/datasource/user.datasource.js";
+import type { PokemonDataSource } from "../../src/domain/datasource/pokemon.datasource.js";
 import { UserEntity } from "../../src/domain/entities/users.entity.js";
 
 const makePokemon = (overrides: Partial<PokemonEntity> = {}): PokemonEntity =>
@@ -35,8 +36,9 @@ describe("BattleService", () => {
       }),
     } as unknown as PokeApiService;
 
-    const mockDbService = {} as unknown as DBService;
-    const battleService = new BattleService(mockPokeApi, mockDbService);
+    const mockUserDataSource = {} as unknown as UserDataSource;
+    const mockPokemonDataSource = {} as unknown as PokemonDataSource;
+    const battleService = new BattleService(mockPokeApi, mockUserDataSource, mockPokemonDataSource);
 
     const pokemon = makePokemon({ timesCaught: 2, nickname: "Ignis" });
     const battlePokemon = await battleService.resolveBattlePokemon(pokemon);
@@ -67,28 +69,36 @@ describe("BattleService", () => {
       timesCaught: 6,
     });
 
-    const mockDbService = {
+    const mockUserDataSource = {
       findUserByTelegramId: vi.fn().mockResolvedValue(mockUser),
+    } as unknown as UserDataSource;
+
+    const mockPokemonDataSource = {
       updatePokemon: mockUpdatePokemon,
-    } as unknown as DBService;
+    } as unknown as PokemonDataSource;
 
     const mockPokeApi = {} as unknown as PokeApiService;
-    const battleService = new BattleService(mockPokeApi, mockDbService);
+    const battleService = new BattleService(mockPokeApi, mockUserDataSource, mockPokemonDataSource);
 
     const result = await battleService.awardVictory(99999n, 42);
 
-    expect(mockDbService.findUserByTelegramId).toHaveBeenCalledWith(99999n);
+    expect(mockUserDataSource.findUserByTelegramId).toHaveBeenCalledWith(99999n);
     expect(mockUpdatePokemon).toHaveBeenCalledWith(mockPokemon, { timesCaught: 6 });
     expect(result).toBeDefined();
     expect(result?.timesCaught).toBe(6);
   });
 
   it("returns null when user or pokemon is not found during victory award", async () => {
-    const mockDbService = {
+    const mockUserDataSource = {
       findUserByTelegramId: vi.fn().mockResolvedValue(null),
-    } as unknown as DBService;
+    } as unknown as UserDataSource;
 
-    const battleService = new BattleService({} as PokeApiService, mockDbService);
+    const mockPokemonDataSource = {} as unknown as PokemonDataSource;
+    const battleService = new BattleService(
+      {} as PokeApiService,
+      mockUserDataSource,
+      mockPokemonDataSource,
+    );
     const result = await battleService.awardVictory(12345n, 99);
     expect(result).toBeNull();
   });

@@ -1,6 +1,5 @@
 import { randomUUID } from "node:crypto";
 import type { InputMediaPhoto } from "grammy/types";
-import type { DBService } from "./db.service.js";
 import { addConversation } from "./addConversation.decorator.js";
 import type { AppContext } from "../data/types.js";
 import { Conversation } from "@grammyjs/conversations";
@@ -14,16 +13,22 @@ import {
 import type { UserEntity } from "../../domain/entities/users.entity.js";
 import type { PokemonEntity } from "../../domain/entities/pokemon.entity.js";
 import type { RateLimiterService } from "./rateLimiter.service.js";
+import type { UserDataSource } from "../../domain/datasource/user.datasource.js";
+import type { PokemonDataSource } from "../../domain/datasource/pokemon.datasource.js";
+import type { PokeApiService } from "./pokeapi.service.js";
+import { evolvePokemonOperation } from "../../features/pokemon/pokemon.service.js";
 
 export class PokemonConversation {
   constructor(
-    private readonly dbService: DBService,
+    private readonly userDataSource: UserDataSource,
+    private readonly pokemonDataSource: PokemonDataSource,
+    private readonly pokeApi: PokeApiService,
     private readonly rateLimiter: RateLimiterService,
   ) {}
 
   @addConversation
   public async pokemons(conv: Conversation, ctx: AppContext) {
-    const user = await conv.external(() => this.dbService.findUserByTelegramId(ctx.from!.id));
+    const user = await conv.external(() => this.userDataSource.findUserByTelegramId(ctx.from!.id));
 
     if (!user) {
       await ctx.reply("You are not registered!");
@@ -77,7 +82,7 @@ export class PokemonConversation {
       .andFrom(ctx.from!);
 
     const user = await conv.external(() =>
-      this.dbService.findUserByTelegramId(choice.callbackQuery.from.id),
+      this.userDataSource.findUserByTelegramId(choice.callbackQuery.from.id),
     );
     if (!user || !user.id) {
       await ctx.reply("You are not registered!");
@@ -88,7 +93,7 @@ export class PokemonConversation {
     await ctx.api.deleteMessage(choice.chat!.id, photoMsg.message_id).catch(() => {});
     await ctx.api.deleteMessage(choice.chat!.id, promptMsg.message_id).catch(() => {});
 
-    const doesPokemonExist = await this.dbService.findUserPokemonByNameAndVariant(
+    const doesPokemonExist = await this.pokemonDataSource.findUserPokemonByNameAndVariant(
       user.id,
       currentPokemon.name,
       currentPokemon.isShiny,
@@ -113,13 +118,13 @@ export class PokemonConversation {
 
     if (doesPokemonExist) {
       await conv.external(() =>
-        this.dbService.updatePokemon(doesPokemonExist, {
+        this.pokemonDataSource.updatePokemon(doesPokemonExist, {
           timesCaught: doesPokemonExist.timesCaught + 1,
         }),
       );
     } else {
       // pokemon doesn't exist, create it
-      await conv.external(() => this.dbService.insertPokemonIntoDB(currentPokemon, user));
+      await conv.external(() => this.pokemonDataSource.createPokemon(currentPokemon, user));
     }
     this.rateLimiter.hit(userId, "catch");
     await ctx.reply(
@@ -158,7 +163,11 @@ export class PokemonConversation {
       return;
     }
 
-    const evolvedPokemon = await this.dbService.evolvePokemon(pokemon);
+    const evolvedPokemon = await evolvePokemonOperation(
+      pokemon,
+      this.pokeApi,
+      this.pokemonDataSource,
+    );
 
     if (evolvedPokemon.name === pokemon.name) {
       await ctx.reply("Your pokemon can't evolve anymore");
@@ -208,7 +217,7 @@ export class PokemonConversation {
 
     await conv.external(() => {
       const shinyPokemon = pokemon.spendForShiny(SHINY_CAP);
-      return this.dbService.updatePokemon(pokemon, {
+      return this.pokemonDataSource.updatePokemon(pokemon, {
         isShiny: shinyPokemon.isShiny,
         timesCaught: shinyPokemon.timesCaught,
       });
@@ -264,7 +273,7 @@ export class PokemonConversation {
     }
 
     await conv.external(() =>
-      this.dbService.tradePokemon(userReq, userReqPkmn, userRes, userResPkmn),
+      this.pokemonDataSource.tradePokemon(userReq, userReqPkmn, userRes, userResPkmn),
     );
 
     await ctx.reply("Trade successful!");
@@ -319,7 +328,7 @@ export class PokemonConversation {
     }
 
     await conv.external(() =>
-      this.dbService.updatePokemon(pokemon, {
+      this.pokemonDataSource.updatePokemon(pokemon, {
         nickname: newNick,
       }),
     );
@@ -398,7 +407,7 @@ export class PokemonConversation {
   }
 
   private async checkUserExists(userId: number, ctx: AppContext) {
-    const user = await this.dbService.findUserByTelegramId(userId);
+    const user = await this.userDataSource.findUserByTelegramId(userId);
     if (!user) {
       await ctx.reply("You are not registered!");
       return null;
@@ -408,7 +417,7 @@ export class PokemonConversation {
   }
 
   private async generateWildPokemon(): Promise<[PokemonEntity, InlineKeyboard]> {
-    const pokemon = await this.dbService.createPokemon();
+    const pokemon = await this.pokeApi.createPokemon();
     const keyboard = new InlineKeyboard().text("Catch", "catch");
     return [pokemon, keyboard];
   }

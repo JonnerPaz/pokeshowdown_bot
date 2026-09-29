@@ -1,12 +1,14 @@
 import type { BattlePokemonStats } from "../../domain/battle/types.js";
 import type { PokemonEntity } from "../../domain/entities/pokemon.entity.js";
-import type { DBService } from "../../presentation/services/db.service.js";
 import type { PokeApiService } from "../../presentation/services/pokeapi.service.js";
+import type { UserDataSource } from "../../domain/datasource/user.datasource.js";
+import type { PokemonDataSource } from "../../domain/datasource/pokemon.datasource.js";
 
 export class BattleService {
   constructor(
     private readonly pokeApi: PokeApiService,
-    private readonly dbService: DBService,
+    private readonly userDataSource: UserDataSource,
+    private readonly pokemonDataSource: PokemonDataSource,
   ) {}
 
   public async resolveBattlePokemon(pokemon: PokemonEntity): Promise<BattlePokemonStats> {
@@ -48,13 +50,13 @@ export class BattleService {
     winnerTelegramId: number | bigint,
     pokemonId: number,
   ): Promise<PokemonEntity | null> {
-    const user = await this.dbService.findUserByTelegramId(winnerTelegramId);
+    const user = await this.userDataSource.findUserByTelegramId(winnerTelegramId);
     if (!user) return null;
 
     const winningPokemon = user.pokemons.find((p) => p.id === pokemonId);
     if (!winningPokemon) return null;
 
-    return await this.dbService.updatePokemon(winningPokemon, {
+    return await this.pokemonDataSource.updatePokemon(winningPokemon, {
       timesCaught: winningPokemon.timesCaught + 1,
     });
   }

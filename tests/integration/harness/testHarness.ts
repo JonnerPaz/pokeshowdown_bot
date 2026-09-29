@@ -2,7 +2,6 @@ import type { Update, User, Chat, UserFromGetMe } from "grammy/types";
 import { MainBot } from "../../../src/presentation/mainbot.js";
 import { MockTelegramClient } from "./mockTelegramClient.js";
 import { InMemoryPokemonDataSource, InMemoryUserDataSource } from "./inMemoryDatasources.js";
-import { DBService } from "../../../src/presentation/services/db.service.js";
 import { RateLimiterService } from "../../../src/presentation/services/rateLimiter.service.js";
 import { BattleService } from "../../../src/features/battle/battle.service.js";
 import type { PokeApiService } from "../../../src/presentation/services/pokeapi.service.js";
@@ -34,7 +33,6 @@ export interface TestBotContext {
   client: MockTelegramClient;
   userDataSource: InMemoryUserDataSource;
   pokemonDataSource: InMemoryPokemonDataSource;
-  dbService: DBService;
   battleService: BattleService;
   dispatchUpdate: (update: Update) => Promise<void>;
   dispatchCommand: (
@@ -98,9 +96,8 @@ export async function createTestBot(options?: {
     ...options?.pokeApiService,
   } as unknown as PokeApiService;
 
-  const dbService = new DBService(userDataSource, pokemonDataSource, mockPokeApi);
   const rateLimiter = new RateLimiterService();
-  const battleService = new BattleService(mockPokeApi, dbService);
+  const battleService = new BattleService(mockPokeApi, userDataSource, pokemonDataSource);
 
   const botInfo = {
     id: 123456789,
@@ -128,7 +125,6 @@ export async function createTestBot(options?: {
     userDatasource: userDataSource,
     pokemonDatasource: pokemonDataSource,
     pokeApi: mockPokeApi,
-    dbService,
     rateLimiter,
     battleService,
   });
@@ -294,7 +290,6 @@ export async function createTestBot(options?: {
     client,
     userDataSource,
     pokemonDataSource,
-    dbService,
     battleService,
     dispatchUpdate,
     dispatchCommand,
