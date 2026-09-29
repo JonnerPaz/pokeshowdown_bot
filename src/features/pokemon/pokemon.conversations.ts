@@ -20,6 +20,14 @@ import {
   createTradeConfirmKeyboard,
   createTradeInviteKeyboard,
 } from "./pokemon.keyboards.js";
+import {
+  BALL_CONFIGS,
+  type BallType,
+  getBallUserField,
+  getUserBallCount,
+  rollCatchAttempt,
+  rollFlee,
+} from "../../domain/items/ballTypes.js";
 
 export interface PokemonConversationDeps {
   userDataSource: UserDataSource;
@@ -109,70 +117,132 @@ export async function generatePokemonConversation(
     return;
   }
 
-  const currentPokemon = await conv.external(() => deps.pokeApi.createPokemon());
-  const keyboard = createCatchKeyboard();
-
-  const photoMsg = await ctx.api.sendPhoto(ctx.chat!.id, getPokemonFrontSprite(currentPokemon));
-
-  const promptMsg = await ctx.reply(`A wild pokemon has appeared! Touch the button to catch it!`, {
-    reply_markup: keyboard,
-  });
-
-  const choice = await conv
-    .waitForCallbackQuery("catch", { maxMilliseconds: CONVERSATION_TIMEOUT_MS })
-    .andFrom(ctx.from!);
-
-  const user = await conv.external(() =>
-    deps.userDataSource.findUserByTelegramId(choice.callbackQuery.from.id),
-  );
+  const user = await conv.external(() => deps.userDataSource.findUserByTelegramId(userId));
   if (!user || !user.id) {
     await ctx.reply("You are not registered!");
     return;
   }
 
-  // delete prompt and photo
-  await ctx.api.deleteMessage(choice.chat!.id, photoMsg.message_id).catch(() => {});
-  await ctx.api.deleteMessage(choice.chat!.id, promptMsg.message_id).catch(() => {});
-
-  const doesPokemonExist = await deps.pokemonDataSource.findUserPokemonByNameAndVariant(
-    user.id,
-    currentPokemon.name,
-    currentPokemon.isShiny,
+  const currentPokemon = await conv.external(() => deps.pokeApi.createPokemon());
+  const captureRate = await conv.external(() =>
+    deps.pokeApi.getPokemonCaptureRate(currentPokemon.name),
   );
 
-  const { pokemons } = user;
-  if (!doesPokemonExist && pokemons.length >= MAX_PKMN_PARTY) {
-    await ctx.reply(`Your pokemon bag is full! You can't catch ${currentPokemon.name}`);
-    return;
-  }
+  const photoMsg = await ctx.api.sendPhoto(ctx.chat!.id, getPokemonFrontSprite(currentPokemon));
+  const promptMsg = await ctx.reply(
+    `A wild *${currentPokemon.name}* appeared! Choose a Pokéball to throw:`,
+    {
+      reply_markup: createCatchKeyboard(user),
+      parse_mode: "Markdown",
+    },
+  );
 
-  const canCatch = await conv.external(() => {
-    if (!deps.rateLimiter.isAllowed(userId, "catch")) return false;
-    deps.rateLimiter.hit(userId, "catch");
-    return true;
-  });
+  while (true) {
+    const choice = await conv
+      .waitForCallbackQuery(/^catch(:.+)?$/, { maxMilliseconds: CONVERSATION_TIMEOUT_MS })
+      .andFrom(ctx.from!);
 
-  if (!canCatch) {
-    await ctx.reply("Slow down! You're catching too many pokemon.");
-    return;
-  }
+    const data = choice.callbackQuery.data;
+    if (data === "catch:run") {
+      await choice.answerCallbackQuery({ text: "You fled safely!" });
+      await ctx.api.deleteMessage(choice.chat!.id, photoMsg.message_id).catch(() => {});
+      await ctx.api.deleteMessage(choice.chat!.id, promptMsg.message_id).catch(() => {});
+      await ctx.reply(`🏃 You ran away safely from the wild ${currentPokemon.name}!`);
+      return;
+    }
 
-  if (doesPokemonExist) {
-    await conv.external(() =>
-      deps.pokemonDataSource.updatePokemon(doesPokemonExist, {
-        timesCaught: doesPokemonExist.timesCaught + 1,
-      }),
+    const ballType: BallType =
+      data === "catch" || data === "catch:pokeball"
+        ? "pokeball"
+        : (data.replace("catch:", "") as BallType);
+
+    const count = getUserBallCount(user, ballType);
+    if (count <= 0) {
+      const ballConfig = BALL_CONFIGS[ballType];
+      await choice.answerCallbackQuery({
+        text: `You don't have any ${ballConfig.name}s left!`,
+        show_alert: true,
+      });
+      continue;
+    }
+
+    await choice.answerCallbackQuery();
+
+    const canCatch = await conv.external(() => {
+      if (!deps.rateLimiter.isAllowed(userId, "catch")) return false;
+      deps.rateLimiter.hit(userId, "catch");
+      return true;
+    });
+
+    if (!canCatch) {
+      await ctx.reply("Slow down! You're catching too many pokemon.");
+      return;
+    }
+
+    // Deduct ball from inventory
+    const field = getBallUserField(ballType);
+    user[field] -= 1;
+    await conv.external(() => deps.userDataSource.updateUser(user, { [field]: user[field] }));
+
+    const doesPokemonExist = await conv.external(() =>
+      deps.pokemonDataSource.findUserPokemonByNameAndVariant(
+        user.id!,
+        currentPokemon.name,
+        currentPokemon.isShiny,
+      ),
     );
-  } else {
-    // pokemon doesn't exist, create it
-    await conv.external(() => deps.pokemonDataSource.createPokemon(currentPokemon, user));
-  }
-  deps.rateLimiter.hit(userId, "catch");
-  await ctx.reply(
-    `@${user.username} has caught ${currentPokemon.isShiny ? "a shiny" : "a"} ${currentPokemon.name}.`,
-  );
 
-  return;
+    const { pokemons } = user;
+    if (!doesPokemonExist && pokemons.length >= MAX_PKMN_PARTY) {
+      await ctx.api.deleteMessage(choice.chat!.id, photoMsg.message_id).catch(() => {});
+      await ctx.api.deleteMessage(choice.chat!.id, promptMsg.message_id).catch(() => {});
+      await ctx.reply(`Your pokemon bag is full! You can't catch ${currentPokemon.name}`);
+      return;
+    }
+
+    const attempt = rollCatchAttempt(captureRate, ballType);
+    if (attempt.caught) {
+      await ctx.api.deleteMessage(choice.chat!.id, photoMsg.message_id).catch(() => {});
+      await ctx.api.deleteMessage(choice.chat!.id, promptMsg.message_id).catch(() => {});
+
+      if (doesPokemonExist) {
+        await conv.external(() =>
+          deps.pokemonDataSource.updatePokemon(doesPokemonExist, {
+            timesCaught: doesPokemonExist.timesCaught + 1,
+          }),
+        );
+      } else {
+        await conv.external(() => deps.pokemonDataSource.createPokemon(currentPokemon, user));
+      }
+
+      await ctx.reply(
+        `🎉 Gotcha! @${user.username} caught ${currentPokemon.isShiny ? "a shiny" : "a"} ${currentPokemon.name} using a ${BALL_CONFIGS[ballType].name}!`,
+      );
+      return;
+    }
+
+    // Did not catch - check if wild Pokémon flees
+    const fled = rollFlee();
+    if (fled) {
+      await ctx.api.deleteMessage(choice.chat!.id, photoMsg.message_id).catch(() => {});
+      await ctx.api.deleteMessage(choice.chat!.id, promptMsg.message_id).catch(() => {});
+      await ctx.reply(
+        `💥 Oh no! The wild ${currentPokemon.name} broke free from the ${BALL_CONFIGS[ballType].name} and fled into the wild! 💨`,
+      );
+      return;
+    }
+
+    // Broke free, but stayed!
+    await ctx.api.editMessageText(
+      choice.chat!.id,
+      promptMsg.message_id,
+      `💥 The wild *${currentPokemon.name}* broke free! It's watching you cautiously.\nChoose another Pokéball to throw:`,
+      {
+        reply_markup: createCatchKeyboard(user),
+        parse_mode: "Markdown",
+      },
+    );
+  }
 }
 
 export async function evolvePokemonConversation(

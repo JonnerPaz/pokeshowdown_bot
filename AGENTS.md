@@ -184,7 +184,7 @@
 
 ---
 
-## 16. Roadmap · Phases 6, 7 & 8
+## 16. Roadmap · Phases 6, 7, 8 & 9
 
 Previous phases: P1 tooling/CI + webhook hardening, P2 conversation timeouts + conversation-local encounters, P3 PokeAPI caching + gen-9 pool + dead-code sweep, P4 dead datasource/`ErrorEntity` removal + constants tidy, P5 turn-based Battle System + rate-limiter & unit tests, P6 comprehensive integration test harness with `ApiClientOptions.fetch`.
 
@@ -192,10 +192,11 @@ Phase 7 (landed on `main`): Architectural Migration to Feature-Based Composers (
 
 Phase 8 (landed on `main`): Pokedex Vertical Slice (`src/features/pokedex/` with `/pokedex` lookup, stat visualizers, lore flavor text, bag-ownership detection), 10-media collection batching fix in `sendPokemonPhotos`, and production graceful shutdown (`SIGINT`/`SIGTERM`) with clean Prisma and server teardown.
 
+Phase 9 (landed on `main`): Pokéball Tiers, Catch Rate Mechanics & Inventory Slice (`src/domain/items/ballTypes.ts` with authentic catch formulas, `src/features/inventory/` with `/bag` and `/daily` reward streaks, Prisma schema migration for user ball counts and streaks, and dynamic multi-ball encounter loop with run, alert on empty balls, and flee chances).
+
 Deferred:
 
 1. **Battle Leaderboard & Trainer Cards**: `/profile` and `/leaderboard` tracking wins, losses, win rates, and buddy Pokémon.
-2. **Pokéball Tiers & Catch Rates**: Pokéball, Great Ball, Ultra Ball, Master Ball mechanics and `/daily` reward streaks.
 
 Conventions: each feature = one scoped commit set, verified with typecheck/lint/format + `pnpm test`, README/AGENTS updated. No new shared mutable state for encounters or battles (keep them conversation-local).
 

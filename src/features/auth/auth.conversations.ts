@@ -84,7 +84,9 @@ export async function registerConversation(
     ),
   );
 
-  await ctx.reply(`You're now registered as @${createdUser.username}`);
+  await ctx.reply(
+    `You're now registered as @${createdUser.username}! You received 10 🔴 Pokéballs and 2 🔵 Great Balls to begin your journey. Check your /bag or claim /daily rewards!`,
+  );
 }
 
 export async function deleteAccountConversation(

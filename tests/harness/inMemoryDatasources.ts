@@ -26,9 +26,38 @@ export class InMemoryUserDataSource implements UserDataSource {
       createdAt: user.createdAt ?? new Date(),
       updatedAt: user.updatedAt ?? new Date(),
       pokemons: user.pokemons ?? [],
+      pokeballs: user.pokeballs,
+      greatballs: user.greatballs,
+      ultraballs: user.ultraballs,
+      masterballs: user.masterballs,
+      lastDailyAt: user.lastDailyAt,
+      dailyStreak: user.dailyStreak,
     });
     this.users.set(id, createdUser);
     return createdUser;
+  }
+
+  public async updateUser(user: UserEntity, data: Partial<UserEntity>): Promise<UserEntity> {
+    const existing = await this.findUserByTelegramId(user.telegramId!);
+    if (!existing || existing.id === null) {
+      throw new Error("User not found");
+    }
+    const updated = new UserEntity({
+      id: existing.id,
+      telegramId: existing.telegramId,
+      username: data.username ?? existing.username,
+      createdAt: existing.createdAt,
+      updatedAt: new Date(),
+      pokemons: data.pokemons ?? existing.pokemons,
+      pokeballs: data.pokeballs ?? existing.pokeballs,
+      greatballs: data.greatballs ?? existing.greatballs,
+      ultraballs: data.ultraballs ?? existing.ultraballs,
+      masterballs: data.masterballs ?? existing.masterballs,
+      lastDailyAt: data.lastDailyAt !== undefined ? data.lastDailyAt : existing.lastDailyAt,
+      dailyStreak: data.dailyStreak ?? existing.dailyStreak,
+    });
+    this.users.set(existing.id, updated);
+    return updated;
   }
 
   public async deleteUserByTelegramId(telegramId: number | bigint): Promise<void> {

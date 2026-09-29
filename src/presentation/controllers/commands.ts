@@ -121,6 +121,26 @@ export const commands = {
       description: "Consulta un Pokemon en la Pokedex nacional",
     },
   },
+  BAG: {
+    [LanguageCodes.English]: {
+      command: "bag",
+      description: "View your Pokeballs and item inventory",
+    },
+    [LanguageCodes.Spanish]: {
+      command: "mochila",
+      description: "Ver tus Pokeballs y mochila de objetos",
+    },
+  },
+  DAILY: {
+    [LanguageCodes.English]: {
+      command: "daily",
+      description: "Claim your daily Pokeballs and streak bonus",
+    },
+    [LanguageCodes.Spanish]: {
+      command: "diario",
+      description: "Reclama tus Pokeballs diarias y bono de racha",
+    },
+  },
 } as const;
 
 export type CommandKeys = keyof typeof commands;

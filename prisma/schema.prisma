@@ -15,6 +15,13 @@ model User {
   updatedAt  DateTime @updatedAt @default(now()) @db.Timestamp(6)
   nickname   String?
 
+  pokeballs   Int       @default(10)
+  greatballs  Int       @default(2)
+  ultraballs  Int       @default(0)
+  masterballs Int       @default(0)
+  lastDailyAt DateTime? @db.Timestamp(6)
+  dailyStreak Int       @default(0)
+
   pokemons  Pokemon[]
 }
 

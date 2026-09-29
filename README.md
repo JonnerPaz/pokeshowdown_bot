@@ -296,6 +296,8 @@ All commands are case sensitive and must start with `/`.
 | `/trade`            | `/intercambiar`    | Trade a Pokemon with another user                |
 | `/battle`           | `/batalla`         | Challenge another trainer to a turn-based battle |
 | `/pokedex`          | `/pokedex`         | Look up any Pokemon in the national Pokedex      |
+| `/bag`              | `/mochila`         | View your Pokeballs and item inventory           |
+| `/daily`            | `/diario`          | Claim daily Pokeballs and streak bonuses         |
 
 ---
 
@@ -333,7 +335,7 @@ Integration tests utilize grammY's `ApiClientOptions.fetch` to intercept outgoin
 ```text
 src/
 ├── domain/            # Entities, repository contracts, battle engine, and domain constants
-├── features/          # Feature slices (auth, battle, pokemon, system) with composers & conversations
+├── features/          # Feature slices (auth, battle, inventory, pokedex, pokemon, system) with composers & conversations
 ├── infrastructure/    # Prisma-backed repository implementations
 ├── presentation/      # MainBot wiring, Express server shell, and shared types
 prisma/                # Prisma schema and database migrations

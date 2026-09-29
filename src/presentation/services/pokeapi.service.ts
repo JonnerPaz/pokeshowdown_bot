@@ -218,6 +218,15 @@ export class PokeApiService {
     }
   }
 
+  public async getPokemonCaptureRate(name: string): Promise<number> {
+    try {
+      const species = await this.api.getPokemonSpeciesByName(name.toLowerCase());
+      return species.capture_rate ?? 120;
+    } catch {
+      return 120;
+    }
+  }
+
   /**
    * Rolls a random number to determine if the pokemon is shiny
    */

@@ -35,6 +35,8 @@ describe("Auth & Registration Integration (/register, /delete_account)", () => {
     expect(createdUser?.username).toBe(username);
     expect(createdUser?.pokemons.length).toBe(1);
     expect(createdUser?.pokemons[0]?.name).toBe("bulbasaur");
+    expect(createdUser?.pokeballs).toBe(10);
+    expect(createdUser?.greatballs).toBe(2);
 
     // 4. Verify confirmation reply was sent
     const sent = client.getSentMessages();

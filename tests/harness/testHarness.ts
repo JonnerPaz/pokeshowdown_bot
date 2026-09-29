@@ -113,6 +113,7 @@ export async function createTestBot(options?: {
         isMythical: false,
       };
     },
+    getPokemonCaptureRate: async () => 255,
   };
 
   const mockPokeApi = {

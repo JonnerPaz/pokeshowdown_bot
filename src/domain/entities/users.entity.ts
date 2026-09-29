@@ -7,6 +7,12 @@ export interface UserEntityProps {
   createdAt: Date;
   updatedAt: Date;
   pokemons: PokemonEntity[];
+  pokeballs?: number;
+  greatballs?: number;
+  ultraballs?: number;
+  masterballs?: number;
+  lastDailyAt?: Date | null;
+  dailyStreak?: number;
 }
 
 export class UserEntity {
@@ -19,6 +25,12 @@ export class UserEntity {
   // Use an array to store pokemon ids,
   // not the actual instance which will be stored in the database
   pokemons: PokemonEntity[];
+  pokeballs: number;
+  greatballs: number;
+  ultraballs: number;
+  masterballs: number;
+  lastDailyAt: Date | null;
+  dailyStreak: number;
 
   constructor(props: UserEntityProps) {
     const {
@@ -28,6 +40,12 @@ export class UserEntity {
       createdAt = new Date(),
       updatedAt,
       pokemons,
+      pokeballs = 10,
+      greatballs = 2,
+      ultraballs = 0,
+      masterballs = 0,
+      lastDailyAt = null,
+      dailyStreak = 0,
     } = props;
     this.id = id;
     this.telegramId = telegramId;
@@ -35,5 +53,11 @@ export class UserEntity {
     this.createdAt = createdAt;
     this.updatedAt = updatedAt;
     this.pokemons = pokemons;
+    this.pokeballs = pokeballs;
+    this.greatballs = greatballs;
+    this.ultraballs = ultraballs;
+    this.masterballs = masterballs;
+    this.lastDailyAt = lastDailyAt;
+    this.dailyStreak = dailyStreak;
   }
 }

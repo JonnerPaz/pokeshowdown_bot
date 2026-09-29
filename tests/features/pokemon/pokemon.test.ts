@@ -141,4 +141,110 @@ describe("Pokemon Operations Integration (/pokemons, /generate_pokemon)", () => 
     const sent = client.getSentMessages();
     expect(sent.some((m) => m.text?.includes("Slow down"))).toBe(true);
   });
+
+  it("deducts the correct ball type when catching with a Great Ball", async () => {
+    const { dispatchCommand, dispatchCallback, client, userDataSource } = await createTestBot();
+
+    const userId = 806;
+    userDataSource.seedUser(
+      new UserEntity({
+        id: 24,
+        telegramId: BigInt(userId),
+        username: "greatball_trainer",
+        createdAt: new Date(),
+        updatedAt: new Date(),
+        pokemons: [],
+        pokeballs: 10,
+        greatballs: 2,
+        ultraballs: 0,
+        masterballs: 0,
+      }),
+    );
+
+    const spawnPromise = dispatchCommand("/generate_pokemon", { fromId: userId });
+    await new Promise((resolve) => setTimeout(resolve, 50));
+
+    await dispatchCallback("catch:greatball", { fromId: userId });
+    await spawnPromise;
+
+    const user = await userDataSource.findUserByTelegramId(userId);
+    expect(user?.greatballs).toBe(1);
+    expect(user?.pokeballs).toBe(10);
+    expect(user?.pokemons.length).toBe(1);
+
+    const sent = client.getSentMessages();
+    expect(sent.some((m) => m.text?.includes("caught") && m.text?.includes("Great Ball"))).toBe(
+      true,
+    );
+  });
+
+  it("handles 0-ball selection gracefully and allows subsequent valid throw", async () => {
+    const { dispatchCommand, dispatchCallback, userDataSource } = await createTestBot();
+
+    const userId = 807;
+    userDataSource.seedUser(
+      new UserEntity({
+        id: 25,
+        telegramId: BigInt(userId),
+        username: "smart_trainer",
+        createdAt: new Date(),
+        updatedAt: new Date(),
+        pokemons: [],
+        pokeballs: 5,
+        greatballs: 0,
+        ultraballs: 0,
+        masterballs: 0,
+      }),
+    );
+
+    const spawnPromise = dispatchCommand("/generate_pokemon", { fromId: userId });
+    await new Promise((resolve) => setTimeout(resolve, 50));
+
+    // Try throwing Master Ball (0 in stock)
+    await dispatchCallback("catch:masterball", { fromId: userId });
+
+    // Inventory unchanged
+    let user = await userDataSource.findUserByTelegramId(userId);
+    expect(user?.masterballs).toBe(0);
+    expect(user?.pokeballs).toBe(5);
+
+    // Now throw Pokéball (has 5)
+    await dispatchCallback("catch:pokeball", { fromId: userId });
+    await spawnPromise;
+
+    user = await userDataSource.findUserByTelegramId(userId);
+    expect(user?.pokeballs).toBe(4);
+    expect(user?.pokemons.length).toBe(1);
+  });
+
+  it("allows trainer to run away from wild encounter", async () => {
+    const { dispatchCommand, dispatchCallback, client, userDataSource } = await createTestBot();
+
+    const userId = 808;
+    userDataSource.seedUser(
+      new UserEntity({
+        id: 26,
+        telegramId: BigInt(userId),
+        username: "runner_trainer",
+        createdAt: new Date(),
+        updatedAt: new Date(),
+        pokemons: [],
+        pokeballs: 10,
+        greatballs: 2,
+      }),
+    );
+
+    const spawnPromise = dispatchCommand("/generate_pokemon", { fromId: userId });
+    await new Promise((resolve) => setTimeout(resolve, 50));
+
+    await dispatchCallback("catch:run", { fromId: userId });
+    await spawnPromise;
+
+    const user = await userDataSource.findUserByTelegramId(userId);
+    expect(user?.pokemons.length).toBe(0);
+    expect(user?.pokeballs).toBe(10);
+
+    const sent = client.getSentMessages();
+    expect(sent.some((m) => m.text?.includes("ran away safely"))).toBe(true);
+  });
 });
