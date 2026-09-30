@@ -15,6 +15,8 @@ import { createPokemonFeature } from "../features/pokemon/pokemon.feature.js";
 import { createPokedexFeature } from "../features/pokedex/pokedex.feature.js";
 import { createInventoryFeature } from "../features/inventory/inventory.feature.js";
 import { createProfileFeature } from "../features/profile/profile.feature.js";
+import { createInlineFeature } from "../features/inline/inline.feature.js";
+import { autoRetry } from "@grammyjs/auto-retry";
 import { BattleService } from "../features/battle/battle.service.js";
 import { RateLimiterService } from "./services/rateLimiter.service.js";
 import { GroupEncounterService } from "../features/pokemon/groupEncounter.service.js";
@@ -35,6 +37,12 @@ export class MainBot {
 
   constructor(apiKey: string = process.env.API_KEY as string, options: MainBotOptions = {}) {
     this.bot = new Bot<AppContext>(apiKey, options.botConfig);
+    this.bot.api.config.use(
+      autoRetry({
+        maxRetryAttempts: 3,
+        maxDelaySeconds: 15,
+      }),
+    );
     this.setupErrorHandler();
 
     // Setup core services
@@ -66,6 +74,7 @@ export class MainBot {
     this.bot.use(createPokedexFeature({ pokeApi, userDataSource: userDatasource }));
     this.bot.use(createInventoryFeature({ userDataSource: userDatasource }));
     this.bot.use(createProfileFeature({ userDataSource: userDatasource }));
+    this.bot.use(createInlineFeature({ pokeApi, userDataSource: userDatasource }));
   }
 
   private setupErrorHandler() {

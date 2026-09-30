@@ -54,6 +54,10 @@ export interface TestBotContext {
     text: string,
     opts?: { fromId?: number; username?: string; chatId?: number; isGroup?: boolean },
   ) => Promise<void>;
+  dispatchInlineQuery: (
+    query: string,
+    opts?: { fromId?: number; username?: string },
+  ) => Promise<void>;
 }
 
 import type { GroupEncounterService } from "../../src/features/pokemon/groupEncounter.service.js";
@@ -315,6 +319,34 @@ export async function createTestBot(options?: {
     await dispatchUpdate(update);
   };
 
+  const dispatchInlineQuery = async (
+    query: string,
+    opts: { fromId?: number; username?: string } = {},
+  ) => {
+    const fromId = opts.fromId ?? 99901;
+    const username = opts.username ?? `user_${fromId}`;
+
+    const from: User = {
+      id: fromId,
+      is_bot: false,
+      first_name: `Trainer_${fromId}`,
+      username,
+    };
+
+    const update = {
+      update_id: updateIdCounter++,
+      inline_query: {
+        id: `inline_query_${updateIdCounter}`,
+        from,
+        query,
+        offset: "",
+        chat_type: "sender",
+      },
+    } as unknown as Update;
+
+    await dispatchUpdate(update);
+  };
+
   return {
     mainBot,
     client,
@@ -326,5 +358,6 @@ export async function createTestBot(options?: {
     dispatchCommand,
     dispatchCallback,
     dispatchText,
+    dispatchInlineQuery,
   };
 }

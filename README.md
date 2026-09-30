@@ -18,6 +18,7 @@ A Telegram bot to catch, evolve, and trade Pokemon with your friends.
 - Evolve Pokemon and set companion buddy Pokemon.
 - Player-to-player Pokemon trading and turn-based PvP battles with rank leaderboards.
 - Inventory system with Pokeball tiers, daily rewards, and Pokedex encyclopedia.
+- Telegram Inline Mode (`@pokeshowdown_bot <pokemon|buddy|team>`) to showcase stats anywhere.
 - Delete account and related user data.
 
 ---
@@ -311,6 +312,14 @@ All commands are case sensitive and must start with `/`.
 | `/leaderboard`      | `/ranking`         | View battle rankings and top trainers            |
 | `/buddy`            | `/companero`       | Set or view your favorite buddy Pokemon          |
 
+### Inline Mode Queries
+
+You can use the bot in **any chat, group, or channel** without adding it by typing `@<bot_username>` followed by a query:
+
+- `@bot <pokemon_name>`: Instant Pokédex card with artwork, types, lore, and visual stat bars.
+- `@bot buddy`: Showcase your companion buddy Pokémon, battle stats, and win rate.
+- `@bot team`: Share your active Pokémon party roster directly into any conversation.
+
 ---
 
 ## Testing
@@ -335,7 +344,7 @@ Integration tests utilize grammY's `ApiClientOptions.fetch` to intercept outgoin
 ## Tech Stack
 
 - **Runtime**: Node.js 22+ (TypeScript ESM, `moduleResolution: nodenext`)
-- **Framework**: [grammY](https://grammy.dev/) (`@grammyjs/commands`, `@grammyjs/conversations`)
+- **Framework**: [grammY](https://grammy.dev/) (`@grammyjs/commands`, `@grammyjs/conversations`, `@grammyjs/auto-retry`)
 - **Database**: PostgreSQL with [Prisma ORM](https://www.prisma.io/)
 - **Server**: Express (Webhook middleware)
 - **External API**: [pokenode-ts](https://github.com/Gabb-c/pokenode-ts) (with in-memory caching)

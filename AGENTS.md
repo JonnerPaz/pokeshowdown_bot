@@ -202,6 +202,8 @@ Phase 12 (landed on `main`): Professional Repository Infrastructure & Release Au
 
 Phase 13: Encounter Lifecycle Hardening & Interactive Pokémon Carousel (`src/presentation/server.ts` webhook timeout to 30s with `"return"`, deterministic replay in `conv.external`, fallback catch handler for orphaned buttons; transformed `/pokemons` from static image dump into an interactive paged carousel card with dynamic levels, dual types, abilities, evolution progress, one-tap buddy assignment, roster overview, and anti-hijack stateless callback queries).
 
+Phase 14 (landed on `main`): Official grammY Plugin Evaluation & Inline Query System (`@grammyjs/auto-retry` installed on `bot.api.config.use` for zero-boilerplate exponential backoff against 429 flood limits and network drops; and full `@pokeshowdown_bot` Inline Mode engine via `src/features/inline/` providing `@bot <pokemon>` Pokédex cards, `@bot buddy` companion showcase, and `@bot team` party cards across any Telegram chat with privacy-safe caching).
+
 Conventions: each feature = one scoped commit set, verified with typecheck/lint/format + `pnpm test`, README/AGENTS updated. No new shared mutable state for encounters or battles (keep them conversation-local).
 
 Stay disciplined, document discoveries, and keep this guide trustworthy for the next agent.
