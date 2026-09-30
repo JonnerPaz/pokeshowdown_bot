@@ -9,6 +9,7 @@ export class PokemonBuilder {
   private isShiny = false;
   private sprite: Sprites | null = null;
   private timesCaught = 1;
+  private isInParty = true;
 
   setId(id: number) {
     this.id = id;
@@ -46,6 +47,11 @@ export class PokemonBuilder {
     return this;
   }
 
+  setIsInParty(isInParty: boolean) {
+    this.isInParty = isInParty;
+    return this;
+  }
+
   build(): PokemonEntity {
     if (!this.types) throw new Error("Types are required");
     if (!this.pokemonName) throw new Error("Name is required");
@@ -59,6 +65,7 @@ export class PokemonBuilder {
       isShiny: this.isShiny,
       sprites: this.sprite,
       timesCaught: this.timesCaught,
+      isInParty: this.isInParty,
     });
   }
 }

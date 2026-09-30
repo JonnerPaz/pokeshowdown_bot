@@ -204,6 +204,8 @@ Phase 13: Encounter Lifecycle Hardening & Interactive Pokémon Carousel (`src/pr
 
 Phase 14 (landed on `main`): Official grammY Plugin Evaluation & Inline Query System (`@grammyjs/auto-retry` installed on `bot.api.config.use` for zero-boilerplate exponential backoff against 429 flood limits and network drops; and full `@pokeshowdown_bot` Inline Mode engine via `src/features/inline/` providing `@bot <pokemon>` Pokédex cards, `@bot buddy` companion showcase, and `@bot team` party cards across any Telegram chat with privacy-safe caching).
 
+Phase 15 (landed on `main`): PC Storage Box System & Pokémon Release with Pokéball Rewards (active 6-member party with auto-routing 7th+ catches to PC Storage Box with `isInParty: false`, `/box` PC storage carousel with Withdraw, Deposit, and Swap actions, `/release` with 2-step confirmation and Professor Oak rewards [+3 Pokéballs standard, +5 Pokéballs & +1 Great Ball shiny], and lone Pokémon protection guards).
+
 Conventions: each feature = one scoped commit set, verified with typecheck/lint/format + `pnpm test`, README/AGENTS updated. No new shared mutable state for encounters or battles (keep them conversation-local).
 
 Stay disciplined, document discoveries, and keep this guide trustworthy for the next agent.

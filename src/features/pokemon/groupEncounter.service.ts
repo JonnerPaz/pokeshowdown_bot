@@ -243,14 +243,6 @@ export class GroupEncounterService {
       encounter.pokemon.isShiny,
     );
 
-    if (!doesExist && user.pokemons.length >= MAX_PKMN_PARTY) {
-      await ctx.answerCallbackQuery({
-        text: "Your Pokémon party is full! (Max 6)",
-        show_alert: true,
-      });
-      return;
-    }
-
     const ballConfig = BALL_CONFIGS[ballType];
     const count = getUserBallCount(user, ballType);
     if (count <= 0) {
@@ -297,22 +289,29 @@ export class GroupEncounterService {
       this.clearTimer(encounterId);
       this.activeEncounters.delete(encounterId);
 
+      let destinationNotice = "";
       if (doesExist) {
         await deps.pokemonDataSource.updatePokemon(doesExist, {
           timesCaught: doesExist.timesCaught + 1,
         });
       } else {
+        const party = user.party;
+        const goesToParty = party.length < MAX_PKMN_PARTY;
+        encounter.pokemon.isInParty = goesToParty;
         await deps.pokemonDataSource.createPokemon(encounter.pokemon, user);
+        destinationNotice = goesToParty
+          ? ` (Added to party: ${party.length + 1}/${MAX_PKMN_PARTY})`
+          : " (Sent to PC Storage Box 📦)";
       }
 
       await ctx.answerCallbackQuery({
-        text: `🎉 Gotcha! You caught ${encounter.pokemon.name}!`,
+        text: `🎉 Gotcha! You caught ${encounter.pokemon.name}!${destinationNotice}`,
       });
 
       const username = escapeMarkdown(user.username);
       const pokemonName = escapeMarkdown(encounter.pokemon.name);
       const shinyStr = encounter.pokemon.isShiny ? " ✨" : "";
-      const victoryText = `🎉 *Gotcha!* @${username} caught the wild *${pokemonName}*${shinyStr} using a ${ballConfig.name}!`;
+      const victoryText = `🎉 *Gotcha!* @${username} caught the wild *${pokemonName}*${shinyStr} using a ${ballConfig.name}!${destinationNotice ? `\n_${destinationNotice.trim()}_` : ""}`;
 
       await ctx.api
         .editMessageCaption(encounter.chatId, encounter.messageId, {

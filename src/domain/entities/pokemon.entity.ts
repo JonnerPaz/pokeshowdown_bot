@@ -12,6 +12,7 @@ interface PokemonEntityProps {
     frontShiny: string;
   };
   timesCaught?: number;
+  isInParty?: boolean;
 }
 
 export class PokemonEntity {
@@ -28,9 +29,20 @@ export class PokemonEntity {
   };
   public timesCaught: number;
   public nickname?: string;
+  public isInParty: boolean;
 
   constructor(props: PokemonEntityProps) {
-    const { id, name, types, ability, isShiny = false, sprites, timesCaught = 1, nickname } = props;
+    const {
+      id,
+      name,
+      types,
+      ability,
+      isShiny = false,
+      sprites,
+      timesCaught = 1,
+      nickname,
+      isInParty = true,
+    } = props;
     this.id = id;
     this.name = name;
     this.types = types;
@@ -38,6 +50,7 @@ export class PokemonEntity {
     this.isShiny = isShiny;
     this.sprites = sprites;
     this.timesCaught = timesCaught;
+    this.isInParty = isInParty;
     if (nickname) {
       this.nickname = nickname;
     }
@@ -54,6 +67,7 @@ export class PokemonEntity {
         sprites,
         timesCaught = 1,
         nickname,
+        isInParty = true,
       } = props;
       if (!name) throw new Error("Name is required");
       if (!types) throw new Error("Types are required");
@@ -68,6 +82,7 @@ export class PokemonEntity {
         isShiny,
         sprites,
         timesCaught,
+        isInParty,
         ...(nickname && { nickname }),
       });
     } catch (error) {

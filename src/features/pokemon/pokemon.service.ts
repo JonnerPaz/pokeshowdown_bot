@@ -44,6 +44,7 @@ export function formatPokemonCarouselCard(
   user: UserEntity,
   index: number,
   total: number,
+  viewMode: "party" | "box" = "party",
 ): string {
   const isBuddy = user.buddyPokemonId === pokemon.id;
   const buddyPrefix = isBuddy ? "⭐ " : "";
@@ -63,10 +64,15 @@ export function formatPokemonCarouselCard(
       ? `🧬 *Evolution:* Ready to evolve! (/evolve)`
       : `🧬 *Evolution:* ${pokemon.timesCaught}/${EVOLVE_CAP} catches (${EVOLVE_CAP - pokemon.timesCaught} more needed)`;
 
-  const statusDisplay = isBuddy ? "⭐ Active Companion Buddy" : "🎒 Party Member";
+  const headerTitle = viewMode === "box" ? `📦 *Your PC Storage Box*` : `🎒 *Your Pokémon Party*`;
+  const statusDisplay = isBuddy
+    ? `⭐ Active Companion Buddy${viewMode === "box" ? " (Boxed)" : ""}`
+    : viewMode === "box"
+      ? "📦 Stored in Box"
+      : "🎒 Battle Party Member";
 
   return (
-    `🎒 *Your Pokémon Party* (${index + 1}/${total})\n` +
+    `${headerTitle} (${index + 1}/${total})\n` +
     `${buddyPrefix}*${displayName}*${shinyBadge} (Lv. ${level})\n` +
     `────────────────────────\n` +
     `🏷️ *Type:* ${typesDisplay}\n` +
@@ -78,12 +84,24 @@ export function formatPokemonCarouselCard(
   );
 }
 
+export function formatSwapPrompt(boxPokemon: PokemonEntity): string {
+  const pName = boxPokemon.nickname
+    ? `${boxPokemon.nickname} (${boxPokemon.name.charAt(0).toUpperCase() + boxPokemon.name.slice(1)})`
+    : boxPokemon.name.charAt(0).toUpperCase() + boxPokemon.name.slice(1);
+  return (
+    `🔄 *Swap Pokémon with Battle Party*\n────────────────────────\n` +
+    `Your battle party is currently full (6/6).\n\n` +
+    `Which party member would you like to send to the **PC Storage Box** to make room for *${escapeMarkdown(pName)}*?`
+  );
+}
+
 export function formatPartyRosterText(user: UserEntity): string {
-  const total = user.pokemons.length;
+  const partyList = user.party.length > 0 ? user.party : user.pokemons;
+  const total = partyList.length;
   const username = escapeMarkdown(user.username);
   let text = `🎒 *Trainer @${username}'s Party* (${total}/6)\n────────────────────────\n`;
 
-  user.pokemons.forEach((p, idx) => {
+  partyList.forEach((p, idx) => {
     const isBuddy = user.buddyPokemonId === p.id;
     const buddyStar = isBuddy ? "⭐ " : "";
     const shinyStar = p.isShiny ? " ✨" : "";
@@ -99,12 +117,15 @@ export function formatPartyRosterText(user: UserEntity): string {
     text += `   ${types} • 🛡️ ${escapeMarkdown(p.ability)} • ${p.timesCaught}x caught\n\n`;
   });
 
-  const buddy = user.pokemons.find((p) => p.id === user.buddyPokemonId) ?? user.pokemons[0];
+  const buddy = user.pokemons.find((p) => p.id === user.buddyPokemonId) ?? partyList[0];
   const buddyName = buddy
     ? escapeMarkdown(buddy.nickname ? `${buddy.nickname} (${buddy.name})` : buddy.name)
     : "None";
 
-  text += `────────────────────────\n⭐ *Buddy:* ${buddyName} • 🏆 *Record:* ${user.wins}W - ${user.losses}L`;
+  const boxCount = user.box.length;
+  const boxNotice = boxCount > 0 ? `\n📦 *PC Storage Box:* ${boxCount} Pokémon stored (/box)` : "";
+
+  text += `────────────────────────\n⭐ *Buddy:* ${buddyName} • 🏆 *Record:* ${user.wins}W - ${user.losses}L${boxNotice}`;
   return text;
 }
 
@@ -131,4 +152,47 @@ export async function evolvePokemonOperation(
     timesCaught: Math.max(0, pokemon.timesCaught - EVOLVE_CAP),
   });
   return updatedPokemon;
+}
+
+export function getReleaseReward(pokemon: PokemonEntity): {
+  pokeballs: number;
+  greatballs: number;
+  text: string;
+} {
+  if (pokemon.isShiny) {
+    return {
+      pokeballs: 5,
+      greatballs: 1,
+      text: "+5 🔴 Pokéballs & +1 🔵 Great Ball ✨",
+    };
+  }
+  return {
+    pokeballs: 3,
+    greatballs: 0,
+    text: "+3 🔴 Pokéballs",
+  };
+}
+
+export function formatReleaseConfirmationPrompt(pokemon: PokemonEntity): string {
+  const pName = pokemon.nickname
+    ? `${pokemon.nickname} (${pokemon.name.charAt(0).toUpperCase() + pokemon.name.slice(1)})`
+    : pokemon.name.charAt(0).toUpperCase() + pokemon.name.slice(1);
+  const reward = getReleaseReward(pokemon);
+  const level = getPokemonLevel(pokemon.timesCaught);
+  const shinyMark = pokemon.isShiny ? " ✨" : "";
+
+  return (
+    `👋 *Release Pokémon Confirmation*\n────────────────────────\n` +
+    `Are you sure you want to release *${escapeMarkdown(pName)}*${shinyMark} (Lv. ${level}) back into the wild?\n\n` +
+    `🎁 *Professor Oak's Research Grant:* ${reward.text}\n` +
+    `⚠️ *Warning:* This action is irreversible! Once released, this Pokémon cannot be recovered.`
+  );
+}
+
+export function formatReleasePickPrompt(): string {
+  return (
+    `👋 *Release Pokémon into the Wild*\n────────────────────────\n` +
+    `Select which Pokémon you want to transfer to Professor Oak for research data.\n\n` +
+    `🎁 *Rewards:* Freeing a Pokémon rewards you with Pokéballs (+3 for normal, +5 & Great Ball for shiny)!`
+  );
 }

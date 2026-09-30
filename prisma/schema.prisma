@@ -39,6 +39,7 @@ model Pokemon {
   createdAt DateTime      @default(now()) @db.Timestamp(6)
   timesCaught Int         @default(1)
   nickname    String?
+  isInParty   Boolean       @default(true)
   userId    Int?          @map("user_id")
 
   user      User?         @relation(fields: [userId], references: [id], onDelete: Cascade)

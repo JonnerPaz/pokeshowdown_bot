@@ -300,6 +300,8 @@ All commands are case sensitive and must start with `/`.
 | `/help`             | `/ayuda`           | Display command list and instructions            |
 | `/generate_pokemon` | `/generar_pokemon` | Spawn a wild Pokemon encounter                   |
 | `/pokemons`         | `/pokemons`        | Browse Pokemon collection (interactive carousel) |
+| `/box`              | `/caja`            | Browse PC Storage Box collection                 |
+| `/release`          | `/liberar`         | Release a Pokemon for Pokeball rewards           |
 | `/evolve`           | `/evolucionar`     | Evolve an owned Pokemon                          |
 | `/shiny`            | `/brillante`       | Make one of your pokemons shiny                  |
 | `/nickname`         | `/nickname`        | Add a custom nickname to your pokemon            |

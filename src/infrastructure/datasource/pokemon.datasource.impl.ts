@@ -57,6 +57,7 @@ export class PokemonDataSourceImpl implements PokemonDataSource {
       timesCaught?: number;
       nickname?: string | null;
       isShiny?: boolean;
+      isInParty?: boolean;
     } = {};
 
     if (typeof data.name === "string") updateData.name = data.name;
@@ -71,6 +72,9 @@ export class PokemonDataSourceImpl implements PokemonDataSource {
     }
     if (typeof data.isShiny === "boolean") {
       updateData.isShiny = data.isShiny;
+    }
+    if (typeof data.isInParty === "boolean") {
+      updateData.isInParty = data.isInParty;
     }
 
     if (Object.keys(updateData).length === 0) {
@@ -101,7 +105,16 @@ export class PokemonDataSourceImpl implements PokemonDataSource {
   }
 
   async createPokemon(pokemon: PokemonEntity, user?: UserEntity): Promise<PokemonEntity> {
-    const { name, types, ability, sprites, timesCaught, nickname, isShiny } = pokemon;
+    const {
+      name,
+      types,
+      ability,
+      sprites,
+      timesCaught,
+      nickname,
+      isShiny,
+      isInParty = true,
+    } = pokemon;
 
     const createdPokemon = await prisma.$transaction(async (tx) => {
       const created = await tx.pokemon.create({
@@ -113,6 +126,7 @@ export class PokemonDataSourceImpl implements PokemonDataSource {
           timesCaught,
           isShiny,
           nickname: nickname ?? null,
+          isInParty,
           ...(user?.id && { userId: user.id }),
         },
       });
@@ -162,5 +176,38 @@ export class PokemonDataSourceImpl implements PokemonDataSource {
         data: { userId: userA.id },
       }),
     ]);
+  }
+
+  async setPokemonPartyStatus(pokemonId: number, isInParty: boolean): Promise<PokemonEntity> {
+    const updated = await prisma.pokemon.update({
+      where: { id: pokemonId },
+      data: { isInParty },
+    });
+    const { nickname: updatedNickname, ...updatedData } = updated;
+    const sprites = JSON.parse(JSON.stringify(updated.sprites));
+    return PokemonEntity.fromObject({
+      ...updatedData,
+      sprites,
+      ...(updatedNickname && { nickname: updatedNickname }),
+    });
+  }
+
+  async swapPokemonPartyStatus(boxPokemonId: number, partyPokemonId: number): Promise<void> {
+    await prisma.$transaction([
+      prisma.pokemon.update({
+        where: { id: boxPokemonId },
+        data: { isInParty: true },
+      }),
+      prisma.pokemon.update({
+        where: { id: partyPokemonId },
+        data: { isInParty: false },
+      }),
+    ]);
+  }
+
+  async deletePokemon(pokemonId: number): Promise<void> {
+    await prisma.pokemon.delete({
+      where: { id: pokemonId },
+    });
   }
 }

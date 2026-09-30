@@ -72,4 +72,12 @@ export class UserEntity {
     this.losses = losses;
     this.buddyPokemonId = buddyPokemonId;
   }
+
+  public get party(): PokemonEntity[] {
+    return this.pokemons.filter((p) => p.isInParty);
+  }
+
+  public get box(): PokemonEntity[] {
+    return this.pokemons.filter((p) => !p.isInParty);
+  }
 }

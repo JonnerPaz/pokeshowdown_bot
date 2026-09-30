@@ -171,6 +171,26 @@ export const commands = {
       description: "Establece tu Pokemon companero favorito",
     },
   },
+  BOX: {
+    [LanguageCodes.English]: {
+      command: "box",
+      description: "View and manage your PC Pokemon Storage Box",
+    },
+    [LanguageCodes.Spanish]: {
+      command: "caja",
+      description: "Ver y gestionar tu Caja de Almacenamiento Pokemon",
+    },
+  },
+  RELEASE: {
+    [LanguageCodes.English]: {
+      command: "release",
+      description: "Release a Pokemon and receive Pokeballs from Professor Oak",
+    },
+    [LanguageCodes.Spanish]: {
+      command: "liberar",
+      description: "Liberar un Pokemon y recibir Pokebolas del Profesor Oak",
+    },
+  },
 } as const;
 
 export type CommandKeys = keyof typeof commands;

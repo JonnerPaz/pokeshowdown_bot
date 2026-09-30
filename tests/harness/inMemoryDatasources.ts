@@ -193,6 +193,45 @@ export class InMemoryPokemonDataSource implements PokemonDataSource {
     }
   }
 
+  public async setPokemonPartyStatus(
+    pokemonId: number,
+    isInParty: boolean,
+  ): Promise<PokemonEntity> {
+    const entry = this.pokemons.get(pokemonId);
+    let target = entry?.pokemon;
+
+    if (!target) {
+      for (const user of this.userDataSource.users.values()) {
+        const found = user.pokemons.find((p) => p.id === pokemonId);
+        if (found) {
+          target = found;
+          break;
+        }
+      }
+    }
+
+    if (!target) {
+      throw new Error("Pokemon not found");
+    }
+
+    return this.updatePokemon(target, { isInParty });
+  }
+
+  public async swapPokemonPartyStatus(boxPokemonId: number, partyPokemonId: number): Promise<void> {
+    await this.setPokemonPartyStatus(boxPokemonId, true);
+    await this.setPokemonPartyStatus(partyPokemonId, false);
+  }
+
+  public async deletePokemon(pokemonId: number): Promise<void> {
+    this.pokemons.delete(pokemonId);
+    for (const user of this.userDataSource.users.values()) {
+      user.pokemons = user.pokemons.filter((p) => p.id !== pokemonId);
+      if (user.buddyPokemonId === pokemonId) {
+        user.buddyPokemonId = null;
+      }
+    }
+  }
+
   public clear(): void {
     this.pokemons.clear();
     this.nextPokemonId = 1;

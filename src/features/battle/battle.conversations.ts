@@ -93,8 +93,10 @@ export async function battleConversation(
 
   await ctx.api.deleteMessage(inviteMsg.chat.id, inviteMsg.message_id).catch(() => {});
 
-  // Challenger Pokemon Selection
-  const challengerKb = createPokemonPickKeyboard(battleId, "A", challengerUser.pokemons);
+  const challengerParty = (challengerUser.pokemons ?? []).filter((p) => p.isInParty !== false);
+  const challengerCandidates =
+    challengerParty.length > 0 ? challengerParty : challengerUser.pokemons;
+  const challengerKb = createPokemonPickKeyboard(battleId, "A", challengerCandidates);
   const pickMsgA = await ctx.reply(`🔴 **${challengerName}**, choose your battle Pokémon:`, {
     reply_markup: challengerKb,
     parse_mode: "Markdown",
@@ -109,15 +111,17 @@ export async function battleConversation(
   await pickCtxA.answerCallbackQuery();
   const chosenPokemonIdA = pickCtxA.match[1];
   const pokemonA =
-    challengerUser.pokemons.find(
+    challengerCandidates.find(
       (p, idx) => (p.id ? String(p.id) : String(idx)) === chosenPokemonIdA,
-    ) ?? challengerUser.pokemons[0]!;
+    ) ?? challengerCandidates[0]!;
 
   await ctx.api.deleteMessage(pickMsgA.chat.id, pickMsgA.message_id).catch(() => {});
 
   // Opponent Pokemon Selection
   const opponentName = opponentUser.username;
-  const opponentKb = createPokemonPickKeyboard(battleId, "B", opponentUser.pokemons);
+  const opponentParty = (opponentUser.pokemons ?? []).filter((p) => p.isInParty !== false);
+  const opponentCandidates = opponentParty.length > 0 ? opponentParty : opponentUser.pokemons;
+  const opponentKb = createPokemonPickKeyboard(battleId, "B", opponentCandidates);
   const pickMsgB = await ctx.reply(`🔵 **${opponentName}**, choose your battle Pokémon:`, {
     reply_markup: opponentKb,
     parse_mode: "Markdown",
@@ -132,9 +136,8 @@ export async function battleConversation(
   await pickCtxB.answerCallbackQuery();
   const chosenPokemonIdB = pickCtxB.match[1];
   const pokemonB =
-    opponentUser.pokemons.find(
-      (p, idx) => (p.id ? String(p.id) : String(idx)) === chosenPokemonIdB,
-    ) ?? opponentUser.pokemons[0]!;
+    opponentCandidates.find((p, idx) => (p.id ? String(p.id) : String(idx)) === chosenPokemonIdB) ??
+    opponentCandidates[0]!;
 
   await ctx.api.deleteMessage(pickMsgB.chat.id, pickMsgB.message_id).catch(() => {});
 

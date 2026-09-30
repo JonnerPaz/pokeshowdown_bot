@@ -18,4 +18,7 @@ export abstract class PokemonDataSource {
     userB: UserEntity,
     pokemonB: PokemonEntity,
   ): Promise<void>;
+  abstract setPokemonPartyStatus(pokemonId: number, isInParty: boolean): Promise<PokemonEntity>;
+  abstract swapPokemonPartyStatus(boxPokemonId: number, partyPokemonId: number): Promise<void>;
+  abstract deletePokemon(pokemonId: number): Promise<void>;
 }

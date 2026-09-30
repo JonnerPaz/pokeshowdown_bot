@@ -206,14 +206,6 @@ export async function generatePokemonConversation(
       ),
     );
 
-    const { pokemons } = user;
-    if (!doesPokemonExist && pokemons.length >= MAX_PKMN_PARTY) {
-      await ctx.api.deleteMessage(choice.chat!.id, photoMsg.message_id).catch(() => {});
-      await ctx.api.deleteMessage(choice.chat!.id, promptMsg.message_id).catch(() => {});
-      await ctx.reply(`Your pokemon bag is full! You can't catch ${currentPokemon.name}`);
-      return;
-    }
-
     const attempt = await conv.external(() => rollCatchAttempt(captureRate, ballType));
     if (attempt.caught) {
       await ctx.api.deleteMessage(choice.chat!.id, photoMsg.message_id).catch(() => {});
@@ -225,13 +217,27 @@ export async function generatePokemonConversation(
             timesCaught: doesPokemonExist.timesCaught + 1,
           }),
         );
+        await ctx.reply(
+          `🎉 Gotcha! @${user.username} caught ${currentPokemon.isShiny ? "a shiny " : ""}${currentPokemon.name} using a ${BALL_CONFIGS[ballType].name}! (Catches: ${doesPokemonExist.timesCaught + 1})`,
+        );
       } else {
+        const userPokemons = user.pokemons ?? [];
+        const party = userPokemons.filter((p) => p.isInParty !== false);
+        const goesToParty = party.length < MAX_PKMN_PARTY;
+        currentPokemon.isInParty = goesToParty;
         await conv.external(() => deps.pokemonDataSource.createPokemon(currentPokemon, user));
-      }
 
-      await ctx.reply(
-        `🎉 Gotcha! @${user.username} caught ${currentPokemon.isShiny ? "a shiny" : "a"} ${currentPokemon.name} using a ${BALL_CONFIGS[ballType].name}!`,
-      );
+        if (goesToParty) {
+          await ctx.reply(
+            `🎉 Gotcha! @${user.username} caught ${currentPokemon.isShiny ? "a shiny " : ""}${currentPokemon.name} using a ${BALL_CONFIGS[ballType].name}! Added to your battle party (${party.length + 1}/${MAX_PKMN_PARTY})! ✨`,
+          );
+        } else {
+          await ctx.reply(
+            `🎉 Gotcha! @${user.username} caught ${currentPokemon.isShiny ? "a shiny " : ""}${currentPokemon.name} using a ${BALL_CONFIGS[ballType].name}!\n\n📦 Your battle party is full (${MAX_PKMN_PARTY}/${MAX_PKMN_PARTY}), so ${currentPokemon.name} was safely sent to your **PC Storage Box**! Use /box to view and manage your storage.`,
+            { parse_mode: "Markdown" },
+          );
+        }
+      }
       return;
     }
 
