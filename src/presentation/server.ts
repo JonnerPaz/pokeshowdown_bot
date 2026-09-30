@@ -56,6 +56,8 @@ export class Server {
     this.app.use(
       webhookCallback(this.bot, "express", {
         secretToken: this.webhookSecret,
+        timeoutMilliseconds: 30_000,
+        onTimeout: "return",
       }),
     );
 

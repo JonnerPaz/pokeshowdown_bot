@@ -298,7 +298,7 @@ All commands are case sensitive and must start with `/`.
 | `/delete_account`   | `/borrar_cuenta`   | Delete account and associated data               |
 | `/help`             | `/ayuda`           | Display command list and instructions            |
 | `/generate_pokemon` | `/generar_pokemon` | Spawn a wild Pokemon encounter                   |
-| `/pokemons`         | `/pokemons`        | View your Pokemon collection                     |
+| `/pokemons`         | `/pokemons`        | Browse Pokemon collection (interactive carousel) |
 | `/evolve`           | `/evolucionar`     | Evolve an owned Pokemon                          |
 | `/shiny`            | `/brillante`       | Make one of your pokemons shiny                  |
 | `/nickname`         | `/nickname`        | Add a custom nickname to your pokemon            |

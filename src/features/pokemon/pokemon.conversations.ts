@@ -138,9 +138,10 @@ export async function generatePokemonConversation(
     deps.pokeApi.getPokemonCaptureRate(currentPokemon.name),
   );
 
+  const timeoutSec = Math.round(CONVERSATION_TIMEOUT_MS / 1000);
   const photoMsg = await ctx.api.sendPhoto(ctx.chat!.id, getPokemonFrontSprite(currentPokemon));
   const promptMsg = await ctx.reply(
-    `A wild *${currentPokemon.name}* appeared! Choose a Pokéball to throw:`,
+    `A wild *${currentPokemon.name}* appeared! Choose a Pokéball to throw (⏳ ${timeoutSec}s):`,
     {
       reply_markup: createCatchKeyboard(user),
       parse_mode: "Markdown",
@@ -176,8 +177,6 @@ export async function generatePokemonConversation(
       continue;
     }
 
-    await choice.answerCallbackQuery();
-
     const canCatch = await conv.external(() => {
       if (!deps.rateLimiter.isAllowed(userId, "catch")) return false;
       deps.rateLimiter.hit(userId, "catch");
@@ -185,9 +184,14 @@ export async function generatePokemonConversation(
     });
 
     if (!canCatch) {
-      await ctx.reply("Slow down! You're catching too many pokemon.");
-      return;
+      await choice.answerCallbackQuery({
+        text: "Slow down! Wait a moment before throwing another Pokéball.",
+        show_alert: true,
+      });
+      continue;
     }
+
+    await choice.answerCallbackQuery();
 
     // Deduct ball from inventory
     const field = getBallUserField(ballType);
@@ -210,7 +214,7 @@ export async function generatePokemonConversation(
       return;
     }
 
-    const attempt = rollCatchAttempt(captureRate, ballType);
+    const attempt = await conv.external(() => rollCatchAttempt(captureRate, ballType));
     if (attempt.caught) {
       await ctx.api.deleteMessage(choice.chat!.id, photoMsg.message_id).catch(() => {});
       await ctx.api.deleteMessage(choice.chat!.id, promptMsg.message_id).catch(() => {});
@@ -232,7 +236,7 @@ export async function generatePokemonConversation(
     }
 
     // Did not catch - check if wild Pokémon flees
-    const fled = rollFlee();
+    const fled = await conv.external(() => rollFlee());
     if (fled) {
       await ctx.api.deleteMessage(choice.chat!.id, photoMsg.message_id).catch(() => {});
       await ctx.api.deleteMessage(choice.chat!.id, promptMsg.message_id).catch(() => {});
@@ -246,7 +250,7 @@ export async function generatePokemonConversation(
     await ctx.api.editMessageText(
       choice.chat!.id,
       promptMsg.message_id,
-      `💥 The wild *${currentPokemon.name}* broke free! It's watching you cautiously.\nChoose another Pokéball to throw:`,
+      `💥 The wild *${currentPokemon.name}* broke free! It's watching you cautiously.\nChoose another Pokéball to throw (⏳ ${timeoutSec}s):`,
       {
         reply_markup: createCatchKeyboard(user),
         parse_mode: "Markdown",

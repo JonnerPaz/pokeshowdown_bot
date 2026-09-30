@@ -200,6 +200,8 @@ Phase 11 (landed on `main`): Group Chat Spawns, Group Encounter Service & Webhoo
 
 Phase 12 (landed on `main`): Professional Repository Infrastructure & Release Automation (`CONTRIBUTING.md`, `CODE_OF_CONDUCT.md`, `SECURITY.md`, `CHANGELOG.md`, `.github/pull_request_template.md`, structured issue forms, Husky hooks for `pre-commit` [lint-staged], `commit-msg` [@commitlint], and `pre-push` [typecheck & test], Google Release Please action with `.release-please-config.json` and `.release-please-manifest.json`, Dependabot security updates, `.editorconfig`, and `package.json` SemVer `1.1.0` with `private: true` and `engines`).
 
+Phase 13: Encounter Lifecycle Hardening & Interactive Pokémon Carousel (`src/presentation/server.ts` webhook timeout to 30s with `"return"`, deterministic replay in `conv.external`, fallback catch handler for orphaned buttons; transformed `/pokemons` from static image dump into an interactive paged carousel card with dynamic levels, dual types, abilities, evolution progress, one-tap buddy assignment, roster overview, and anti-hijack stateless callback queries).
+
 Conventions: each feature = one scoped commit set, verified with typecheck/lint/format + `pnpm test`, README/AGENTS updated. No new shared mutable state for encounters or battles (keep them conversation-local).
 
 Stay disciplined, document discoveries, and keep this guide trustworthy for the next agent.
