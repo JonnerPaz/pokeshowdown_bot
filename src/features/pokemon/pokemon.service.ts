@@ -91,7 +91,7 @@ export function formatSwapPrompt(boxPokemon: PokemonEntity): string {
   return (
     `🔄 *Swap Pokémon with Battle Party*\n────────────────────────\n` +
     `Your battle party is currently full (6/6).\n\n` +
-    `Which party member would you like to send to the **PC Storage Box** to make room for *${escapeMarkdown(pName)}*?`
+    `Which party member would you like to send to the *PC Storage Box* to make room for *${escapeMarkdown(pName)}*?`
   );
 }
 

@@ -218,7 +218,7 @@ describe("Turn-Based Battle Integration (/battle)", () => {
 
     const finalEdit = edits[edits.length - 1];
     expect(finalEdit?.text).toContain("VICTORY!");
-    expect(finalEdit?.text).toContain("ash_champion");
+    expect(finalEdit?.text).toContain("ash\\_champion");
     expect(finalEdit?.text).toContain("pikachu");
 
     // 8. Verify winning pokemon gained +1 combat experience (timesCaught)

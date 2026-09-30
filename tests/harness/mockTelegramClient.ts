@@ -55,6 +55,52 @@ export class MockTelegramClient {
         timestamp: Date.now(),
       });
 
+      if (payload.parse_mode === "Markdown") {
+        const textToCheck =
+          typeof payload.text === "string"
+            ? payload.text
+            : typeof payload.caption === "string"
+              ? payload.caption
+              : null;
+        if (textToCheck) {
+          let inBold = false;
+          let inItalic = false;
+          let inCode = false;
+
+          for (let i = 0; i < textToCheck.length; i++) {
+            const char = textToCheck[i];
+            if (char === "\\") {
+              i++;
+              continue;
+            }
+            if (char === "`") {
+              inCode = !inCode;
+            } else if (!inCode) {
+              if (char === "*") {
+                inBold = !inBold;
+              } else if (char === "_") {
+                inItalic = !inItalic;
+              }
+            }
+          }
+
+          if (inBold || inItalic || inCode) {
+            return new Response(
+              JSON.stringify({
+                ok: false,
+                error_code: 400,
+                description: `Bad Request: can't parse entities: unclosed formatting`,
+                parameters: {},
+              }),
+              {
+                status: 400,
+                headers: { "Content-Type": "application/json" },
+              },
+            );
+          }
+        }
+      }
+
       const responseBody = this.resolveResponse(method, payload);
       return new Response(JSON.stringify(responseBody), {
         status: 200,

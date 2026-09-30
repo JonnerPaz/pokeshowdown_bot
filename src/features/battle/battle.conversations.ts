@@ -12,6 +12,7 @@ import {
   createBattleActionKeyboard,
   renderBattlefield,
 } from "./battle.keyboards.js";
+import { escapeMarkdown } from "../common/stringHelper.js";
 
 export interface BattleConversationDeps {
   userDataSource: UserDataSource;
@@ -45,7 +46,7 @@ export async function battleConversation(
 
   const acceptKeyboard = createBattleInviteKeyboard(battleId);
   const inviteMsg = await ctx.reply(
-    `⚔️ **${challengerName}** has issued a Pokémon battle challenge!\n\nWho dares to accept the challenge?`,
+    `⚔️ *${escapeMarkdown(challengerName)}* has issued a Pokémon battle challenge!\n\nWho dares to accept the challenge?`,
     { reply_markup: acceptKeyboard, parse_mode: "Markdown" },
   );
 
@@ -97,10 +98,13 @@ export async function battleConversation(
   const challengerCandidates =
     challengerParty.length > 0 ? challengerParty : challengerUser.pokemons;
   const challengerKb = createPokemonPickKeyboard(battleId, "A", challengerCandidates);
-  const pickMsgA = await ctx.reply(`🔴 **${challengerName}**, choose your battle Pokémon:`, {
-    reply_markup: challengerKb,
-    parse_mode: "Markdown",
-  });
+  const pickMsgA = await ctx.reply(
+    `🔴 *${escapeMarkdown(challengerName)}*, choose your battle Pokémon:`,
+    {
+      reply_markup: challengerKb,
+      parse_mode: "Markdown",
+    },
+  );
 
   const pickCtxA = await conv
     .waitForCallbackQuery(new RegExp(`^battle:${battleId}:pick:A:(.+)$`), {
@@ -122,10 +126,13 @@ export async function battleConversation(
   const opponentParty = (opponentUser.pokemons ?? []).filter((p) => p.isInParty !== false);
   const opponentCandidates = opponentParty.length > 0 ? opponentParty : opponentUser.pokemons;
   const opponentKb = createPokemonPickKeyboard(battleId, "B", opponentCandidates);
-  const pickMsgB = await ctx.reply(`🔵 **${opponentName}**, choose your battle Pokémon:`, {
-    reply_markup: opponentKb,
-    parse_mode: "Markdown",
-  });
+  const pickMsgB = await ctx.reply(
+    `🔵 *${escapeMarkdown(opponentName)}*, choose your battle Pokémon:`,
+    {
+      reply_markup: opponentKb,
+      parse_mode: "Markdown",
+    },
+  );
 
   const pickCtxB = await conv
     .waitForCallbackQuery(new RegExp(`^battle:${battleId}:pick:B:(.+)$`), {

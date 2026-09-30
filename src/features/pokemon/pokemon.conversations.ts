@@ -15,6 +15,7 @@ import {
   SHINY_CAP,
 } from "../../domain/data/constants.js";
 import { evolvePokemonOperation, getPokemonFrontSprite } from "./pokemon.service.js";
+import { escapeMarkdown } from "../common/stringHelper.js";
 import type { GroupEncounterService } from "./groupEncounter.service.js";
 import {
   createCatchKeyboard,
@@ -141,7 +142,7 @@ export async function generatePokemonConversation(
   const timeoutSec = Math.round(CONVERSATION_TIMEOUT_MS / 1000);
   const photoMsg = await ctx.api.sendPhoto(ctx.chat!.id, getPokemonFrontSprite(currentPokemon));
   const promptMsg = await ctx.reply(
-    `A wild *${currentPokemon.name}* appeared! Choose a Pokéball to throw (⏳ ${timeoutSec}s):`,
+    `A wild *${escapeMarkdown(currentPokemon.name)}* appeared! Choose a Pokéball to throw (⏳ ${timeoutSec}s):`,
     {
       reply_markup: createCatchKeyboard(user),
       parse_mode: "Markdown",
@@ -233,8 +234,7 @@ export async function generatePokemonConversation(
           );
         } else {
           await ctx.reply(
-            `🎉 Gotcha! @${user.username} caught ${currentPokemon.isShiny ? "a shiny " : ""}${currentPokemon.name} using a ${BALL_CONFIGS[ballType].name}!\n\n📦 Your battle party is full (${MAX_PKMN_PARTY}/${MAX_PKMN_PARTY}), so ${currentPokemon.name} was safely sent to your **PC Storage Box**! Use /box to view and manage your storage.`,
-            { parse_mode: "Markdown" },
+            `🎉 Gotcha! @${user.username} caught ${currentPokemon.isShiny ? "a shiny " : ""}${currentPokemon.name} using a ${BALL_CONFIGS[ballType].name}!\n\n📦 Your battle party is full (${MAX_PKMN_PARTY}/${MAX_PKMN_PARTY}), so ${currentPokemon.name} was safely sent to your PC Storage Box! Use /box to view and manage your storage.`,
           );
         }
       }
@@ -256,7 +256,7 @@ export async function generatePokemonConversation(
     await ctx.api.editMessageText(
       choice.chat!.id,
       promptMsg.message_id,
-      `💥 The wild *${currentPokemon.name}* broke free! It's watching you cautiously.\nChoose another Pokéball to throw (⏳ ${timeoutSec}s):`,
+      `💥 The wild *${escapeMarkdown(currentPokemon.name)}* broke free! It's watching you cautiously.\nChoose another Pokéball to throw (⏳ ${timeoutSec}s):`,
       {
         reply_markup: createCatchKeyboard(user),
         parse_mode: "Markdown",

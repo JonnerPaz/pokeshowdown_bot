@@ -63,10 +63,10 @@ export class BattleEngine {
     // (defend protects against the NEXT attack)
     if (action === "defend") {
       attacker.isDefending = true;
-      logMessage = `🛡️ **${attacker.name}** adopted a defensive stance! Damage taken next turn will be halved.`;
+      logMessage = `🛡️ *${attacker.name}* adopted a defensive stance! Damage taken next turn will be halved.`;
     } else if (action === "charge") {
       attacker.isCharged = true;
-      logMessage = `⚡ **${attacker.name}** gathered energy! Its next attack will land a devastating critical hit!`;
+      logMessage = `⚡ *${attacker.name}* gathered energy! Its next attack will land a devastating critical hit!`;
     } else {
       // Offensive action: "attack" or "special"
       const power = action === "special" ? 65 : 40;
@@ -91,7 +91,7 @@ export class BattleEngine {
 
       if (typeMultiplier === 0) {
         damage = 0;
-        logMessage = `👻 It had no effect on **${defender.name}**! (0x damage)`;
+        logMessage = `👻 It had no effect on *${defender.name}*! (0x damage)`;
       } else {
         const level = Math.min(100, 20 + attacker.timesCaught * 5);
         const baseDamage =
@@ -119,7 +119,7 @@ export class BattleEngine {
         else if (typeMultiplier > 0 && typeMultiplier < 1)
           effectText = " 🛡️ It's not very effective...";
 
-        logMessage = `⚔️ **${attacker.name}** used **${moveName}** dealing **${damage}** dmg!${critText}${effectText}`;
+        logMessage = `⚔️ *${attacker.name}* used *${moveName}* dealing *${damage}* dmg!${critText}${effectText}`;
       }
     }
 

@@ -2,6 +2,7 @@ import { InlineKeyboard } from "grammy";
 import { BattleEngine } from "../../domain/battle/battleEngine.js";
 import type { BattlePokemonStats, BattleState } from "../../domain/battle/types.js";
 import type { PokemonEntity } from "../../domain/entities/pokemon.entity.js";
+import { escapeMarkdown } from "../common/stringHelper.js";
 
 export function createBattleInviteKeyboard(battleId: string): InlineKeyboard {
   return new InlineKeyboard().text(
@@ -46,10 +47,15 @@ export function renderBattlefield(state: BattleState, combatLog?: string): strin
   const statusA = pA.isDefending ? " [🛡️ Defending]" : pA.isCharged ? " [⚡ Charged]" : "";
   const statusB = pB.isDefending ? " [🛡️ Defending]" : pB.isCharged ? " [⚡ Charged]" : "";
 
-  let text = `🏟️ **POKEMON SHOWDOWN BATTLE**\n\n`;
-  text += `🔴 **${state.trainerA.name}**: ${pA.name}${pA.isShiny ? " ✨" : ""}\n`;
+  const nameA = escapeMarkdown(state.trainerA.name);
+  const nameB = escapeMarkdown(state.trainerB.name);
+  const pkmnA = escapeMarkdown(pA.name);
+  const pkmnB = escapeMarkdown(pB.name);
+
+  let text = `🏟️ *POKEMON SHOWDOWN BATTLE*\n\n`;
+  text += `🔴 *${nameA}*: ${pkmnA}${pA.isShiny ? " ✨" : ""}\n`;
   text += `${hpBarA} ${pA.currentHp}/${pA.maxHp} HP${statusA}\n\n`;
-  text += `🔵 **${state.trainerB.name}**: ${pB.name}${pB.isShiny ? " ✨" : ""}\n`;
+  text += `🔵 *${nameB}*: ${pkmnB}${pB.isShiny ? " ✨" : ""}\n`;
   text += `${hpBarB} ${pB.currentHp}/${pB.maxHp} HP${statusB}\n`;
 
   if (combatLog) {
@@ -58,12 +64,14 @@ export function renderBattlefield(state: BattleState, combatLog?: string): strin
 
   if (state.isFinished) {
     const winner = state.winnerTrainerId === state.trainerA.id ? state.trainerA : state.trainerB;
-    const winnerPokemon = winner.pokemon;
-    text += `\n🏆 **VICTORY!**\n🎉 **${winner.name}** and **${winnerPokemon.name}** won the battle!\n⭐ **${winnerPokemon.name}** gained +1 combat experience!`;
+    const winnerName = escapeMarkdown(winner.name);
+    const winnerPokemon = escapeMarkdown(winner.pokemon.name);
+    text += `\n🏆 *VICTORY!*\n🎉 *${winnerName}* and *${winnerPokemon}* won the battle!\n⭐ *${winnerPokemon}* gained +1 combat experience!`;
   } else {
     const activeTrainer =
       state.currentTurnTrainerId === state.trainerA.id ? state.trainerA : state.trainerB;
-    text += `\n👉 Turn ${state.turnCount}: It's **${activeTrainer.name}**'s turn!`;
+    const activeName = escapeMarkdown(activeTrainer.name);
+    text += `\n👉 Turn ${state.turnCount}: It's *${activeName}*'s turn!`;
   }
 
   return text;
