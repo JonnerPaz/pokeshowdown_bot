@@ -299,6 +299,35 @@ describe("Pokemon Operations Integration (/pokemons, /generate_pokemon)", () => 
     }
   });
 
+  it("merges into the existing evolved form instead of creating a duplicate", async () => {
+    const { dispatchCommand, dispatchText, userDataSource } = await createTestBot();
+
+    const userId = 812;
+    const charmander = createMockPokemon("charmander", "fire", { id: 301, timesCaught: 5 });
+    const charmeleon = createMockPokemon("charmeleon", "fire", { id: 302, timesCaught: 2 });
+    userDataSource.seedUser(
+      new UserEntity({
+        id: 32,
+        telegramId: BigInt(userId),
+        username: "evo_trainer",
+        createdAt: new Date(),
+        updatedAt: new Date(),
+        pokemons: [charmander, charmeleon],
+      }),
+    );
+
+    const evolvePromise = dispatchCommand("/evolve", { fromId: userId });
+    await new Promise((resolve) => setTimeout(resolve, 50));
+    await dispatchText("charmander", { fromId: userId });
+    await evolvePromise;
+
+    const user = await userDataSource.findUserByTelegramId(userId);
+    expect(user?.pokemons.length).toBe(1);
+    expect(user?.pokemons[0]?.name).toBe("charmeleon");
+    // Existing charmeleon (2) + leftover from charmander (5 - EVOLVE_CAP 3) = 4
+    expect(user?.pokemons[0]?.timesCaught).toBe(4);
+  });
+
   it("allows trainer to run away from wild encounter", async () => {
     const { dispatchCommand, dispatchCallback, client, userDataSource } = await createTestBot();
 

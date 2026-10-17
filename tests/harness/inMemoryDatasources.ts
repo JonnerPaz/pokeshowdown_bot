@@ -173,6 +173,14 @@ export class InMemoryPokemonDataSource implements PokemonDataSource {
     return updated;
   }
 
+  public async deletePokemon(pokemon: PokemonEntity): Promise<void> {
+    if (pokemon.id === null) return;
+    this.pokemons.delete(pokemon.id);
+    for (const user of this.userDataSource.users.values()) {
+      user.pokemons = user.pokemons.filter((p) => p.id !== pokemon.id);
+    }
+  }
+
   public async tradePokemon(
     userA: UserEntity,
     pokemonA: PokemonEntity,

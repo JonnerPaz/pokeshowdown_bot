@@ -296,6 +296,7 @@ export async function evolvePokemonConversation(
     pokemon,
     deps.pokeApi,
     deps.pokemonDataSource,
+    user.id ?? undefined,
   );
 
   if (evolvedPokemon.name === pokemon.name) {

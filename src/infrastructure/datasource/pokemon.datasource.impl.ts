@@ -143,6 +143,11 @@ export class PokemonDataSourceImpl implements PokemonDataSource {
     });
   }
 
+  async deletePokemon(pokemon: PokemonEntity): Promise<void> {
+    if (!pokemon.id) throw new Error("Pokemon ID is required to delete a pokemon");
+    await prisma.pokemon.delete({ where: { id: pokemon.id } });
+  }
+
   async tradePokemon(
     userA: UserEntity,
     pokemonA: PokemonEntity,
