@@ -39,7 +39,7 @@ describe("renderBattlefield", () => {
       ),
     );
 
-    expect(renderBattlefield(state)).toContain("It's **Ash**'s turn!");
+    expect(renderBattlefield(state)).toContain("It's *Ash*'s turn!");
   });
 
   it("replaces the turn prompt with a final note when one is provided", () => {
@@ -52,12 +52,12 @@ describe("renderBattlefield", () => {
     const text = renderBattlefield(
       state,
       "⚔️ A fierce exchange!",
-      "🏳️ **Turn limit reached!** The battle was called a draw.",
+      "🏳️ *Turn limit reached!* The battle was called a draw.",
     );
 
     expect(text).toContain("A fierce exchange!");
     expect(text).toContain("Turn limit reached!");
-    expect(text).not.toContain("It's **");
+    expect(text).not.toContain("It's *Ash*");
   });
 
   it("renders the victory screen when the battle is finished", () => {

@@ -431,8 +431,65 @@ describe("Pokemon Operations Integration (/pokemons, /generate_pokemon)", () => 
     const user = await userDataSource.findUserByTelegramId(userId);
     expect(user?.pokemons.length).toBe(1);
     expect(user?.pokemons[0]?.name).toBe("charmeleon");
-    // Existing charmeleon (2) + leftover from charmander (5 - EVOLVE_CAP 3) = 4
-    expect(user?.pokemons[0]?.timesCaught).toBe(4);
+    // Existing charmeleon (2) + 1 (newly evolved) + leftover from charmander (5 - EVOLVE_CAP 3) = 5
+    expect(user?.pokemons[0]?.timesCaught).toBe(5);
+  });
+
+  it("ensures an evolved pokemon has at least 1 timesCaught when evolved from exact EVOLVE_CAP", async () => {
+    const { dispatchCommand, dispatchText, userDataSource } = await createTestBot();
+
+    const userId = 818;
+    const charmander = createMockPokemon("charmander", "fire", { id: 303, timesCaught: 3 });
+    userDataSource.seedUser(
+      new UserEntity({
+        id: 37,
+        telegramId: BigInt(userId),
+        username: "exact_evo",
+        createdAt: new Date(),
+        updatedAt: new Date(),
+        pokemons: [charmander],
+      }),
+    );
+
+    const evolvePromise = dispatchCommand("/evolve", { fromId: userId });
+    await new Promise((resolve) => setTimeout(resolve, 50));
+    await dispatchText("charmander", { fromId: userId });
+    await evolvePromise;
+
+    const user = await userDataSource.findUserByTelegramId(userId);
+    expect(user?.pokemons[0]?.name).toBe("charmeleon");
+    // Exactly EVOLVE_CAP (3) spent -> newly evolved form must have at least 1 catch (not 0)
+    expect(user?.pokemons[0]?.timesCaught).toBe(1);
+  });
+
+  it("migrates user.buddyPokemonId to the merged pokemon when buddy is evolved", async () => {
+    const { dispatchCommand, dispatchText, userDataSource } = await createTestBot();
+
+    const userId = 819;
+    const charmander = createMockPokemon("charmander", "fire", { id: 304, timesCaught: 3 });
+    const charmeleon = createMockPokemon("charmeleon", "fire", { id: 305, timesCaught: 1 });
+    userDataSource.seedUser(
+      new UserEntity({
+        id: 38,
+        telegramId: BigInt(userId),
+        username: "buddy_evo",
+        createdAt: new Date(),
+        updatedAt: new Date(),
+        pokemons: [charmander, charmeleon],
+        buddyPokemonId: 304, // charmander is the buddy
+      }),
+    );
+
+    const evolvePromise = dispatchCommand("/evolve", { fromId: userId });
+    await new Promise((resolve) => setTimeout(resolve, 50));
+    await dispatchText("charmander", { fromId: userId });
+    await evolvePromise;
+
+    const user = await userDataSource.findUserByTelegramId(userId);
+    expect(user?.pokemons.length).toBe(1);
+    expect(user?.pokemons[0]?.id).toBe(305);
+    // Buddy should migrate to the merged charmeleon (id 305) instead of becoming orphaned
+    expect(user?.buddyPokemonId).toBe(305);
   });
 
   it("allows trainer to run away from wild encounter", async () => {

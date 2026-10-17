@@ -371,6 +371,12 @@ export async function evolvePokemonConversation(
     return;
   }
 
+  if (user.buddyPokemonId === pokemon.id && evolvedPokemon.id !== pokemon.id) {
+    await conv.external(() =>
+      deps.userDataSource.updateUser(user, { buddyPokemonId: evolvedPokemon.id }),
+    );
+  }
+
   await ctx.reply(`Your ${pokemon.name} evolved to ${evolvedPokemon.name}`);
   return;
 }

@@ -54,7 +54,7 @@ export async function battleConversation(
 
   const acceptKeyboard = createBattleInviteKeyboard(battleId);
   const inviteMsg = await ctx.reply(
-    `⚔️ **${challengerName}** has issued a Pokémon battle challenge!\n\nWho dares to accept the challenge?`,
+    `⚔️ *${challengerName}* has issued a Pokémon battle challenge!\n\nWho dares to accept the challenge?`,
     { reply_markup: acceptKeyboard, parse_mode: "Markdown" },
   );
 
@@ -104,7 +104,7 @@ export async function battleConversation(
 
   // Challenger Pokemon Selection
   const challengerKb = createPokemonPickKeyboard(battleId, "A", challengerUser.pokemons);
-  const pickMsgA = await ctx.reply(`🔴 **${challengerName}**, choose your battle Pokémon:`, {
+  const pickMsgA = await ctx.reply(`🔴 *${challengerName}*, choose your battle Pokémon:`, {
     reply_markup: challengerKb,
     parse_mode: "Markdown",
   });
@@ -127,7 +127,7 @@ export async function battleConversation(
   // Opponent Pokemon Selection
   const opponentName = escapeMarkdown(opponentUser.username);
   const opponentKb = createPokemonPickKeyboard(battleId, "B", opponentUser.pokemons);
-  const pickMsgB = await ctx.reply(`🔵 **${opponentName}**, choose your battle Pokémon:`, {
+  const pickMsgB = await ctx.reply(`🔵 *${opponentName}*, choose your battle Pokémon:`, {
     reply_markup: opponentKb,
     parse_mode: "Markdown",
   });
@@ -260,7 +260,7 @@ export async function battleConversation(
         renderBattlefield(
           battleState,
           battleState.lastTurnLog,
-          "🏳️ **Turn limit reached!** The battle was called a draw.",
+          "🏳️ *Turn limit reached!* The battle was called a draw.",
         ),
         { parse_mode: "Markdown" },
       )

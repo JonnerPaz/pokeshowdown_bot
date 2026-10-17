@@ -50,10 +50,10 @@ export function renderBattlefield(
   const statusA = pA.isDefending ? " [🛡️ Defending]" : pA.isCharged ? " [⚡ Charged]" : "";
   const statusB = pB.isDefending ? " [🛡️ Defending]" : pB.isCharged ? " [⚡ Charged]" : "";
 
-  let text = `🏟️ **POKEMON SHOWDOWN BATTLE**\n\n`;
-  text += `🔴 **${state.trainerA.name}**: ${pA.name}${pA.isShiny ? " ✨" : ""}\n`;
+  let text = `🏟️ *POKEMON SHOWDOWN BATTLE*\n\n`;
+  text += `🔴 *${state.trainerA.name}*: ${pA.name}${pA.isShiny ? " ✨" : ""}\n`;
   text += `${hpBarA} ${pA.currentHp}/${pA.maxHp} HP${statusA}\n\n`;
-  text += `🔵 **${state.trainerB.name}**: ${pB.name}${pB.isShiny ? " ✨" : ""}\n`;
+  text += `🔵 *${state.trainerB.name}*: ${pB.name}${pB.isShiny ? " ✨" : ""}\n`;
   text += `${hpBarB} ${pB.currentHp}/${pB.maxHp} HP${statusB}\n`;
 
   if (combatLog) {
@@ -63,13 +63,13 @@ export function renderBattlefield(
   if (state.isFinished) {
     const winner = state.winnerTrainerId === state.trainerA.id ? state.trainerA : state.trainerB;
     const winnerPokemon = winner.pokemon;
-    text += `\n🏆 **VICTORY!**\n🎉 **${winner.name}** and **${winnerPokemon.name}** won the battle!\n⭐ **${winnerPokemon.name}** gained +1 combat experience!`;
+    text += `\n🏆 *VICTORY!*\n🎉 *${winner.name}* and *${winnerPokemon.name}* won the battle!\n⭐ *${winnerPokemon.name}* gained +1 combat experience!`;
   } else if (finalNote) {
     text += `\n${finalNote}`;
   } else {
     const activeTrainer =
       state.currentTurnTrainerId === state.trainerA.id ? state.trainerA : state.trainerB;
-    text += `\n👉 Turn ${state.turnCount}: It's **${activeTrainer.name}**'s turn!`;
+    text += `\n👉 Turn ${state.turnCount}: It's *${activeTrainer.name}*'s turn!`;
   }
 
   return text;

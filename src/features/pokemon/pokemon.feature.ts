@@ -46,18 +46,6 @@ export function createPokemonFeature(deps: PokemonConversationDeps): Composer<Ap
   feature.callbackQuery(
     /^gcatch:([a-zA-Z0-9_-]+):(pokeball|greatball|ultraball|masterball)$/,
     async (ctx) => {
-      const userId = ctx.from?.id;
-      if (!userId) return;
-
-      if (!deps.rateLimiter.isAllowed(userId, "catch")) {
-        await ctx.answerCallbackQuery({
-          text: "Slow down! You're throwing balls too quickly. Try again in a moment.",
-          show_alert: true,
-        });
-        return;
-      }
-      deps.rateLimiter.hit(userId, "catch");
-
       const encounterId = ctx.match[1]!;
       const ballType = ctx.match[2]! as BallType;
       await groupEncounterService.handleGroupCatchAttempt(

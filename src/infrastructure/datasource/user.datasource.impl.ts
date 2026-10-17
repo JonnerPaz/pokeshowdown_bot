@@ -153,6 +153,10 @@ export class UserDataSourceImpl implements UserDataSource {
     }
 
     const field = getBallUserField(ballType);
+    if (user[field] <= 0) {
+      return user;
+    }
+
     const updatedUser = await prisma.user.update({
       where: { telegramId: BigInt(user.telegramId) },
       data: { [field]: { decrement: 1 } },

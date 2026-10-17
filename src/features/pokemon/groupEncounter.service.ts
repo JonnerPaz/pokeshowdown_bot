@@ -5,6 +5,7 @@ import type { PokemonEntity } from "../../domain/entities/pokemon.entity.js";
 import type { PokeApiService } from "../../presentation/services/pokeapi.service.js";
 import type { UserDataSource } from "../../domain/datasource/user.datasource.js";
 import type { PokemonDataSource } from "../../domain/datasource/pokemon.datasource.js";
+import type { RateLimiterService } from "../../presentation/services/rateLimiter.service.js";
 import {
   type BallType,
   BALL_CONFIGS,
@@ -219,6 +220,9 @@ export class GroupEncounterService {
           });
       }
     }, this.encounterTimeoutMs);
+    if (typeof timer.unref === "function") {
+      timer.unref();
+    }
 
     this.encounterTimers.set(encounterId, timer);
     this.activeEncounters.set(encounterId, encounter);
@@ -247,8 +251,20 @@ export class GroupEncounterService {
     deps: {
       userDataSource: UserDataSource;
       pokemonDataSource: PokemonDataSource;
+      rateLimiter?: RateLimiterService;
     },
   ): Promise<void> {
+    const userId = ctx.from?.id;
+    if (!userId) return;
+
+    if (deps.rateLimiter && !deps.rateLimiter.isAllowed(userId, "catch")) {
+      await ctx.answerCallbackQuery({
+        text: "Slow down! You're throwing balls too quickly. Try again in a moment.",
+        show_alert: true,
+      });
+      return;
+    }
+
     const encounter = this.activeEncounters.get(encounterId);
     if (!encounter || encounter.isResolved) {
       await ctx.answerCallbackQuery({
@@ -257,9 +273,6 @@ export class GroupEncounterService {
       });
       return;
     }
-
-    const userId = ctx.from?.id;
-    if (!userId) return;
 
     // Synchronous reservation: claim the encounter before the first `await` so that
     // concurrent taps can never both enter the critical section.
@@ -304,6 +317,10 @@ export class GroupEncounterService {
           show_alert: true,
         });
         return;
+      }
+
+      if (deps.rateLimiter) {
+        deps.rateLimiter.hit(userId, "catch");
       }
 
       // Re-check after the awaits above: another attempt or the despawn timer may

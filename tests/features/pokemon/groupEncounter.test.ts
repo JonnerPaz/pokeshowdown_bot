@@ -375,6 +375,49 @@ describe("Group Spawns & Encounters Integration", () => {
     );
   });
 
+  it("does not consume rate limit when attempt is rejected because the encounter is busy", async () => {
+    const service = new GroupEncounterService({
+      spawnMessageMin: 1,
+      spawnMessageMax: 1,
+      spawnCooldownMs: 0,
+      fleeChance: 0,
+    });
+    const botCtx = await createTestBot({ groupEncounterService: service });
+
+    const userId = 4243;
+    botCtx.userDataSource.seedUser(
+      new UserEntity({
+        id: 43,
+        telegramId: BigInt(userId),
+        username: "patient_thrower",
+        createdAt: new Date(),
+        updatedAt: new Date(),
+        pokemons: [createMockPokemon("eevee", "normal")],
+        masterballs: 3,
+      }),
+    );
+
+    const groupChatId = -1004322;
+    const encounter = await service.spawnGroupPokemon(botCtx.mainBot.bot.api, groupChatId, {
+      pokeApi: botCtx.pokeApi,
+    });
+
+    // Mark encounter busy manually to simulate another player's throw in flight
+    encounter.isBusy = true;
+
+    await botCtx.dispatchCallback(`gcatch:${encounter.id}:masterball`, {
+      fromId: userId,
+      chatId: groupChatId,
+    });
+
+    expect(
+      botCtx.client.getAnsweredCallbacks().some((cb) => cb.text?.includes("already throwing")),
+    ).toBe(true);
+
+    // Rate limiter must NOT have been hit for this rejected attempt
+    expect(botCtx.rateLimiter.isAllowed(userId, "catch")).toBe(true);
+  });
+
   it("spawns a group encounter when /generate_pokemon is used in a group", async () => {
     const botCtx = await createTestBot();
     const userId = 5001;

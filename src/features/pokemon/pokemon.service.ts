@@ -76,7 +76,7 @@ export async function evolvePokemonOperation(
 
     if (existing && existing.id !== pokemon.id) {
       const merged = await pokemonDataSource.updatePokemon(existing, {
-        timesCaught: existing.timesCaught + remainingCaught,
+        timesCaught: existing.timesCaught + 1 + remainingCaught,
       });
       if (pokemon.id !== null) {
         await pokemonDataSource.deletePokemon(pokemon);
@@ -91,6 +91,6 @@ export async function evolvePokemonOperation(
     ability: evolvedPokemon.ability,
     sprites: evolvedPokemon.sprites,
     isShiny: pokemon.isShiny,
-    timesCaught: remainingCaught,
+    timesCaught: 1 + remainingCaught,
   });
 }
