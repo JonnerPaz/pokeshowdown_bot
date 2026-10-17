@@ -35,7 +35,7 @@
 - **Lint / format**: `pnpm lint`, `pnpm lint:fix`, `pnpm format`, `pnpm format:check` (Prettier; formatted paths are scoped in package.json to avoid `postgres/` permission issues).
 - **Migrations**: `pnpm run prisma:migrate -- --name <desc>` (requires live DB connection).
 - **Codegen**: `pnpm run prisma:generate` after migrations/schema edits.
-- **Testing**: Vitest suite (49 tests: domain, feature integration, presentation). Run all tests with `pnpm test`, or single file with `pnpm vitest run tests/<path>`. Tests run natively with no extra compiler plugins. Feature tests use grammY's `ApiClientOptions.fetch` mock harness and in-memory datasources (`tests/harness/`). CI runs `pnpm test`.
+- **Testing**: Vitest suite (domain, feature integration, presentation). Run all tests with `pnpm test`, or a single file with `pnpm vitest run tests/<path>`. Tests run natively with no extra compiler plugins. Feature tests use grammY's `ApiClientOptions.fetch` mock harness and in-memory datasources (`tests/harness/`). CI runs `pnpm test`.
 
 ---
 
@@ -77,8 +77,7 @@
 
 ## 6. Error Handling & Logging
 
-- `MainBot.setupErrorHandler()` installs a `bot.catch` global handler (structured log + best-effort reply). Unhandled conversation/command errors propagate here.
-- `MainBot.setupErrorHandler()` installs a `bot.catch` global handler (structured log + best-effort reply). Unhandled conversation/command errors propagate here.
+- `MainBot.setupErrorHandler()` installs a root middleware error boundary **and** a `bot.catch` global handler (structured log + best-effort reply). Unhandled conversation/command errors propagate here. The root boundary swallows errors so the webhook always answers Telegram with `200 OK`, preventing retry deadlocks.
 - Conversation steps do **not** wrap with try/catch — let errors bubble to `bot.catch`. Commands and conversations report errors using `displayCommandError(e, ctx, msg?)` (`src/features/common/errorHandler.ts`) with structured logging.
 - Use contextual logs: `console.error("pokemon.generate failed", { username, error })` rather than plain stack output.
 - Differentiate user mistakes (not registered) from system faults (Prisma/PokeAPI issues). Never leak stack traces or secrets into Telegram chats.
@@ -199,6 +198,8 @@ Phase 10 (landed on `main`): Battle Leaderboard & Trainer Profile Slice (`src/fe
 Phase 11 (landed on `main`): Group Chat Spawns, Group Encounter Service & Webhook Hardening (`src/features/pokemon/groupEncounter.service.ts` tracking group chat activity with message thresholds, anti-spam burst protection, spontaneous wild spawns, multiplayer ball throws with catch/spook/flee mechanics, despawn timers, and race-condition mutexes; group-aware `/generate_pokemon`; markdown entity sanitization via `escapeMarkdown` in `src/features/common/stringHelper.ts` to prevent Telegram entity parse errors; and top-level bot middleware error boundary ensuring 200 OK responses to prevent webhook retry deadlocks).
 
 Phase 12 (landed on `main`): Professional Repository Infrastructure & Release Automation (`CONTRIBUTING.md`, `CODE_OF_CONDUCT.md`, `SECURITY.md`, `CHANGELOG.md`, `.github/pull_request_template.md`, structured issue forms, Husky hooks for `pre-commit` [lint-staged], `commit-msg` [@commitlint], and `pre-push` [typecheck & test], Google Release Please action with `.release-please-config.json` and `.release-please-manifest.json`, Dependabot security updates, `.editorconfig`, and `package.json` SemVer `1.1.0` with `private: true` and `engines`).
+
+Phase 13 (landed on `main`): Correctness & Hardening Audit Sweep (atomic group-catch mutex in `groupEncounter.service.ts`, party-capacity check before ball deduction in solo encounters, evolution re-stacks `timesCaught` instead of duplicating rows, consistent Telegram Markdown escaping via `escapeMarkdown`, scoped command menus registered with `CommandGroup.setCommands`, buddy "none" state, per-user atomic ball deduction + rate limiting for group catches, user-scoped `updatePokemon` fallback, immutable `BattleEngine` state with turn-cap resolution, pruned in-memory rate-limit/activity maps, removal of dead `BattleService.awardVictory`, and the `/pokemonsummary` detailed stats view).
 
 Conventions: each feature = one scoped commit set, verified with typecheck/lint/format + `pnpm test`, README/AGENTS updated. No new shared mutable state for encounters or battles (keep them conversation-local).
 

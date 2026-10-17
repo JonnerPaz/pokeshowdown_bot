@@ -1,9 +1,8 @@
 # TODO
 
-- Update `/pokemonsummary` to show all pokemon stats and abilities, using a context menu
-- Add trade mechanic
-- Add battle mechanic
+- Add full message localization (EN/ES) — command metadata is localized, replies are not yet.
+- Add pagination to `/pokemons` and a full (beyond top-10) battle ranking view.
 
 # Fix
 
-- When a pokemon is caught of the same evolution chain and user decide to evolve it, it should be updated the timesCaught, not adding the same pokemon twice
+- Group and solo catch flows should share a single inventory/rate-limit code path.
