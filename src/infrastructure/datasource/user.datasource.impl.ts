@@ -2,6 +2,7 @@ import { prisma } from "../../data/postgres/index.js";
 import { UserDataSource } from "../../domain/datasource/user.datasource.js";
 import { UserEntity } from "../../domain/entities/users.entity.js";
 import { PokemonEntity } from "../../domain/entities/pokemon.entity.js";
+import { getBallUserField, type BallType } from "../../domain/items/ballTypes.js";
 
 export class UserDataSourceImpl implements UserDataSource {
   public async findUserByTelegramId(telegramId: number | bigint): Promise<UserEntity | null> {
@@ -126,6 +127,35 @@ export class UserDataSourceImpl implements UserDataSource {
     const updatedUser = await prisma.user.update({
       where: { telegramId: BigInt(user.telegramId) },
       data: updateData,
+      include: { pokemons: true },
+    });
+
+    const pokemons = updatedUser.pokemons.map((pokemon) => {
+      const { nickname, ...pokemonData } = pokemon;
+      const sprites = JSON.parse(JSON.stringify(pokemon.sprites));
+      return PokemonEntity.fromObject({
+        ...pokemonData,
+        sprites,
+        ...(nickname && { nickname }),
+      });
+    });
+
+    return new UserEntity({
+      ...updatedUser,
+      telegramId: updatedUser.telegramId !== null ? Number(updatedUser.telegramId) : null,
+      pokemons,
+    });
+  }
+
+  public async decrementBall(user: UserEntity, ballType: BallType): Promise<UserEntity> {
+    if (!user.telegramId) {
+      throw new Error("Cannot decrement balls for a user without telegramId");
+    }
+
+    const field = getBallUserField(ballType);
+    const updatedUser = await prisma.user.update({
+      where: { telegramId: BigInt(user.telegramId) },
+      data: { [field]: { decrement: 1 } },
       include: { pokemons: true },
     });
 

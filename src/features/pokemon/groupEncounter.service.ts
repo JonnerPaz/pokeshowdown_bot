@@ -8,7 +8,6 @@ import type { PokemonDataSource } from "../../domain/datasource/pokemon.datasour
 import {
   type BallType,
   BALL_CONFIGS,
-  getBallUserField,
   getUserBallCount,
   rollCatchAttempt,
 } from "../../domain/items/ballTypes.js";
@@ -287,10 +286,8 @@ export class GroupEncounterService {
         return;
       }
 
-      // Deduct ball from inventory
-      const field = getBallUserField(ballType);
-      user[field] -= 1;
-      await deps.userDataSource.updateUser(user, { [field]: user[field] });
+      // Deduct ball from inventory atomically so concurrent throws cannot lose an update.
+      await deps.userDataSource.decrementBall(user, ballType);
 
       const attempt = rollCatchAttempt(encounter.captureRate, ballType);
 

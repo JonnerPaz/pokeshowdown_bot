@@ -2,6 +2,7 @@ import type { UserDataSource } from "../../src/domain/datasource/user.datasource
 import type { PokemonDataSource } from "../../src/domain/datasource/pokemon.datasource.js";
 import { UserEntity } from "../../src/domain/entities/users.entity.js";
 import { PokemonEntity } from "../../src/domain/entities/pokemon.entity.js";
+import { getBallUserField, type BallType } from "../../src/domain/items/ballTypes.js";
 
 export class InMemoryUserDataSource implements UserDataSource {
   public users = new Map<number, UserEntity>();
@@ -65,6 +66,16 @@ export class InMemoryUserDataSource implements UserDataSource {
     });
     this.users.set(existing.id, updated);
     return updated;
+  }
+
+  public async decrementBall(user: UserEntity, ballType: BallType): Promise<UserEntity> {
+    const existing = await this.findUserByTelegramId(user.telegramId!);
+    if (!existing || existing.id === null) {
+      throw new Error("User not found");
+    }
+    const field = getBallUserField(ballType);
+    const next = Math.max(0, existing[field] - 1);
+    return this.updateUser(existing, { [field]: next });
   }
 
   public async getLeaderboard(limit: number = 10): Promise<UserEntity[]> {

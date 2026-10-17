@@ -212,10 +212,10 @@ export async function generatePokemonConversation(
       return;
     }
 
-    // Deduct ball from inventory
+    // Deduct ball from inventory atomically (mirror locally so the keyboard renders fresh counts).
     const field = getBallUserField(ballType);
     user[field] -= 1;
-    await conv.external(() => deps.userDataSource.updateUser(user, { [field]: user[field] }));
+    await conv.external(() => deps.userDataSource.decrementBall(user, ballType));
 
     const attempt = rollCatchAttempt(captureRate, ballType);
     if (attempt.caught) {

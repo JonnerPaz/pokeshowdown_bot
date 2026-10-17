@@ -309,6 +309,49 @@ describe("Group Spawns & Encounters Integration", () => {
     ).toBe(true);
   });
 
+  it("rate-limits rapid group catch attempts from the same trainer", async () => {
+    const service = new GroupEncounterService({
+      spawnMessageMin: 1,
+      spawnMessageMax: 1,
+      spawnCooldownMs: 0,
+      fleeChance: 0,
+    });
+    const botCtx = await createTestBot({ groupEncounterService: service });
+
+    const userId = 4242;
+    botCtx.userDataSource.seedUser(
+      new UserEntity({
+        id: 42,
+        telegramId: BigInt(userId),
+        username: "spam_thrower",
+        createdAt: new Date(),
+        updatedAt: new Date(),
+        pokemons: [createMockPokemon("eevee", "normal")],
+        masterballs: 3,
+      }),
+    );
+
+    const groupChatId = -1004321;
+    const encounter = await service.spawnGroupPokemon(botCtx.mainBot.bot.api, groupChatId, {
+      pokeApi: botCtx.pokeApi,
+    });
+
+    await botCtx.dispatchCallback(`gcatch:${encounter.id}:masterball`, {
+      fromId: userId,
+      chatId: groupChatId,
+    });
+    await botCtx.dispatchCallback(`gcatch:${encounter.id}:masterball`, {
+      fromId: userId,
+      chatId: groupChatId,
+    });
+
+    const user = await botCtx.userDataSource.findUserByTelegramId(userId);
+    expect(user?.masterballs).toBe(2);
+    expect(botCtx.client.getAnsweredCallbacks().some((cb) => cb.text?.includes("Slow down"))).toBe(
+      true,
+    );
+  });
+
   it("spawns a group encounter when /generate_pokemon is used in a group", async () => {
     const botCtx = await createTestBot();
     const userId = 5001;
