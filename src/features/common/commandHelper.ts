@@ -15,7 +15,6 @@ export function registerFeatureCommand<T extends AppContext>(
   );
   return group
     .command(command, description, handler)
-    .addToScope({ type: "all_group_chats" })
     .localize(LanguageCodes.Spanish, commandSpa, descriptionSpa);
 }
 

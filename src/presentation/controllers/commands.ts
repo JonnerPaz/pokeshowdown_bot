@@ -1,4 +1,5 @@
 import { LanguageCodes } from "@grammyjs/commands";
+import type { LanguageCode } from "grammy/types";
 
 export const commands = {
   START: {
@@ -195,6 +196,32 @@ export function getAllCommands(language: Languages = "en") {
       description: command[language].description,
     };
   });
+}
+
+export interface CommandRegistration {
+  scope: { type: "default" | "all_group_chats" };
+  language_code?: LanguageCode;
+  commands: Array<{ command: string; description: string }>;
+}
+
+/**
+ * Builds the full list of `setMyCommands` payloads: every supported scope
+ * (default + group chats) for every supported language.
+ */
+export function getCommandRegistrations(): CommandRegistration[] {
+  const scopes: CommandRegistration["scope"][] = [{ type: "default" }, { type: "all_group_chats" }];
+  const languages: Array<{ key: Languages; language_code?: LanguageCode }> = [
+    { key: LanguageCodes.English },
+    { key: LanguageCodes.Spanish, language_code: LanguageCodes.Spanish },
+  ];
+
+  return scopes.flatMap((scope) =>
+    languages.map((language) => ({
+      scope,
+      ...(language.language_code ? { language_code: language.language_code } : {}),
+      commands: getAllCommands(language.key),
+    })),
+  );
 }
 
 export default commands;
