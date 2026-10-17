@@ -17,11 +17,10 @@ export function calculateWinRate(wins: number, losses: number): number {
 }
 
 export function getBuddyPokemon(user: UserEntity): PokemonEntity | null {
-  if (user.buddyPokemonId !== null && user.buddyPokemonId !== undefined) {
-    const found = user.pokemons.find((p) => p.id === user.buddyPokemonId);
-    if (found) return found;
+  if (user.buddyPokemonId === null || user.buddyPokemonId === undefined) {
+    return null;
   }
-  return user.pokemons[0] ?? null;
+  return user.pokemons.find((p) => p.id === user.buddyPokemonId) ?? null;
 }
 
 export function formatProfileCard(user: UserEntity): { text: string; spriteUrl?: string } {

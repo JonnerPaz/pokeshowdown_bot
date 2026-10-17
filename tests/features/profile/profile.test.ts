@@ -86,6 +86,27 @@ describe("Profile & Leaderboard Service Unit Tests", () => {
     expect(board).toContain("Your Position:* #2 (@gary)");
   });
 
+  it("reports no buddy when none is assigned", () => {
+    const user = new UserEntity({
+      id: 1,
+      telegramId: 100,
+      username: "ash",
+      createdAt: new Date(),
+      updatedAt: new Date(),
+      pokemons: [createMockPokemon("pikachu", "electric", { id: 1 })],
+      wins: 1,
+      losses: 0,
+    });
+
+    const card = formatProfileCard(user);
+    expect(card.text).toContain("_No buddy Pokémon assigned._");
+    expect(card.spriteUrl).toBeUndefined();
+
+    const board = formatLeaderboard([user], 100);
+    expect(board).toContain("🥇 *@ash* — 1W / 0L (100% WR)");
+    expect(board).not.toContain("pikachu");
+  });
+
   it("matches buddy pokemon by name or nickname", () => {
     const p1 = createMockPokemon("pikachu", "electric", { id: 1, nickname: "Sparky" });
     const p2 = createMockPokemon("snorlax", "normal", { id: 2 });
