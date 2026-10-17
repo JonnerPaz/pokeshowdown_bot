@@ -31,6 +31,8 @@ export interface GroupEncounter {
   pokemon: PokemonEntity;
   captureRate: number;
   isResolved: boolean;
+  /** Set synchronously while an attempt is in flight to serialize concurrent throws. */
+  isBusy: boolean;
   expiresAt: number;
 }
 
@@ -164,6 +166,7 @@ export class GroupEncounterService {
       pokemon,
       captureRate,
       isResolved: false,
+      isBusy: false,
       expiresAt: Date.now() + this.encounterTimeoutMs,
     };
 
@@ -194,18 +197,19 @@ export class GroupEncounterService {
   }
 
   /**
-   * Handles a multiplayer group catch attempt using a double-checked mutex lock pattern.
+   * Handles a multiplayer group catch attempt.
    *
-   * Concurrency Safety (Mutex):
+   * Concurrency Safety (Synchronous Reservation Mutex):
    * When multiple group members tap catch buttons at the same millisecond, Node.js pauses
-   * during asynchronous database I/O (user lookup, party size, inventory checks). To prevent race
-   * conditions where multiple trainers deduct balls and claim the same single Pokémon:
-   * 1. Check 1 (Fast-fail): Instant check if the encounter is resolved before running DB queries.
-   * 2. Check 2 (Mutex Guard): A second check immediately before ball deduction and capture roll.
-   *    If another concurrent attempt succeeded or caused the Pokémon to flee while this user's DB
-   *    queries were in flight, this guard aborts without deducting any items from the user's bag.
-   * 3. Atomic State Resolution: Setting `encounter.isResolved = true` and removing from active map
-   *    is executed synchronously on the event loop, immediately locking out all queued attempts.
+   * during asynchronous database I/O (user lookup, party size, inventory checks). To prevent
+   * race conditions where multiple trainers deduct balls and claim the same single Pokémon:
+   * 1. Fast-fail: instant check whether the encounter is already resolved.
+   * 2. Reservation: `encounter.isBusy` is claimed **synchronously**, before any `await`, so a
+   *    second tap observes the lock and aborts immediately (no overlapping critical section).
+   * 3. Re-check: after the awaits, `isResolved` is re-checked in case the encounter was caught,
+   *    spooked, or timed out while this attempt's lookups were in flight.
+   * 4. Resolution/release: catch/flee set `isResolved` and remove the encounter from the active
+   *    pool synchronously; a harmless "broke free" releases the reservation so others can retry.
    */
   public async handleGroupCatchAttempt(
     ctx: AppContext,
@@ -228,143 +232,150 @@ export class GroupEncounterService {
     const userId = ctx.from?.id;
     if (!userId) return;
 
-    const user = await deps.userDataSource.findUserByTelegramId(userId);
-    if (!user) {
+    // Synchronous reservation: claim the encounter before the first `await` so that
+    // concurrent taps can never both enter the critical section.
+    if (encounter.isBusy) {
       await ctx.answerCallbackQuery({
-        text: "You must register first with /register to catch Pokémon!",
+        text: "Someone is already throwing a Pokéball — try again in a moment!",
         show_alert: true,
       });
       return;
     }
+    encounter.isBusy = true;
 
-    const doesExist = await deps.pokemonDataSource.findUserPokemonByNameAndVariant(
-      user.id!,
-      encounter.pokemon.name,
-      encounter.pokemon.isShiny,
-    );
-
-    if (!doesExist && user.pokemons.length >= MAX_PKMN_PARTY) {
-      await ctx.answerCallbackQuery({
-        text: "Your Pokémon party is full! (Max 6)",
-        show_alert: true,
-      });
-      return;
-    }
-
-    const ballConfig = BALL_CONFIGS[ballType];
-    const count = getUserBallCount(user, ballType);
-    if (count <= 0) {
-      await ctx.answerCallbackQuery({
-        text: `You don't have any ${ballConfig.name}s left! Check /bag or /daily.`,
-        show_alert: true,
-      });
-      return;
-    }
-
-    // =========================================================================
-    // MUTEX / CRITICAL SECTION GUARD (Double-Checked State Pattern)
-    // =========================================================================
-    // Why this second check is required:
-    // Node.js is single-threaded but asynchronous. While this user's database
-    // lookups above (findUserByTelegramId, party capacity, inventory check) were
-    // awaiting I/O, other users' callback queries were processed concurrently.
-    //
-    // If another trainer caught or spooked this Pokémon during that async window,
-    // `encounter.isResolved` was set to `true`. Checking it here acts as a mutex
-    // barrier:
-    // 1. It protects the trainer's inventory: no ball is deducted.
-    // 2. It prevents double-captures of the same wild Pokémon instance.
-    // =========================================================================
-    if (encounter.isResolved) {
-      await ctx.answerCallbackQuery({
-        text: "Too late! Someone else just caught or scared it away!",
-        show_alert: true,
-      });
-      return;
-    }
-
-    // Deduct ball from inventory
-    const field = getBallUserField(ballType);
-    user[field] -= 1;
-    await deps.userDataSource.updateUser(user, { [field]: user[field] });
-
-    const attempt = rollCatchAttempt(encounter.captureRate, ballType);
-
-    if (attempt.caught) {
-      // Synchronous atomic lock: instantly marks the encounter resolved and removes
-      // it from the active pool before any subsequent async database updates.
-      encounter.isResolved = true;
-      this.clearTimer(encounterId);
-      this.activeEncounters.delete(encounterId);
-
-      if (doesExist) {
-        await deps.pokemonDataSource.updatePokemon(doesExist, {
-          timesCaught: doesExist.timesCaught + 1,
+    try {
+      const user = await deps.userDataSource.findUserByTelegramId(userId);
+      if (!user) {
+        await ctx.answerCallbackQuery({
+          text: "You must register first with /register to catch Pokémon!",
+          show_alert: true,
         });
-      } else {
-        await deps.pokemonDataSource.createPokemon(encounter.pokemon, user);
+        return;
       }
 
-      await ctx.answerCallbackQuery({
-        text: `🎉 Gotcha! You caught ${encounter.pokemon.name}!`,
-      });
+      const doesExist = await deps.pokemonDataSource.findUserPokemonByNameAndVariant(
+        user.id!,
+        encounter.pokemon.name,
+        encounter.pokemon.isShiny,
+      );
 
-      const username = escapeMarkdown(user.username);
-      const pokemonName = escapeMarkdown(encounter.pokemon.name);
-      const shinyStr = encounter.pokemon.isShiny ? " ✨" : "";
-      const victoryText = `🎉 *Gotcha!* @${username} caught the wild *${pokemonName}*${shinyStr} using a ${ballConfig.name}!`;
-
-      await ctx.api
-        .editMessageCaption(encounter.chatId, encounter.messageId, {
-          caption: victoryText,
-          parse_mode: "Markdown",
-        })
-        .catch(async () => {
-          await ctx.api
-            .editMessageText(encounter.chatId, encounter.messageId, victoryText, {
-              parse_mode: "Markdown",
-            })
-            .catch(() => {});
+      if (!doesExist && user.pokemons.length >= MAX_PKMN_PARTY) {
+        await ctx.answerCallbackQuery({
+          text: "Your Pokémon party is full! (Max 6)",
+          show_alert: true,
         });
-      return;
-    }
+        return;
+      }
 
-    // Did not catch - check if wild Pokémon flees
-    const fled = Math.random() < this.fleeChance;
-    if (fled) {
-      // Synchronous atomic lock: marks encounter resolved upon fleeing so no further attempts can catch it
-      encounter.isResolved = true;
-      this.clearTimer(encounterId);
-      this.activeEncounters.delete(encounterId);
-
-      await ctx.answerCallbackQuery({
-        text: "💥 It broke free and fled into the wild! 💨",
-        show_alert: true,
-      });
-
-      const username = escapeMarkdown(user.username);
-      const pokemonName = escapeMarkdown(encounter.pokemon.name);
-      const fledText = `💨 *Oh no!* The wild *${pokemonName}* broke free from @${username}'s throw and fled into the wild!`;
-
-      await ctx.api
-        .editMessageCaption(encounter.chatId, encounter.messageId, {
-          caption: fledText,
-          parse_mode: "Markdown",
-        })
-        .catch(async () => {
-          await ctx.api
-            .editMessageText(encounter.chatId, encounter.messageId, fledText, {
-              parse_mode: "Markdown",
-            })
-            .catch(() => {});
+      const ballConfig = BALL_CONFIGS[ballType];
+      const count = getUserBallCount(user, ballType);
+      if (count <= 0) {
+        await ctx.answerCallbackQuery({
+          text: `You don't have any ${ballConfig.name}s left! Check /bag or /daily.`,
+          show_alert: true,
         });
-      return;
-    }
+        return;
+      }
 
-    // Broke free, but stayed!
-    await ctx.answerCallbackQuery({
-      text: `💥 Oh no! ${encounter.pokemon.name} broke free from the ${ballConfig.name}! Throw again!`,
-    });
+      // Re-check after the awaits above: another attempt or the despawn timer may
+      // have resolved this encounter while our database lookups were in flight.
+      if (encounter.isResolved) {
+        await ctx.answerCallbackQuery({
+          text: "Too late! Someone else just caught or scared it away!",
+          show_alert: true,
+        });
+        return;
+      }
+
+      // Deduct ball from inventory
+      const field = getBallUserField(ballType);
+      user[field] -= 1;
+      await deps.userDataSource.updateUser(user, { [field]: user[field] });
+
+      const attempt = rollCatchAttempt(encounter.captureRate, ballType);
+
+      if (attempt.caught) {
+        // Synchronous atomic lock: instantly marks the encounter resolved and removes
+        // it from the active pool before any subsequent async database updates.
+        encounter.isResolved = true;
+        this.clearTimer(encounterId);
+        this.activeEncounters.delete(encounterId);
+
+        if (doesExist) {
+          await deps.pokemonDataSource.updatePokemon(doesExist, {
+            timesCaught: doesExist.timesCaught + 1,
+          });
+        } else {
+          await deps.pokemonDataSource.createPokemon(encounter.pokemon, user);
+        }
+
+        await ctx.answerCallbackQuery({
+          text: `🎉 Gotcha! You caught ${encounter.pokemon.name}!`,
+        });
+
+        const username = escapeMarkdown(user.username);
+        const pokemonName = escapeMarkdown(encounter.pokemon.name);
+        const shinyStr = encounter.pokemon.isShiny ? " ✨" : "";
+        const victoryText = `🎉 *Gotcha!* @${username} caught the wild *${pokemonName}*${shinyStr} using a ${ballConfig.name}!`;
+
+        await ctx.api
+          .editMessageCaption(encounter.chatId, encounter.messageId, {
+            caption: victoryText,
+            parse_mode: "Markdown",
+          })
+          .catch(async () => {
+            await ctx.api
+              .editMessageText(encounter.chatId, encounter.messageId, victoryText, {
+                parse_mode: "Markdown",
+              })
+              .catch(() => {});
+          });
+        return;
+      }
+
+      // Did not catch - check if wild Pokémon flees
+      const fled = Math.random() < this.fleeChance;
+      if (fled) {
+        // Synchronous atomic lock: marks encounter resolved upon fleeing so no further attempts can catch it
+        encounter.isResolved = true;
+        this.clearTimer(encounterId);
+        this.activeEncounters.delete(encounterId);
+
+        await ctx.answerCallbackQuery({
+          text: "💥 It broke free and fled into the wild! 💨",
+          show_alert: true,
+        });
+
+        const username = escapeMarkdown(user.username);
+        const pokemonName = escapeMarkdown(encounter.pokemon.name);
+        const fledText = `💨 *Oh no!* The wild *${pokemonName}* broke free from @${username}'s throw and fled into the wild!`;
+
+        await ctx.api
+          .editMessageCaption(encounter.chatId, encounter.messageId, {
+            caption: fledText,
+            parse_mode: "Markdown",
+          })
+          .catch(async () => {
+            await ctx.api
+              .editMessageText(encounter.chatId, encounter.messageId, fledText, {
+                parse_mode: "Markdown",
+              })
+              .catch(() => {});
+          });
+        return;
+      }
+
+      // Broke free, but stayed!
+      await ctx.answerCallbackQuery({
+        text: `💥 Oh no! ${encounter.pokemon.name} broke free from the ${ballConfig.name}! Throw again!`,
+      });
+    } finally {
+      // Only release the reservation if the encounter is still live; a resolved
+      // encounter stays locked so no further throws can be accepted.
+      if (!encounter.isResolved) {
+        encounter.isBusy = false;
+      }
+    }
   }
 
   private clearTimer(encounterId: string): void {
