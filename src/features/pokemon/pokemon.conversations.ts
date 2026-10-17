@@ -189,11 +189,6 @@ export async function generatePokemonConversation(
       return;
     }
 
-    // Deduct ball from inventory
-    const field = getBallUserField(ballType);
-    user[field] -= 1;
-    await conv.external(() => deps.userDataSource.updateUser(user, { [field]: user[field] }));
-
     const doesPokemonExist = await conv.external(() =>
       deps.pokemonDataSource.findUserPokemonByNameAndVariant(
         user.id!,
@@ -202,13 +197,18 @@ export async function generatePokemonConversation(
       ),
     );
 
-    const { pokemons } = user;
-    if (!doesPokemonExist && pokemons.length >= MAX_PKMN_PARTY) {
+    // Check party capacity before spending a ball so a full party never wastes inventory.
+    if (!doesPokemonExist && user.pokemons.length >= MAX_PKMN_PARTY) {
       await ctx.api.deleteMessage(choice.chat!.id, photoMsg.message_id).catch(() => {});
       await ctx.api.deleteMessage(choice.chat!.id, promptMsg.message_id).catch(() => {});
       await ctx.reply(`Your pokemon bag is full! You can't catch ${currentPokemon.name}`);
       return;
     }
+
+    // Deduct ball from inventory
+    const field = getBallUserField(ballType);
+    user[field] -= 1;
+    await conv.external(() => deps.userDataSource.updateUser(user, { [field]: user[field] }));
 
     const attempt = rollCatchAttempt(captureRate, ballType);
     if (attempt.caught) {

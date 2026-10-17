@@ -217,6 +217,39 @@ describe("Pokemon Operations Integration (/pokemons, /generate_pokemon)", () => 
     expect(user?.pokemons.length).toBe(1);
   });
 
+  it("does not consume a ball when the party is full and the species is new", async () => {
+    const { dispatchCommand, dispatchCallback, userDataSource } = await createTestBot();
+
+    const userId = 810;
+    const party = Array.from({ length: 6 }, (_, i) =>
+      createMockPokemon(`party_${i}`, "normal", { id: 200 + i }),
+    );
+    userDataSource.seedUser(
+      new UserEntity({
+        id: 30,
+        telegramId: BigInt(userId),
+        username: "full_party_trainer",
+        createdAt: new Date(),
+        updatedAt: new Date(),
+        pokemons: party,
+        pokeballs: 5,
+        greatballs: 0,
+        ultraballs: 0,
+        masterballs: 0,
+      }),
+    );
+
+    const spawnPromise = dispatchCommand("/generate_pokemon", { fromId: userId });
+    await new Promise((resolve) => setTimeout(resolve, 50));
+
+    await dispatchCallback("catch:pokeball", { fromId: userId });
+    await spawnPromise;
+
+    const user = await userDataSource.findUserByTelegramId(userId);
+    expect(user?.pokeballs).toBe(5);
+    expect(user?.pokemons.length).toBe(6);
+  });
+
   it("allows trainer to run away from wild encounter", async () => {
     const { dispatchCommand, dispatchCallback, client, userDataSource } = await createTestBot();
 
