@@ -15,6 +15,7 @@ import {
   SHINY_CAP,
 } from "../../domain/data/constants.js";
 import { escapeMarkdown } from "../common/stringHelper.js";
+import { isGroupChat } from "../common/chatHelper.js";
 import {
   buildPokemonSummaryCaption,
   evolvePokemonOperation,
@@ -495,6 +496,13 @@ export async function tradeConversation(
   ctx: AppContext,
   deps: Pick<PokemonConversationDeps, "userDataSource" | "pokemonDataSource">,
 ) {
+  if (!isGroupChat(ctx)) {
+    await ctx.reply(
+      "🔄 Trades need a group chat! Invite a friend and send /trade from a group to swap Pokemon.",
+    );
+    return;
+  }
+
   const tradeId = randomUUID();
 
   const [userReq, userReqPkmn] = await prepareUserTrade(

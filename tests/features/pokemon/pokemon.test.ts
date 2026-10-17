@@ -166,6 +166,26 @@ describe("Pokemon Operations Integration (/pokemons, /generate_pokemon)", () => 
     expect(client.getSentMessages().some((m) => m.text?.includes("not registered"))).toBe(true);
   });
 
+  it("rejects /trade outside of a group chat", async () => {
+    const { dispatchCommand, client, userDataSource } = await createTestBot();
+
+    const userId = 817;
+    userDataSource.seedUser(
+      new UserEntity({
+        id: 36,
+        telegramId: BigInt(userId),
+        username: "lonely_trader",
+        createdAt: new Date(),
+        updatedAt: new Date(),
+        pokemons: [createMockPokemon("pikachu", "electric", { id: 404 })],
+      }),
+    );
+
+    await dispatchCommand("/trade", { fromId: userId });
+
+    expect(client.getSentMessages().some((m) => m.text?.includes("group chat"))).toBe(true);
+  });
+
   it("completes wild encounter and catch flow successfully", async () => {
     const { dispatchCommand, dispatchCallback, client, userDataSource } = await createTestBot();
 
