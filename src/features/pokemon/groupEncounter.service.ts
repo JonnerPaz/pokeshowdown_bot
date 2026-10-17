@@ -13,11 +13,13 @@ import {
 } from "../../domain/items/ballTypes.js";
 import {
   GROUP_CATCH_FLEE_CHANCE,
+  GROUP_CHAT_ACTIVITY_TTL_MS,
   GROUP_ENCOUNTER_TIMEOUT_MS,
   GROUP_SPAWN_COOLDOWN_MS,
   GROUP_SPAWN_MESSAGE_MAX,
   GROUP_SPAWN_MESSAGE_MIN,
   MAX_PKMN_PARTY,
+  MEMORY_PRUNE_INTERVAL,
 } from "../../domain/data/constants.js";
 import { escapeMarkdown } from "../common/stringHelper.js";
 import { getPokemonFrontSprite } from "./pokemon.service.js";
@@ -47,6 +49,7 @@ interface ChatActivity {
   count: number;
   threshold: number;
   lastSpawnTime: number;
+  lastSeenAt: number;
   lastSenderId?: string | undefined;
   lastSenderTime?: number | undefined;
 }
@@ -61,6 +64,12 @@ export class GroupEncounterService {
   private readonly chatActivity = new Map<string, ChatActivity>();
   private readonly activeEncounters = new Map<string, GroupEncounter>();
   private readonly encounterTimers = new Map<string, NodeJS.Timeout>();
+  private messageCount = 0;
+
+  /** Number of chats currently tracked. Exposed for diagnostics/tests. */
+  public get trackedChatCount(): number {
+    return this.chatActivity.size;
+  }
 
   constructor(options: GroupEncounterServiceOptions = {}) {
     this.spawnMessageMin = options.spawnMessageMin ?? GROUP_SPAWN_MESSAGE_MIN;
@@ -76,6 +85,18 @@ export class GroupEncounterService {
     );
   }
 
+  /**
+   * Drops chats that have been silent for longer than the activity TTL so the
+   * activity map does not retain every group the bot has ever seen.
+   */
+  private pruneChatActivity(now: number): void {
+    for (const [key, activity] of this.chatActivity) {
+      if (now - activity.lastSeenAt > GROUP_CHAT_ACTIVITY_TTL_MS) {
+        this.chatActivity.delete(key);
+      }
+    }
+  }
+
   public trackMessage(chatId: number | bigint, senderId?: number | bigint): boolean {
     const key = String(chatId);
     let activity = this.chatActivity.get(key);
@@ -86,8 +107,17 @@ export class GroupEncounterService {
         count: 0,
         threshold: this.randomThreshold(),
         lastSpawnTime: 0,
+        lastSeenAt: now,
       };
       this.chatActivity.set(key, activity);
+    }
+
+    activity.lastSeenAt = now;
+
+    this.messageCount += 1;
+    if (this.messageCount >= MEMORY_PRUNE_INTERVAL) {
+      this.messageCount = 0;
+      this.pruneChatActivity(now);
     }
 
     // Anti-spam guard: rapid consecutive messages from the same sender within 2s don't increment

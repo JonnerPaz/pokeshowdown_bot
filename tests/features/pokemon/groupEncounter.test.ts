@@ -1,10 +1,33 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import { createMockPokemon, createTestBot } from "../../harness/testHarness.js";
 import { UserEntity } from "../../../src/domain/entities/users.entity.js";
+import { MEMORY_PRUNE_INTERVAL } from "../../../src/domain/data/constants.js";
 import { GroupEncounterService } from "../../../src/features/pokemon/groupEncounter.service.js";
 import { createGroupCatchKeyboard } from "../../../src/features/pokemon/pokemon.keyboards.js";
 
 describe("GroupEncounterService Unit Tests", () => {
+  it("prunes chats that have been silent past the activity TTL", () => {
+    const service = new GroupEncounterService({
+      spawnMessageMin: 1000,
+      spawnMessageMax: 1000,
+    });
+    const nowSpy = vi.spyOn(Date, "now").mockReturnValue(1_000_000);
+
+    for (let chat = 0; chat < MEMORY_PRUNE_INTERVAL; chat += 1) {
+      service.trackMessage(-1000 - chat, 1);
+    }
+    expect(service.trackedChatCount).toBe(MEMORY_PRUNE_INTERVAL);
+
+    // Two days later every previously tracked chat has expired.
+    nowSpy.mockReturnValue(1_000_000 + 48 * 60 * 60 * 1000);
+    for (let chat = 0; chat < MEMORY_PRUNE_INTERVAL; chat += 1) {
+      service.trackMessage(-5000 - chat, 1);
+    }
+
+    expect(service.trackedChatCount).toBe(MEMORY_PRUNE_INTERVAL);
+    nowSpy.mockRestore();
+  });
+
   it("tracks message volume and triggers spawn at threshold", () => {
     const service = new GroupEncounterService({
       spawnMessageMin: 3,
