@@ -7,6 +7,7 @@ import type { BallType } from "../../domain/items/ballTypes.js";
 import { GroupEncounterService } from "./groupEncounter.service.js";
 import {
   pokemonsConversation,
+  pokemonSummaryConversation,
   generatePokemonConversation,
   evolvePokemonConversation,
   shinyPokemonConversation,
@@ -77,6 +78,12 @@ export function createPokemonFeature(deps: PokemonConversationDeps): Composer<Ap
   );
   feature.use(
     createConversation<AppContext, AppContext>(
+      (conv, ctx) => pokemonSummaryConversation(conv, ctx, effectiveDeps),
+      "pokemonSummary",
+    ),
+  );
+  feature.use(
+    createConversation<AppContext, AppContext>(
       (conv, ctx) => generatePokemonConversation(conv, ctx, effectiveDeps),
       "generatePokemon",
     ),
@@ -108,6 +115,7 @@ export function createPokemonFeature(deps: PokemonConversationDeps): Composer<Ap
 
   // Mount commands
   registerFeatureConversationCommand(commandGroup, "MY_POKEMONS", "pokemons");
+  registerFeatureConversationCommand(commandGroup, "POKEMON_SUMMARY", "pokemonSummary");
   registerFeatureConversationCommand(commandGroup, "POKEMON_GENERATE", "generatePokemon");
   registerFeatureConversationCommand(commandGroup, "EVOLVE", "evolvePokemon");
   registerFeatureConversationCommand(commandGroup, "SHINY", "shinyPokemon");

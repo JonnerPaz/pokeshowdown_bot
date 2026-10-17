@@ -1,10 +1,54 @@
 import type { PokemonDataSource } from "../../domain/datasource/pokemon.datasource.js";
 import type { PokemonEntity } from "../../domain/entities/pokemon.entity.js";
 import { EVOLVE_CAP } from "../../domain/data/constants.js";
-import type { PokeApiService } from "../../presentation/services/pokeapi.service.js";
+import type {
+  BasePokemonStats,
+  PokeApiService,
+} from "../../presentation/services/pokeapi.service.js";
+import { formatTypeBadges, renderStat } from "../common/pokemonFormat.js";
+import { escapeMarkdown } from "../common/stringHelper.js";
 
 export function getPokemonFrontSprite(pokemon: PokemonEntity): string {
   return pokemon.isShiny ? pokemon.sprites.frontShiny : pokemon.sprites.frontDefault;
+}
+
+/** Battle level derived from how many times the pokemon has been caught. */
+export function getPokemonLevel(timesCaught: number): number {
+  return Math.min(100, 20 + timesCaught * 5);
+}
+
+/** Builds the Markdown caption used by `/pokemonsummary`. */
+export function buildPokemonSummaryCaption(
+  pokemon: PokemonEntity,
+  baseStats: BasePokemonStats,
+): string {
+  const total =
+    baseStats.hp +
+    baseStats.attack +
+    baseStats.defense +
+    baseStats.specialAttack +
+    baseStats.specialDefense +
+    baseStats.speed;
+
+  return [
+    "📊 *POKÉMON SUMMARY*",
+    `*Name:* ${escapeMarkdown(pokemon.name.toUpperCase())}`,
+    `*Nickname:* ${pokemon.nickname ? escapeMarkdown(pokemon.nickname) : "None"}`,
+    `*Shiny:* ${pokemon.isShiny ? "✨ Yes" : "No"}`,
+    `*Type:* ${formatTypeBadges(pokemon.types)}`,
+    `*Ability:* ${escapeMarkdown(pokemon.ability)}`,
+    `*Caught:* ${pokemon.timesCaught}x`,
+    `*Level:* ${getPokemonLevel(pokemon.timesCaught)}`,
+    "",
+    "📈 *Base Stats:*",
+    `\`${renderStat("HP", baseStats.hp)}\``,
+    `\`${renderStat("Attack", baseStats.attack)}\``,
+    `\`${renderStat("Defense", baseStats.defense)}\``,
+    `\`${renderStat("Sp.Atk", baseStats.specialAttack)}\``,
+    `\`${renderStat("Sp.Def", baseStats.specialDefense)}\``,
+    `\`${renderStat("Speed", baseStats.speed)}\``,
+    `*Total:* ${total}`,
+  ].join("\n");
 }
 
 export async function evolvePokemonOperation(

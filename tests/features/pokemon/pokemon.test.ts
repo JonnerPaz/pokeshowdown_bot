@@ -79,6 +79,93 @@ describe("Pokemon Operations Integration (/pokemons, /generate_pokemon)", () => 
     expect(sent.some((m) => m.text?.includes("Your pokemons are"))).toBe(true);
   });
 
+  it("renders a detailed summary for a pokemon matched by name", async () => {
+    const { dispatchCommand, client, userDataSource } = await createTestBot();
+
+    const userId = 813;
+    const pikachu = createMockPokemon("pikachu", "electric", { id: 401, timesCaught: 3 });
+    userDataSource.seedUser(
+      new UserEntity({
+        id: 33,
+        telegramId: BigInt(userId),
+        username: "summary_ash",
+        createdAt: new Date(),
+        updatedAt: new Date(),
+        pokemons: [pikachu],
+      }),
+    );
+
+    await dispatchCommand("/pokemonsummary pikachu", { fromId: userId });
+
+    const summary = client.getSentMessages().find((m) => m.text?.includes("POKÉMON SUMMARY"));
+    expect(summary).toBeDefined();
+    expect(summary?.text).toContain("PIKACHU");
+    expect(summary?.text).toContain("*Caught:* 3x");
+    expect(summary?.text).toContain("*Level:* 35");
+    expect(summary?.text).toContain("⚡ Electric");
+  });
+
+  it("prompts for a name and matches by nickname when no argument is given", async () => {
+    const { dispatchCommand, dispatchText, client, userDataSource } = await createTestBot();
+
+    const userId = 814;
+    const eevee = createMockPokemon("eevee", "normal", { id: 402, nickname: "Fluffy" });
+    userDataSource.seedUser(
+      new UserEntity({
+        id: 34,
+        telegramId: BigInt(userId),
+        username: "nick_trainer",
+        createdAt: new Date(),
+        updatedAt: new Date(),
+        pokemons: [eevee],
+      }),
+    );
+
+    const summaryPromise = dispatchCommand("/pokemonsummary", { fromId: userId });
+    await new Promise((resolve) => setTimeout(resolve, 50));
+    expect(
+      client
+        .getSentMessages()
+        .some((m) => m.text?.includes("Which pokemon do you want a summary of")),
+    ).toBe(true);
+
+    await dispatchText("fluffy", { fromId: userId });
+    await summaryPromise;
+
+    const summary = client.getSentMessages().find((m) => m.text?.includes("POKÉMON SUMMARY"));
+    expect(summary?.text).toContain("*Nickname:* Fluffy");
+  });
+
+  it("reports when the requested pokemon is not owned", async () => {
+    const { dispatchCommand, client, userDataSource } = await createTestBot();
+
+    const userId = 815;
+    userDataSource.seedUser(
+      new UserEntity({
+        id: 35,
+        telegramId: BigInt(userId),
+        username: "small_bag",
+        createdAt: new Date(),
+        updatedAt: new Date(),
+        pokemons: [createMockPokemon("pikachu", "electric", { id: 403 })],
+      }),
+    );
+
+    await dispatchCommand("/pokemonsummary mewtwo", { fromId: userId });
+
+    expect(
+      client.getSentMessages().some((m) => m.text?.includes("don't have a pokemon named")),
+    ).toBe(true);
+  });
+
+  it("rejects /pokemonsummary for unregistered users", async () => {
+    const { dispatchCommand, client } = await createTestBot();
+
+    await dispatchCommand("/pokemonsummary", { fromId: 816 });
+
+    expect(client.getSentMessages().some((m) => m.text?.includes("not registered"))).toBe(true);
+  });
+
   it("completes wild encounter and catch flow successfully", async () => {
     const { dispatchCommand, dispatchCallback, client, userDataSource } = await createTestBot();
 

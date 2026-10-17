@@ -62,6 +62,16 @@ export const commands = {
       description: "obtener informacion de todos tus pokemons",
     },
   },
+  POKEMON_SUMMARY: {
+    [LanguageCodes.English]: {
+      command: "pokemonsummary",
+      description: "View detailed stats of one of your pokemons",
+    },
+    [LanguageCodes.Spanish]: {
+      command: "resumen_pokemon",
+      description: "Ver estadisticas detalladas de uno de tus pokemons",
+    },
+  },
   EVOLVE: {
     [LanguageCodes.English]: {
       command: "evolve",

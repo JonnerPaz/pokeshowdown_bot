@@ -15,7 +15,11 @@ import {
   SHINY_CAP,
 } from "../../domain/data/constants.js";
 import { escapeMarkdown } from "../common/stringHelper.js";
-import { evolvePokemonOperation, getPokemonFrontSprite } from "./pokemon.service.js";
+import {
+  buildPokemonSummaryCaption,
+  evolvePokemonOperation,
+  getPokemonFrontSprite,
+} from "./pokemon.service.js";
 import type { GroupEncounterService } from "./groupEncounter.service.js";
 import {
   createCatchKeyboard,
@@ -99,6 +103,66 @@ export async function pokemonsConversation(
   await ctx.reply("Your pokemons are:");
   await sendPokemonPhotos(ctx, pokemonPhotos);
   return;
+}
+
+export async function pokemonSummaryConversation(
+  conv: AppConversation,
+  ctx: AppContext,
+  deps: Pick<PokemonConversationDeps, "userDataSource" | "pokeApi">,
+) {
+  const user = await checkUserExists(ctx.from!.id, ctx, deps.userDataSource);
+  if (!user) return;
+
+  if (user.pokemons.length === 0) {
+    await ctx.reply("You don't have any pokemon yet! Catch one with /generate_pokemon.");
+    return;
+  }
+
+  let target = (ctx.message?.text ?? "").split(/\s+/).slice(1).join(" ").trim();
+
+  if (!target) {
+    const roster = user.pokemons
+      .map((el) => (el.nickname ? `${el.nickname} (${el.name})` : el.name))
+      .join(", ");
+    await ctx.reply(
+      `Which pokemon do you want a summary of? Send its name or nickname.\nYour pokemons: ${roster}`,
+    );
+
+    const answer = await conv
+      .waitFrom(ctx.from!.id, { maxMilliseconds: CONVERSATION_TIMEOUT_MS })
+      .andFor(":text");
+    target = answer.message?.text?.trim() ?? "";
+  }
+
+  if (!target) {
+    await ctx.reply("Pokemon summary cancelled.");
+    return;
+  }
+
+  const query = target.toLowerCase();
+  const pokemon = user.pokemons.find(
+    (el) => el.name.toLowerCase() === query || el.nickname?.toLowerCase() === query,
+  );
+
+  if (!pokemon) {
+    await ctx.reply(`You don't have a pokemon named "${escapeMarkdown(target)}".`);
+    return;
+  }
+
+  const baseStats = await conv.external(() => deps.pokeApi.getPokemonBaseStats(pokemon.name));
+  const caption = buildPokemonSummaryCaption(pokemon, baseStats);
+
+  try {
+    const sprite = getPokemonFrontSprite(pokemon);
+    if (sprite) {
+      await ctx.api.sendPhoto(ctx.chat!.id, sprite, { caption, parse_mode: "Markdown" });
+      return;
+    }
+  } catch {
+    // Fall back to a text-only summary if the photo cannot be delivered.
+  }
+
+  await ctx.reply(caption, { parse_mode: "Markdown" });
 }
 
 export async function generatePokemonConversation(

@@ -299,6 +299,7 @@ All commands are case sensitive and must start with `/`.
 | `/help`             | `/ayuda`           | Display command list and instructions            |
 | `/generate_pokemon` | `/generar_pokemon` | Spawn a wild Pokemon encounter                   |
 | `/pokemons`         | `/pokemons`        | View your Pokemon collection                     |
+| `/pokemonsummary`   | `/resumen_pokemon` | View detailed stats of one of your Pokemon       |
 | `/evolve`           | `/evolucionar`     | Evolve an owned Pokemon                          |
 | `/shiny`            | `/brillante`       | Make one of your pokemons shiny                  |
 | `/nickname`         | `/nickname`        | Add a custom nickname to your pokemon            |
