@@ -3,6 +3,14 @@ import { createTestBot, createMockPokemon } from "../../harness/testHarness.js";
 import { UserEntity } from "../../../src/domain/entities/users.entity.js";
 
 describe("Turn-Based Battle Integration (/battle)", () => {
+  it("rejects /battle outside of a group chat", async () => {
+    const { dispatchCommand, client } = await createTestBot();
+
+    await dispatchCommand("/battle", { fromId: 1007 });
+
+    expect(client.getSentMessages().some((m) => m.text?.includes("group chat"))).toBe(true);
+  });
+
   it("rejects /battle when initiator is not registered", async () => {
     const { dispatchCommand, client } = await createTestBot();
 

@@ -5,6 +5,7 @@ import { CONVERSATION_TIMEOUT_MS } from "../../domain/data/constants.js";
 import type { UserEntity } from "../../domain/entities/users.entity.js";
 import type { UserDataSource } from "../../domain/datasource/user.datasource.js";
 import type { AppContext, AppConversation } from "../../presentation/data/types.js";
+import { isGroupChat } from "../common/chatHelper.js";
 import { escapeMarkdown } from "../common/stringHelper.js";
 import type { BattleService } from "./battle.service.js";
 import {
@@ -24,6 +25,13 @@ export async function battleConversation(
   ctx: AppContext,
   deps: BattleConversationDeps,
 ) {
+  if (!isGroupChat(ctx)) {
+    await ctx.reply(
+      "⚔️ Battles need a group chat! Add me to a group so trainers can face each other.",
+    );
+    return;
+  }
+
   const challengerTelegramId = ctx.from?.id;
   if (!challengerTelegramId) return;
 
