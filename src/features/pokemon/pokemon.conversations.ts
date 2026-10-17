@@ -176,18 +176,23 @@ export async function generatePokemonConversation(
       continue;
     }
 
-    await choice.answerCallbackQuery();
-
     const canCatch = await conv.external(() => {
       if (!deps.rateLimiter.isAllowed(userId, "catch")) return false;
       deps.rateLimiter.hit(userId, "catch");
       return true;
     });
 
+    // Rate-limited: keep the encounter alive and let the trainer throw again shortly
+    // instead of aborting the conversation and stranding the wild Pokémon messages.
     if (!canCatch) {
-      await ctx.reply("Slow down! You're catching too many pokemon.");
-      return;
+      await choice.answerCallbackQuery({
+        text: "Slow down! You're throwing balls too quickly. Try again in a moment.",
+        show_alert: true,
+      });
+      continue;
     }
+
+    await choice.answerCallbackQuery();
 
     const doesPokemonExist = await conv.external(() =>
       deps.pokemonDataSource.findUserPokemonByNameAndVariant(

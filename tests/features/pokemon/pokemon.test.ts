@@ -1,4 +1,4 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import { createMockPokemon, createTestBot } from "../../harness/testHarness.js";
 import { UserEntity } from "../../../src/domain/entities/users.entity.js";
 
@@ -248,6 +248,55 @@ describe("Pokemon Operations Integration (/pokemons, /generate_pokemon)", () => 
     const user = await userDataSource.findUserByTelegramId(userId);
     expect(user?.pokeballs).toBe(5);
     expect(user?.pokemons.length).toBe(6);
+  });
+
+  it("keeps the encounter alive when a throw is rate-limited instead of stranding messages", async () => {
+    const { dispatchCommand, dispatchCallback, client, userDataSource, pokeApi } =
+      await createTestBot();
+
+    const userId = 811;
+    userDataSource.seedUser(
+      new UserEntity({
+        id: 31,
+        telegramId: BigInt(userId),
+        username: "eager_thrower",
+        createdAt: new Date(),
+        updatedAt: new Date(),
+        pokemons: [],
+        pokeballs: 10,
+        greatballs: 0,
+        ultraballs: 0,
+        masterballs: 0,
+      }),
+    );
+
+    // Force a low capture rate and a deterministic miss that does not flee.
+    vi.spyOn(pokeApi, "getPokemonCaptureRate").mockResolvedValue(1);
+    const randomSpy = vi.spyOn(Math, "random").mockReturnValue(0.999);
+
+    try {
+      const spawnPromise = dispatchCommand("/generate_pokemon", { fromId: userId });
+      await new Promise((resolve) => setTimeout(resolve, 50));
+
+      // First throw misses and the wild Pokémon stays.
+      await dispatchCallback("catch:pokeball", { fromId: userId });
+      // Second throw is blocked by the rate limiter but must NOT end the encounter.
+      await dispatchCallback("catch:pokeball", { fromId: userId });
+
+      // The conversation is still alive, so running away completes normally.
+      await dispatchCallback("catch:run", { fromId: userId });
+      await spawnPromise;
+
+      const user = await userDataSource.findUserByTelegramId(userId);
+      expect(user?.pokeballs).toBe(9);
+      expect(user?.pokemons.length).toBe(0);
+
+      const sent = client.getSentMessages();
+      expect(sent.some((m) => m.text?.includes("ran away safely"))).toBe(true);
+      expect(client.getAnsweredCallbacks().some((cb) => cb.text?.includes("Slow down"))).toBe(true);
+    } finally {
+      randomSpy.mockRestore();
+    }
   });
 
   it("allows trainer to run away from wild encounter", async () => {
