@@ -77,7 +77,7 @@ describe("BattleService", () => {
     expect(battlePokemon.name).toBe("Mr\\_Mime\\*");
   });
 
-  it("awards victory by incrementing timesCaught for the winning pokemon", async () => {
+  it("awards victory by incrementing wins and timesCaught for the winning pokemon", async () => {
     const mockPokemon = makePokemon({ id: 42, timesCaught: 5 });
     const mockUser = new UserEntity({
       id: 1,
@@ -94,7 +94,7 @@ describe("BattleService", () => {
     });
 
     const mockUserDataSource = {
-      findUserByTelegramId: vi.fn().mockResolvedValue(mockUser),
+      findUserByTelegramId: vi.fn((id: bigint) => Promise.resolve(id === 99999n ? mockUser : null)),
       updateUser: vi.fn().mockResolvedValue(mockUser),
     } as unknown as UserDataSource;
 
@@ -102,16 +102,19 @@ describe("BattleService", () => {
       updatePokemon: mockUpdatePokemon,
     } as unknown as PokemonDataSource;
 
-    const mockPokeApi = {} as unknown as PokeApiService;
-    const battleService = new BattleService(mockPokeApi, mockUserDataSource, mockPokemonDataSource);
+    const battleService = new BattleService(
+      {} as PokeApiService,
+      mockUserDataSource,
+      mockPokemonDataSource,
+    );
 
-    const result = await battleService.awardVictory(99999n, 42);
+    const outcome = await battleService.recordBattleOutcome(99999n, 88888n, 42);
 
     expect(mockUserDataSource.findUserByTelegramId).toHaveBeenCalledWith(99999n);
     expect(mockUserDataSource.updateUser).toHaveBeenCalledWith(mockUser, { wins: 1 });
     expect(mockUpdatePokemon).toHaveBeenCalledWith(mockPokemon, { timesCaught: 6 });
-    expect(result).toBeDefined();
-    expect(result?.timesCaught).toBe(6);
+    expect(outcome.upgradedPokemon?.timesCaught).toBe(6);
+    expect(outcome.loser).toBeNull();
   });
 
   it("records battle outcome with winner victory and loser defeat", async () => {
@@ -166,18 +169,20 @@ describe("BattleService", () => {
     expect(outcome.upgradedPokemon?.timesCaught).toBe(3);
   });
 
-  it("returns null when user or pokemon is not found during victory award", async () => {
+  it("returns empty results when users are not found while recording an outcome", async () => {
     const mockUserDataSource = {
       findUserByTelegramId: vi.fn().mockResolvedValue(null),
     } as unknown as UserDataSource;
 
-    const mockPokemonDataSource = {} as unknown as PokemonDataSource;
     const battleService = new BattleService(
       {} as PokeApiService,
       mockUserDataSource,
-      mockPokemonDataSource,
+      {} as unknown as PokemonDataSource,
     );
-    const result = await battleService.awardVictory(12345n, 99);
-    expect(result).toBeNull();
+
+    const outcome = await battleService.recordBattleOutcome(12345n, 54321n, 99);
+    expect(outcome.winner).toBeNull();
+    expect(outcome.loser).toBeNull();
+    expect(outcome.upgradedPokemon).toBeNull();
   });
 });

@@ -49,25 +49,6 @@ export class BattleService {
     };
   }
 
-  public async awardVictory(
-    winnerTelegramId: number | bigint,
-    pokemonId: number,
-  ): Promise<PokemonEntity | null> {
-    const user = await this.userDataSource.findUserByTelegramId(winnerTelegramId);
-    if (!user) return null;
-
-    await this.userDataSource.updateUser(user, {
-      wins: user.wins + 1,
-    });
-
-    const winningPokemon = user.pokemons.find((p) => p.id === pokemonId);
-    if (!winningPokemon) return null;
-
-    return await this.pokemonDataSource.updatePokemon(winningPokemon, {
-      timesCaught: winningPokemon.timesCaught + 1,
-    });
-  }
-
   public async recordBattleOutcome(
     winnerTelegramId: number | bigint,
     loserTelegramId: number | bigint,
