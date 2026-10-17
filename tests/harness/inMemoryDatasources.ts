@@ -152,7 +152,10 @@ export class InMemoryPokemonDataSource implements PokemonDataSource {
     pokemon: PokemonEntity,
     data: Partial<PokemonEntity>,
   ): Promise<PokemonEntity> {
-    const id = pokemon.id ?? 1;
+    if (pokemon.id === null) {
+      throw new Error("Pokemon ID is required to update a pokemon");
+    }
+    const id = pokemon.id;
     const updated = PokemonEntity.fromObject({
       ...pokemon,
       ...data,
