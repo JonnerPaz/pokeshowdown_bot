@@ -3,6 +3,14 @@ import { createTestBot, createMockPokemon } from "../../harness/testHarness.js";
 import { UserEntity } from "../../../src/domain/entities/users.entity.js";
 
 describe("Turn-Based Battle Integration (/battle)", () => {
+  it("rejects /battle outside of a group chat", async () => {
+    const { dispatchCommand, client } = await createTestBot();
+
+    await dispatchCommand("/battle", { fromId: 1007 });
+
+    expect(client.getSentMessages().some((m) => m.text?.includes("group chat"))).toBe(true);
+  });
+
   it("rejects /battle when initiator is not registered", async () => {
     const { dispatchCommand, client } = await createTestBot();
 
@@ -230,5 +238,82 @@ describe("Turn-Based Battle Integration (/battle)", () => {
     // 9. Verify loser recorded +1 loss
     const loser = await userDataSource.findUserByTelegramId(opponentId);
     expect(loser?.losses).toBe(1);
+  });
+
+  it("declares a draw when the turn limit is reached without a knockout", async () => {
+    const challengerId = 1030;
+    const opponentId = 1040;
+
+    const endlessStats = {
+      hp: 100000,
+      attack: 1,
+      defense: 100000,
+      specialAttack: 1,
+      specialDefense: 100000,
+      speed: 10,
+    };
+
+    const { dispatchCommand, dispatchCallback, client, userDataSource } = await createTestBot({
+      pokeApiService: {
+        getPokemonBaseStats: async () => endlessStats,
+      },
+    });
+
+    userDataSource.seedUser(
+      new UserEntity({
+        id: 31,
+        telegramId: BigInt(challengerId),
+        username: "tank_a",
+        createdAt: new Date(),
+        updatedAt: new Date(),
+        pokemons: [createMockPokemon("snorlax", "normal", { id: 51 })],
+      }),
+    );
+
+    userDataSource.seedUser(
+      new UserEntity({
+        id: 32,
+        telegramId: BigInt(opponentId),
+        username: "tank_b",
+        createdAt: new Date(),
+        updatedAt: new Date(),
+        pokemons: [createMockPokemon("snorlax", "normal", { id: 52 })],
+      }),
+    );
+
+    const battlePromise = dispatchCommand("/battle", { fromId: challengerId, isGroup: true });
+    await new Promise((resolve) => setTimeout(resolve, 50));
+
+    const match = JSON.stringify(client.getSentMessages()).match(/battle:([a-f0-9]+):accept/);
+    expect(match).not.toBeNull();
+    const battleId = match![1];
+
+    await dispatchCallback(`battle:${battleId}:accept`, { fromId: opponentId, isGroup: true });
+    await new Promise((resolve) => setTimeout(resolve, 50));
+    await dispatchCallback(`battle:${battleId}:pick:A:51`, { fromId: challengerId, isGroup: true });
+    await new Promise((resolve) => setTimeout(resolve, 50));
+    await dispatchCallback(`battle:${battleId}:pick:B:52`, { fromId: opponentId, isGroup: true });
+    await new Promise((resolve) => setTimeout(resolve, 50));
+
+    // Trade the maximum number of turns; neither Pokemon can be knocked out.
+    for (let turn = 0; turn < 50; turn += 1) {
+      const actorId = turn % 2 === 0 ? challengerId : opponentId;
+      await dispatchCallback(`battle:${battleId}:act:attack`, { fromId: actorId, isGroup: true });
+      await new Promise((resolve) => setTimeout(resolve, 10));
+    }
+    await battlePromise;
+
+    const edits = client.getEditedMessages();
+    const finalEdit = edits[edits.length - 1];
+    expect(finalEdit?.text).toContain("draw");
+    expect(finalEdit?.text).not.toContain("VICTORY!");
+
+    // A draw must not be recorded as a win or a loss for either trainer.
+    const challenger = await userDataSource.findUserByTelegramId(challengerId);
+    const opponent = await userDataSource.findUserByTelegramId(opponentId);
+    expect(challenger?.wins).toBe(0);
+    expect(challenger?.losses).toBe(0);
+    expect(opponent?.wins).toBe(0);
+    expect(opponent?.losses).toBe(0);
   });
 });

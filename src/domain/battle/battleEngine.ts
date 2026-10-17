@@ -1,6 +1,7 @@
 import { getTypeEffectiveness } from "./typeEffectiveness.js";
 import type {
   BattleActionType,
+  BattlePokemonStats,
   BattleState,
   TrainerBattleProfile,
   TurnActionResult,
@@ -51,8 +52,9 @@ export class BattleEngine {
     const activeTrainer = isTrainerATurn ? state.trainerA : state.trainerB;
     const defenderTrainer = isTrainerATurn ? state.trainerB : state.trainerA;
 
-    const attacker = activeTrainer.pokemon;
-    const defender = defenderTrainer.pokemon;
+    // Operate on copies so the incoming BattleState is never mutated.
+    const attacker: BattlePokemonStats = { ...activeTrainer.pokemon };
+    const defender: BattlePokemonStats = { ...defenderTrainer.pokemon };
 
     let damage = 0;
     let typeMultiplier = 1;
@@ -140,14 +142,13 @@ export class BattleEngine {
 
     const nextTurnTrainerId = isFinished ? state.currentTurnTrainerId : defenderTrainer.id;
 
+    const updatedActiveTrainer: TrainerBattleProfile = { ...activeTrainer, pokemon: attacker };
+    const updatedDefenderTrainer: TrainerBattleProfile = { ...defenderTrainer, pokemon: defender };
+
     const updatedState: BattleState = {
       ...state,
-      trainerA: isTrainerATurn
-        ? { ...activeTrainer, pokemon: { ...attacker } }
-        : { ...defenderTrainer, pokemon: { ...defender } },
-      trainerB: isTrainerATurn
-        ? { ...defenderTrainer, pokemon: { ...defender } }
-        : { ...activeTrainer, pokemon: { ...attacker } },
+      trainerA: isTrainerATurn ? updatedActiveTrainer : updatedDefenderTrainer,
+      trainerB: isTrainerATurn ? updatedDefenderTrainer : updatedActiveTrainer,
       turnCount: state.turnCount + 1,
       currentTurnTrainerId: nextTurnTrainerId,
       isFinished,

@@ -1,10 +1,33 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import { createMockPokemon, createTestBot } from "../../harness/testHarness.js";
 import { UserEntity } from "../../../src/domain/entities/users.entity.js";
+import { MEMORY_PRUNE_INTERVAL } from "../../../src/domain/data/constants.js";
 import { GroupEncounterService } from "../../../src/features/pokemon/groupEncounter.service.js";
 import { createGroupCatchKeyboard } from "../../../src/features/pokemon/pokemon.keyboards.js";
 
 describe("GroupEncounterService Unit Tests", () => {
+  it("prunes chats that have been silent past the activity TTL", () => {
+    const service = new GroupEncounterService({
+      spawnMessageMin: 1000,
+      spawnMessageMax: 1000,
+    });
+    const nowSpy = vi.spyOn(Date, "now").mockReturnValue(1_000_000);
+
+    for (let chat = 0; chat < MEMORY_PRUNE_INTERVAL; chat += 1) {
+      service.trackMessage(-1000 - chat, 1);
+    }
+    expect(service.trackedChatCount).toBe(MEMORY_PRUNE_INTERVAL);
+
+    // Two days later every previously tracked chat has expired.
+    nowSpy.mockReturnValue(1_000_000 + 48 * 60 * 60 * 1000);
+    for (let chat = 0; chat < MEMORY_PRUNE_INTERVAL; chat += 1) {
+      service.trackMessage(-5000 - chat, 1);
+    }
+
+    expect(service.trackedChatCount).toBe(MEMORY_PRUNE_INTERVAL);
+    nowSpy.mockRestore();
+  });
+
   it("tracks message volume and triggers spawn at threshold", () => {
     const service = new GroupEncounterService({
       spawnMessageMin: 3,
@@ -227,6 +250,172 @@ describe("Group Spawns & Encounters Integration", () => {
     const slowUser = await botCtx.userDataSource.findUserByTelegramId(userB);
     expect(slowUser?.masterballs).toBe(1);
     expect(slowUser?.pokemons.length).toBe(1);
+  });
+
+  it("serializes simultaneous throws so only one trainer can catch (reservation mutex)", async () => {
+    const service = new GroupEncounterService({
+      spawnMessageMin: 1,
+      spawnMessageMax: 1,
+      spawnCooldownMs: 0,
+      fleeChance: 0,
+    });
+    const botCtx = await createTestBot({ groupEncounterService: service });
+
+    const userA = 2001;
+    const userB = 2002;
+    botCtx.userDataSource.seedUser(
+      new UserEntity({
+        id: 20,
+        telegramId: BigInt(userA),
+        username: "quick_trainer",
+        createdAt: new Date(),
+        updatedAt: new Date(),
+        pokemons: [createMockPokemon("charmander", "fire")],
+        masterballs: 1,
+      }),
+    );
+    botCtx.userDataSource.seedUser(
+      new UserEntity({
+        id: 21,
+        telegramId: BigInt(userB),
+        username: "late_trainer",
+        createdAt: new Date(),
+        updatedAt: new Date(),
+        pokemons: [createMockPokemon("bulbasaur", "grass")],
+        masterballs: 1,
+      }),
+    );
+
+    const groupChatId = -1001234;
+    const encounter = await service.spawnGroupPokemon(botCtx.mainBot.bot.api, groupChatId, {
+      pokeApi: botCtx.pokeApi,
+    });
+
+    // Gate the first lookup so the first throw is still in flight when the second taps.
+    const originalFind = botCtx.userDataSource.findUserByTelegramId.bind(botCtx.userDataSource);
+    let release!: () => void;
+    const gate = new Promise<void>((resolve) => {
+      release = resolve;
+    });
+    let gated = false;
+    botCtx.userDataSource.findUserByTelegramId = async (telegramId) => {
+      if (!gated) {
+        gated = true;
+        await gate;
+      }
+      return originalFind(telegramId);
+    };
+
+    const firstThrow = botCtx.dispatchCallback(`gcatch:${encounter.id}:masterball`, {
+      fromId: userA,
+      chatId: groupChatId,
+    });
+    await new Promise((resolve) => setTimeout(resolve, 0));
+    const secondThrow = botCtx.dispatchCallback(`gcatch:${encounter.id}:masterball`, {
+      fromId: userB,
+      chatId: groupChatId,
+    });
+    await new Promise((resolve) => setTimeout(resolve, 0));
+    release();
+    await Promise.all([firstThrow, secondThrow]);
+
+    const userAFinal = await botCtx.userDataSource.findUserByTelegramId(userA);
+    const userBFinal = await botCtx.userDataSource.findUserByTelegramId(userB);
+
+    // Exactly one ball spent and exactly one Pokémon captured across both trainers.
+    const ballsSpent = 1 - (userAFinal?.masterballs ?? 0) + (1 - (userBFinal?.masterballs ?? 0));
+    expect(ballsSpent).toBe(1);
+    expect(userAFinal!.pokemons.length + userBFinal!.pokemons.length).toBe(3);
+    expect(encounter.isResolved).toBe(true);
+    expect(
+      botCtx.client.getAnsweredCallbacks().some((cb) => cb.text?.includes("already throwing")),
+    ).toBe(true);
+  });
+
+  it("rate-limits rapid group catch attempts from the same trainer", async () => {
+    const service = new GroupEncounterService({
+      spawnMessageMin: 1,
+      spawnMessageMax: 1,
+      spawnCooldownMs: 0,
+      fleeChance: 0,
+    });
+    const botCtx = await createTestBot({ groupEncounterService: service });
+
+    const userId = 4242;
+    botCtx.userDataSource.seedUser(
+      new UserEntity({
+        id: 42,
+        telegramId: BigInt(userId),
+        username: "spam_thrower",
+        createdAt: new Date(),
+        updatedAt: new Date(),
+        pokemons: [createMockPokemon("eevee", "normal")],
+        masterballs: 3,
+      }),
+    );
+
+    const groupChatId = -1004321;
+    const encounter = await service.spawnGroupPokemon(botCtx.mainBot.bot.api, groupChatId, {
+      pokeApi: botCtx.pokeApi,
+    });
+
+    await botCtx.dispatchCallback(`gcatch:${encounter.id}:masterball`, {
+      fromId: userId,
+      chatId: groupChatId,
+    });
+    await botCtx.dispatchCallback(`gcatch:${encounter.id}:masterball`, {
+      fromId: userId,
+      chatId: groupChatId,
+    });
+
+    const user = await botCtx.userDataSource.findUserByTelegramId(userId);
+    expect(user?.masterballs).toBe(2);
+    expect(botCtx.client.getAnsweredCallbacks().some((cb) => cb.text?.includes("Slow down"))).toBe(
+      true,
+    );
+  });
+
+  it("does not consume rate limit when attempt is rejected because the encounter is busy", async () => {
+    const service = new GroupEncounterService({
+      spawnMessageMin: 1,
+      spawnMessageMax: 1,
+      spawnCooldownMs: 0,
+      fleeChance: 0,
+    });
+    const botCtx = await createTestBot({ groupEncounterService: service });
+
+    const userId = 4243;
+    botCtx.userDataSource.seedUser(
+      new UserEntity({
+        id: 43,
+        telegramId: BigInt(userId),
+        username: "patient_thrower",
+        createdAt: new Date(),
+        updatedAt: new Date(),
+        pokemons: [createMockPokemon("eevee", "normal")],
+        masterballs: 3,
+      }),
+    );
+
+    const groupChatId = -1004322;
+    const encounter = await service.spawnGroupPokemon(botCtx.mainBot.bot.api, groupChatId, {
+      pokeApi: botCtx.pokeApi,
+    });
+
+    // Mark encounter busy manually to simulate another player's throw in flight
+    encounter.isBusy = true;
+
+    await botCtx.dispatchCallback(`gcatch:${encounter.id}:masterball`, {
+      fromId: userId,
+      chatId: groupChatId,
+    });
+
+    expect(
+      botCtx.client.getAnsweredCallbacks().some((cb) => cb.text?.includes("already throwing")),
+    ).toBe(true);
+
+    // Rate limiter must NOT have been hit for this rejected attempt
+    expect(botCtx.rateLimiter.isAllowed(userId, "catch")).toBe(true);
   });
 
   it("spawns a group encounter when /generate_pokemon is used in a group", async () => {

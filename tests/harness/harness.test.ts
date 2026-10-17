@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
-import { createTestBot } from "./testHarness.js";
+import { createMockPokemon, createTestBot } from "./testHarness.js";
+import { InMemoryPokemonDataSource, InMemoryUserDataSource } from "./inMemoryDatasources.js";
 
 describe("Integration Test Harness (ApiClientOptions)", () => {
   it("initializes MainBot with mocked Telegram API client and registers commands", async () => {
@@ -21,6 +22,16 @@ describe("Integration Test Harness (ApiClientOptions)", () => {
     const helpMsg = sent.find((m) => m.text?.includes("commands"));
     expect(helpMsg).toBeDefined();
     expect(helpMsg?.text).toContain("/battle");
+  });
+
+  it("rejects pokemon updates when the entity has no persisted id", async () => {
+    const userDataSource = new InMemoryUserDataSource();
+    const pokemonDataSource = new InMemoryPokemonDataSource(userDataSource);
+    const transient = createMockPokemon("pikachu", "electric", { id: null });
+
+    await expect(pokemonDataSource.updatePokemon(transient, { nickname: "Zap" })).rejects.toThrow(
+      "Pokemon ID is required",
+    );
   });
 
   it("captures localized /start responses without internet connection", async () => {

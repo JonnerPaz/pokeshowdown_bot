@@ -12,6 +12,7 @@ export abstract class PokemonDataSource {
     data: Partial<PokemonEntity>,
   ): Promise<PokemonEntity>;
   abstract createPokemon(pokemon: PokemonEntity, user?: UserEntity): Promise<PokemonEntity>;
+  abstract deletePokemon(target: PokemonEntity | number): Promise<void>;
   abstract tradePokemon(
     userA: UserEntity,
     pokemonA: PokemonEntity,
@@ -20,5 +21,4 @@ export abstract class PokemonDataSource {
   ): Promise<void>;
   abstract setPokemonPartyStatus(pokemonId: number, isInParty: boolean): Promise<PokemonEntity>;
   abstract swapPokemonPartyStatus(boxPokemonId: number, partyPokemonId: number): Promise<void>;
-  abstract deletePokemon(pokemonId: number): Promise<void>;
 }

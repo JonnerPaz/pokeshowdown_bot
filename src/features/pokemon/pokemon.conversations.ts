@@ -14,8 +14,13 @@ import {
   MAX_PKMN_PARTY,
   SHINY_CAP,
 } from "../../domain/data/constants.js";
-import { evolvePokemonOperation, getPokemonFrontSprite } from "./pokemon.service.js";
 import { escapeMarkdown } from "../common/stringHelper.js";
+import { isGroupChat } from "../common/chatHelper.js";
+import {
+  buildPokemonSummaryCaption,
+  evolvePokemonOperation,
+  getPokemonFrontSprite,
+} from "./pokemon.service.js";
 import type { GroupEncounterService } from "./groupEncounter.service.js";
 import {
   createCatchKeyboard,
@@ -101,6 +106,66 @@ export async function pokemonsConversation(
   return;
 }
 
+export async function pokemonSummaryConversation(
+  conv: AppConversation,
+  ctx: AppContext,
+  deps: Pick<PokemonConversationDeps, "userDataSource" | "pokeApi">,
+) {
+  const user = await checkUserExists(ctx.from!.id, ctx, deps.userDataSource);
+  if (!user) return;
+
+  if (user.pokemons.length === 0) {
+    await ctx.reply("You don't have any pokemon yet! Catch one with /generate_pokemon.");
+    return;
+  }
+
+  let target = (ctx.message?.text ?? "").split(/\s+/).slice(1).join(" ").trim();
+
+  if (!target) {
+    const roster = user.pokemons
+      .map((el) => (el.nickname ? `${el.nickname} (${el.name})` : el.name))
+      .join(", ");
+    await ctx.reply(
+      `Which pokemon do you want a summary of? Send its name or nickname.\nYour pokemons: ${roster}`,
+    );
+
+    const answer = await conv
+      .waitFrom(ctx.from!.id, { maxMilliseconds: CONVERSATION_TIMEOUT_MS })
+      .andFor(":text");
+    target = answer.message?.text?.trim() ?? "";
+  }
+
+  if (!target) {
+    await ctx.reply("Pokemon summary cancelled.");
+    return;
+  }
+
+  const query = target.toLowerCase();
+  const pokemon = user.pokemons.find(
+    (el) => el.name.toLowerCase() === query || el.nickname?.toLowerCase() === query,
+  );
+
+  if (!pokemon) {
+    await ctx.reply(`You don't have a pokemon named "${escapeMarkdown(target)}".`);
+    return;
+  }
+
+  const baseStats = await conv.external(() => deps.pokeApi.getPokemonBaseStats(pokemon.name));
+  const caption = buildPokemonSummaryCaption(pokemon, baseStats);
+
+  try {
+    const sprite = getPokemonFrontSprite(pokemon);
+    if (sprite) {
+      await ctx.api.sendPhoto(ctx.chat!.id, sprite, { caption, parse_mode: "Markdown" });
+      return;
+    }
+  } catch {
+    // Fall back to a text-only summary if the photo cannot be delivered.
+  }
+
+  await ctx.reply(caption, { parse_mode: "Markdown" });
+}
+
 export async function generatePokemonConversation(
   conv: AppConversation,
   ctx: AppContext,
@@ -140,9 +205,10 @@ export async function generatePokemonConversation(
   );
 
   const timeoutSec = Math.round(CONVERSATION_TIMEOUT_MS / 1000);
+  const escapedWildName = escapeMarkdown(currentPokemon.name);
   const photoMsg = await ctx.api.sendPhoto(ctx.chat!.id, getPokemonFrontSprite(currentPokemon));
   const promptMsg = await ctx.reply(
-    `A wild *${escapeMarkdown(currentPokemon.name)}* appeared! Choose a Pokéball to throw (⏳ ${timeoutSec}s):`,
+    `A wild *${escapedWildName}* appeared! Choose a Pokéball to throw (⏳ ${timeoutSec}s):`,
     {
       reply_markup: createCatchKeyboard(user),
       parse_mode: "Markdown",
@@ -184,9 +250,11 @@ export async function generatePokemonConversation(
       return true;
     });
 
+    // Rate-limited: keep the encounter alive and let the trainer throw again shortly
+    // instead of aborting the conversation and stranding the wild Pokémon messages.
     if (!canCatch) {
       await choice.answerCallbackQuery({
-        text: "Slow down! Wait a moment before throwing another Pokéball.",
+        text: "Slow down! You're throwing balls too quickly. Try again in a moment.",
         show_alert: true,
       });
       continue;
@@ -194,10 +262,10 @@ export async function generatePokemonConversation(
 
     await choice.answerCallbackQuery();
 
-    // Deduct ball from inventory
+    // Deduct ball from inventory atomically (mirror locally so the keyboard renders fresh counts).
     const field = getBallUserField(ballType);
     user[field] -= 1;
-    await conv.external(() => deps.userDataSource.updateUser(user, { [field]: user[field] }));
+    await conv.external(() => deps.userDataSource.decrementBall(user, ballType));
 
     const doesPokemonExist = await conv.external(() =>
       deps.pokemonDataSource.findUserPokemonByNameAndVariant(
@@ -256,7 +324,7 @@ export async function generatePokemonConversation(
     await ctx.api.editMessageText(
       choice.chat!.id,
       promptMsg.message_id,
-      `💥 The wild *${escapeMarkdown(currentPokemon.name)}* broke free! It's watching you cautiously.\nChoose another Pokéball to throw (⏳ ${timeoutSec}s):`,
+      `💥 The wild *${escapedWildName}* broke free! It's watching you cautiously.\nChoose another Pokéball to throw (⏳ ${timeoutSec}s):`,
       {
         reply_markup: createCatchKeyboard(user),
         parse_mode: "Markdown",
@@ -297,15 +365,23 @@ export async function evolvePokemonConversation(
     return;
   }
 
+  const wasBuddy = user.buddyPokemonId === pokemon.id;
   const evolvedPokemon = await evolvePokemonOperation(
     pokemon,
     deps.pokeApi,
     deps.pokemonDataSource,
+    user.id ?? undefined,
   );
 
   if (evolvedPokemon.name === pokemon.name) {
     await ctx.reply("Your pokemon can't evolve anymore");
     return;
+  }
+
+  if (wasBuddy && evolvedPokemon.id !== pokemon.id) {
+    await conv.external(() =>
+      deps.userDataSource.updateUser(user, { buddyPokemonId: evolvedPokemon.id }),
+    );
   }
 
   await ctx.reply(`Your ${pokemon.name} evolved to ${evolvedPokemon.name}`);
@@ -433,6 +509,13 @@ export async function tradeConversation(
   ctx: AppContext,
   deps: Pick<PokemonConversationDeps, "userDataSource" | "pokemonDataSource">,
 ) {
+  if (!isGroupChat(ctx)) {
+    await ctx.reply(
+      "🔄 Trades need a group chat! Invite a friend and send /trade from a group to swap Pokemon.",
+    );
+    return;
+  }
+
   const tradeId = randomUUID();
 
   const [userReq, userReqPkmn] = await prepareUserTrade(

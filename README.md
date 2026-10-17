@@ -300,6 +300,7 @@ All commands are case sensitive and must start with `/`.
 | `/help`             | `/ayuda`           | Display command list and instructions            |
 | `/generate_pokemon` | `/generar_pokemon` | Spawn a wild Pokemon encounter                   |
 | `/pokemons`         | `/pokemons`        | Browse Pokemon collection (interactive carousel) |
+| `/pokemonsummary`   | `/resumen_pokemon` | View detailed stats of one of your Pokemon       |
 | `/box`              | `/caja`            | Browse PC Storage Box collection                 |
 | `/release`          | `/liberar`         | Release a Pokemon for Pokeball rewards           |
 | `/evolve`           | `/evolucionar`     | Evolve an owned Pokemon                          |

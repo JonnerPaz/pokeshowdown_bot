@@ -7,7 +7,7 @@ import { UserDataSourceImpl } from "../infrastructure/datasource/user.datasource
 import { PokemonDataSourceImpl } from "../infrastructure/datasource/pokemon.datasource.impl.js";
 import type { UserDataSource } from "../domain/datasource/user.datasource.js";
 import type { PokemonDataSource } from "../domain/datasource/pokemon.datasource.js";
-import { getAllCommands } from "./controllers/commands.js";
+import { getCommandRegistrations } from "./controllers/commands.js";
 import { createSystemFeature } from "../features/system/system.feature.js";
 import { createAuthFeature } from "../features/auth/auth.feature.js";
 import { createBattleFeature } from "../features/battle/battle.feature.js";
@@ -121,10 +121,11 @@ export class MainBot {
         .catch(() => {});
     }
 
-    await this.bot.api.setMyCommands(getAllCommands(LanguageCodes.English));
-
-    await this.bot.api.setMyCommands(getAllCommands(LanguageCodes.Spanish), {
-      language_code: LanguageCodes.Spanish,
-    });
+    for (const registration of getCommandRegistrations()) {
+      await this.bot.api.setMyCommands(registration.commands, {
+        scope: registration.scope,
+        ...(registration.language_code ? { language_code: registration.language_code } : {}),
+      });
+    }
   }
 }

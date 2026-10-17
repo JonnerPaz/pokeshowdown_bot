@@ -13,3 +13,5 @@ export const GROUP_SPAWN_MESSAGE_MAX = 40;
 export const GROUP_SPAWN_COOLDOWN_MS = 5 * 60 * 1000;
 export const GROUP_ENCOUNTER_TIMEOUT_MS = 2 * 60 * 1000;
 export const GROUP_CATCH_FLEE_CHANCE = 0.15;
+export const GROUP_CHAT_ACTIVITY_TTL_MS = 24 * 60 * 60 * 1000;
+export const MEMORY_PRUNE_INTERVAL = 100;

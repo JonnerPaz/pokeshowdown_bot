@@ -33,19 +33,15 @@ export class PokemonDataSourceImpl implements PokemonDataSource {
     pokemon: PokemonEntity,
     data: Partial<PokemonEntity>,
   ): Promise<PokemonEntity> {
-    let dbPokemon;
-
-    // Try finding by ID first if available
-    if (pokemon.id) {
-      dbPokemon = await prisma.pokemon.findUnique({
-        where: { id: pokemon.id },
-      });
-    } else {
-      // Fallback to name search (findFirst) - behavior from original code but safer
-      dbPokemon = await prisma.pokemon.findFirst({
-        where: { name: pokemon.name },
-      });
+    // Require a persisted identity: a name-only fallback could target another
+    // trainer's pokemon that happens to share the same species name.
+    if (!pokemon.id) {
+      throw new Error("Pokemon ID is required to update a pokemon");
     }
+
+    const dbPokemon = await prisma.pokemon.findUnique({
+      where: { id: pokemon.id },
+    });
 
     if (!dbPokemon) throw new Error("Pokemon not found in db");
 
@@ -157,6 +153,12 @@ export class PokemonDataSourceImpl implements PokemonDataSource {
     });
   }
 
+  async deletePokemon(target: PokemonEntity | number): Promise<void> {
+    const id = typeof target === "number" ? target : target.id;
+    if (!id) throw new Error("Pokemon ID is required to delete a pokemon");
+    await prisma.pokemon.delete({ where: { id } });
+  }
+
   async tradePokemon(
     userA: UserEntity,
     pokemonA: PokemonEntity,
@@ -203,11 +205,5 @@ export class PokemonDataSourceImpl implements PokemonDataSource {
         data: { isInParty: false },
       }),
     ]);
-  }
-
-  async deletePokemon(pokemonId: number): Promise<void> {
-    await prisma.pokemon.delete({
-      where: { id: pokemonId },
-    });
   }
 }

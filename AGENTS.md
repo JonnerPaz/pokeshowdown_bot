@@ -35,7 +35,7 @@
 - **Lint / format**: `pnpm lint`, `pnpm lint:fix`, `pnpm format`, `pnpm format:check` (Prettier; formatted paths are scoped in package.json to avoid `postgres/` permission issues).
 - **Migrations**: `pnpm run prisma:migrate -- --name <desc>` (requires live DB connection).
 - **Codegen**: `pnpm run prisma:generate` after migrations/schema edits.
-- **Testing**: Vitest suite (49 tests: domain, feature integration, presentation). Run all tests with `pnpm test`, or single file with `pnpm vitest run tests/<path>`. Tests run natively with no extra compiler plugins. Feature tests use grammY's `ApiClientOptions.fetch` mock harness and in-memory datasources (`tests/harness/`). CI runs `pnpm test`.
+- **Testing**: Vitest suite (domain, feature integration, presentation). Run all tests with `pnpm test`, or a single file with `pnpm vitest run tests/<path>`. Tests run natively with no extra compiler plugins. Feature tests use grammY's `ApiClientOptions.fetch` mock harness and in-memory datasources (`tests/harness/`). CI runs `pnpm test`.
 
 ---
 
@@ -77,8 +77,7 @@
 
 ## 6. Error Handling & Logging
 
-- `MainBot.setupErrorHandler()` installs a `bot.catch` global handler (structured log + best-effort reply). Unhandled conversation/command errors propagate here.
-- `MainBot.setupErrorHandler()` installs a `bot.catch` global handler (structured log + best-effort reply). Unhandled conversation/command errors propagate here.
+- `MainBot.setupErrorHandler()` installs a root middleware error boundary **and** a `bot.catch` global handler (structured log + best-effort reply). Unhandled conversation/command errors propagate here. The root boundary swallows errors so the webhook always answers Telegram with `200 OK`, preventing retry deadlocks.
 - Conversation steps do **not** wrap with try/catch — let errors bubble to `bot.catch`. Commands and conversations report errors using `displayCommandError(e, ctx, msg?)` (`src/features/common/errorHandler.ts`) with structured logging.
 - Use contextual logs: `console.error("pokemon.generate failed", { username, error })` rather than plain stack output.
 - Differentiate user mistakes (not registered) from system faults (Prisma/PokeAPI issues). Never leak stack traces or secrets into Telegram chats.
@@ -200,11 +199,13 @@ Phase 11 (landed on `main`): Group Chat Spawns, Group Encounter Service & Webhoo
 
 Phase 12 (landed on `main`): Professional Repository Infrastructure & Release Automation (`CONTRIBUTING.md`, `CODE_OF_CONDUCT.md`, `SECURITY.md`, `CHANGELOG.md`, `.github/pull_request_template.md`, structured issue forms, Husky hooks for `pre-commit` [lint-staged], `commit-msg` [@commitlint], and `pre-push` [typecheck & test], Google Release Please action with `.release-please-config.json` and `.release-please-manifest.json`, Dependabot security updates, `.editorconfig`, and `package.json` SemVer `1.1.0` with `private: true` and `engines`).
 
-Phase 13: Encounter Lifecycle Hardening & Interactive Pokémon Carousel (`src/presentation/server.ts` webhook timeout to 30s with `"return"`, deterministic replay in `conv.external`, fallback catch handler for orphaned buttons; transformed `/pokemons` from static image dump into an interactive paged carousel card with dynamic levels, dual types, abilities, evolution progress, one-tap buddy assignment, roster overview, and anti-hijack stateless callback queries).
+Phase 13 (landed on `main`): Encounter Lifecycle Hardening & Interactive Pokémon Carousel (`src/presentation/server.ts` webhook timeout to 30s with `"return"`, deterministic replay in `conv.external`, fallback catch handler for orphaned buttons; transformed `/pokemons` from static image dump into an interactive paged carousel card with dynamic levels, dual types, abilities, evolution progress, one-tap buddy assignment, roster overview, and anti-hijack stateless callback queries).
 
 Phase 14 (landed on `main`): Official grammY Plugin Evaluation & Inline Query System (`@grammyjs/auto-retry` installed on `bot.api.config.use` for zero-boilerplate exponential backoff against 429 flood limits and network drops; and full `@pokeshowdown_bot` Inline Mode engine via `src/features/inline/` providing `@bot <pokemon>` Pokédex cards, `@bot buddy` companion showcase, and `@bot team` party cards across any Telegram chat with privacy-safe caching).
 
 Phase 15 (landed on `main`): PC Storage Box System & Pokémon Release with Pokéball Rewards (active 6-member party with auto-routing 7th+ catches to PC Storage Box with `isInParty: false`, `/box` PC storage carousel with Withdraw, Deposit, and Swap actions, `/release` with 2-step confirmation and Professor Oak rewards [+3 Pokéballs standard, +5 Pokéballs & +1 Great Ball shiny], and lone Pokémon protection guards).
+
+Phase 16 (landed on `main`): Correctness & Hardening Audit Sweep (atomic group-catch mutex in `groupEncounter.service.ts`, evolution re-stacks `timesCaught` with `1 + remainingCaught` instead of duplicating rows, buddy migration on evolution merge, consistent Telegram Markdown escaping and single-asterisk format, scoped command menus registered with `CommandGroup.setCommands`, buddy "none" state, per-user atomic ball deduction + rate limiting for group catches, Postgres decrement guard against negative ball counts, immutable `BattleEngine` state with turn-cap resolution, pruned in-memory rate-limit/activity maps, removal of dead `BattleService.awardVictory`, and the `/pokemonsummary` detailed stats view).
 
 Conventions: each feature = one scoped commit set, verified with typecheck/lint/format + `pnpm test`, README/AGENTS updated. No new shared mutable state for encounters or battles (keep them conversation-local).
 

@@ -5,6 +5,8 @@ import { CONVERSATION_TIMEOUT_MS } from "../../domain/data/constants.js";
 import type { UserEntity } from "../../domain/entities/users.entity.js";
 import type { UserDataSource } from "../../domain/datasource/user.datasource.js";
 import type { AppContext, AppConversation } from "../../presentation/data/types.js";
+import { isGroupChat } from "../common/chatHelper.js";
+import { escapeMarkdown } from "../common/stringHelper.js";
 import type { BattleService } from "./battle.service.js";
 import {
   createBattleInviteKeyboard,
@@ -12,7 +14,6 @@ import {
   createBattleActionKeyboard,
   renderBattlefield,
 } from "./battle.keyboards.js";
-import { escapeMarkdown } from "../common/stringHelper.js";
 
 export interface BattleConversationDeps {
   userDataSource: UserDataSource;
@@ -24,6 +25,13 @@ export async function battleConversation(
   ctx: AppContext,
   deps: BattleConversationDeps,
 ) {
+  if (!isGroupChat(ctx)) {
+    await ctx.reply(
+      "⚔️ Battles need a group chat! Add me to a group so trainers can face each other.",
+    );
+    return;
+  }
+
   const challengerTelegramId = ctx.from?.id;
   if (!challengerTelegramId) return;
 
@@ -42,11 +50,11 @@ export async function battleConversation(
   }
 
   const battleId = await conv.external(() => randomUUID().slice(0, 8));
-  const challengerName = challengerUser.username;
+  const challengerName = escapeMarkdown(challengerUser.username);
 
   const acceptKeyboard = createBattleInviteKeyboard(battleId);
   const inviteMsg = await ctx.reply(
-    `⚔️ *${escapeMarkdown(challengerName)}* has issued a Pokémon battle challenge!\n\nWho dares to accept the challenge?`,
+    `⚔️ *${challengerName}* has issued a Pokémon battle challenge!\n\nWho dares to accept the challenge?`,
     { reply_markup: acceptKeyboard, parse_mode: "Markdown" },
   );
 
@@ -98,13 +106,10 @@ export async function battleConversation(
   const challengerCandidates =
     challengerParty.length > 0 ? challengerParty : challengerUser.pokemons;
   const challengerKb = createPokemonPickKeyboard(battleId, "A", challengerCandidates);
-  const pickMsgA = await ctx.reply(
-    `🔴 *${escapeMarkdown(challengerName)}*, choose your battle Pokémon:`,
-    {
-      reply_markup: challengerKb,
-      parse_mode: "Markdown",
-    },
-  );
+  const pickMsgA = await ctx.reply(`🔴 *${challengerName}*, choose your battle Pokémon:`, {
+    reply_markup: challengerKb,
+    parse_mode: "Markdown",
+  });
 
   const pickCtxA = await conv
     .waitForCallbackQuery(new RegExp(`^battle:${battleId}:pick:A:(.+)$`), {
@@ -122,17 +127,14 @@ export async function battleConversation(
   await ctx.api.deleteMessage(pickMsgA.chat.id, pickMsgA.message_id).catch(() => {});
 
   // Opponent Pokemon Selection
-  const opponentName = opponentUser.username;
+  const opponentName = escapeMarkdown(opponentUser.username);
   const opponentParty = (opponentUser.pokemons ?? []).filter((p) => p.isInParty !== false);
   const opponentCandidates = opponentParty.length > 0 ? opponentParty : opponentUser.pokemons;
   const opponentKb = createPokemonPickKeyboard(battleId, "B", opponentCandidates);
-  const pickMsgB = await ctx.reply(
-    `🔵 *${escapeMarkdown(opponentName)}*, choose your battle Pokémon:`,
-    {
-      reply_markup: opponentKb,
-      parse_mode: "Markdown",
-    },
-  );
+  const pickMsgB = await ctx.reply(`🔵 *${opponentName}*, choose your battle Pokémon:`, {
+    reply_markup: opponentKb,
+    parse_mode: "Markdown",
+  });
 
   const pickCtxB = await conv
     .waitForCallbackQuery(new RegExp(`^battle:${battleId}:pick:B:(.+)$`), {
@@ -162,13 +164,13 @@ export async function battleConversation(
       {
         id: "trainerA",
         telegramId: challengerTelegramId,
-        name: challengerName,
+        name: challengerUser.username,
         pokemon: battlePokemonA,
       },
       {
         id: "trainerB",
         telegramId: opponentTelegramId,
-        name: opponentName,
+        name: opponentUser.username,
         pokemon: battlePokemonB,
       },
     ),
@@ -248,6 +250,22 @@ export async function battleConversation(
           reply_markup: createBattleActionKeyboard(battleId, nextActive.pokemon),
           parse_mode: "Markdown",
         },
+      )
+      .catch(() => {});
+  }
+
+  // Turn cap reached without a knockout — call it a draw (no wins/losses recorded).
+  if (!battleState.isFinished) {
+    await ctx.api
+      .editMessageText(
+        battleMsg.chat.id,
+        battleMsg.message_id,
+        renderBattlefield(
+          battleState,
+          battleState.lastTurnLog,
+          "🏳️ *Turn limit reached!* The battle was called a draw.",
+        ),
+        { parse_mode: "Markdown" },
       )
       .catch(() => {});
   }

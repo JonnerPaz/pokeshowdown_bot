@@ -187,6 +187,26 @@ describe("BattleEngine", () => {
     expect(state.trainerB.pokemon.currentHp).toBe(0);
   });
 
+  it("does not mutate the incoming battle state", () => {
+    const p1 = makeTestPokemon({ attack: 80, speed: 100 });
+    const p2 = makeTestPokemon({ defense: 60, currentHp: 100, maxHp: 100, speed: 50 });
+
+    const trainerA = makeTrainer("t1", "Trainer A", p1);
+    const trainerB = makeTrainer("t2", "Trainer B", p2);
+
+    const battle = BattleEngine.initBattle("battle-immutable", trainerA, trainerB);
+    const snapshot = JSON.parse(JSON.stringify(battle));
+
+    const { state } = BattleEngine.executeTurn(battle, "attack");
+
+    // The returned state advanced, but the input must remain untouched.
+    expect(state.trainerB.pokemon.currentHp).toBeLessThan(100);
+    expect(state.currentTurnTrainerId).toBe("t2");
+    expect(battle.trainerB.pokemon.currentHp).toBe(100);
+    expect(battle.currentTurnTrainerId).toBe("t1");
+    expect(JSON.parse(JSON.stringify(battle))).toEqual(snapshot);
+  });
+
   it("renders visual HP bar accurately", () => {
     expect(BattleEngine.renderHpBar(100, 100, 5)).toBe("🟩🟩🟩🟩🟩");
     expect(BattleEngine.renderHpBar(60, 100, 5)).toBe("🟩🟩🟩⬜⬜");

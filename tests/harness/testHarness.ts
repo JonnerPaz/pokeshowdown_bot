@@ -35,6 +35,7 @@ export interface TestBotContext {
   pokemonDataSource: InMemoryPokemonDataSource;
   battleService: BattleService;
   pokeApi: PokeApiService;
+  rateLimiter: RateLimiterService;
   dispatchUpdate: (update: Update) => Promise<void>;
   dispatchCommand: (
     command: string,
@@ -354,6 +355,7 @@ export async function createTestBot(options?: {
     pokemonDataSource,
     battleService,
     pokeApi: mockPokeApi,
+    rateLimiter,
     dispatchUpdate,
     dispatchCommand,
     dispatchCallback,

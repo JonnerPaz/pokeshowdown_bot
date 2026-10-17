@@ -2,6 +2,7 @@ import type { UserDataSource } from "../../src/domain/datasource/user.datasource
 import type { PokemonDataSource } from "../../src/domain/datasource/pokemon.datasource.js";
 import { UserEntity } from "../../src/domain/entities/users.entity.js";
 import { PokemonEntity } from "../../src/domain/entities/pokemon.entity.js";
+import { getBallUserField, type BallType } from "../../src/domain/items/ballTypes.js";
 
 export class InMemoryUserDataSource implements UserDataSource {
   public users = new Map<number, UserEntity>();
@@ -65,6 +66,16 @@ export class InMemoryUserDataSource implements UserDataSource {
     });
     this.users.set(existing.id, updated);
     return updated;
+  }
+
+  public async decrementBall(user: UserEntity, ballType: BallType): Promise<UserEntity> {
+    const existing = await this.findUserByTelegramId(user.telegramId!);
+    if (!existing || existing.id === null) {
+      throw new Error("User not found");
+    }
+    const field = getBallUserField(ballType);
+    const next = Math.max(0, existing[field] - 1);
+    return this.updateUser(existing, { [field]: next });
   }
 
   public async getLeaderboard(limit: number = 10): Promise<UserEntity[]> {
@@ -141,7 +152,10 @@ export class InMemoryPokemonDataSource implements PokemonDataSource {
     pokemon: PokemonEntity,
     data: Partial<PokemonEntity>,
   ): Promise<PokemonEntity> {
-    const id = pokemon.id ?? 1;
+    if (pokemon.id === null) {
+      throw new Error("Pokemon ID is required to update a pokemon");
+    }
+    const id = pokemon.id;
     const updated = PokemonEntity.fromObject({
       ...pokemon,
       ...data,
@@ -171,6 +185,18 @@ export class InMemoryPokemonDataSource implements PokemonDataSource {
     }
 
     return updated;
+  }
+
+  public async deletePokemon(target: PokemonEntity | number): Promise<void> {
+    const id = typeof target === "number" ? target : target.id;
+    if (id === null || id === undefined) return;
+    this.pokemons.delete(id);
+    for (const user of this.userDataSource.users.values()) {
+      user.pokemons = user.pokemons.filter((p) => p.id !== id);
+      if (user.buddyPokemonId === id) {
+        user.buddyPokemonId = null;
+      }
+    }
   }
 
   public async tradePokemon(
@@ -220,16 +246,6 @@ export class InMemoryPokemonDataSource implements PokemonDataSource {
   public async swapPokemonPartyStatus(boxPokemonId: number, partyPokemonId: number): Promise<void> {
     await this.setPokemonPartyStatus(boxPokemonId, true);
     await this.setPokemonPartyStatus(partyPokemonId, false);
-  }
-
-  public async deletePokemon(pokemonId: number): Promise<void> {
-    this.pokemons.delete(pokemonId);
-    for (const user of this.userDataSource.users.values()) {
-      user.pokemons = user.pokemons.filter((p) => p.id !== pokemonId);
-      if (user.buddyPokemonId === pokemonId) {
-        user.buddyPokemonId = null;
-      }
-    }
   }
 
   public clear(): void {
