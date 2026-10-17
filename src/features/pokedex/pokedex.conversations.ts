@@ -3,38 +3,11 @@ import type { PokeApiService } from "../../presentation/services/pokeapi.service
 import type { UserDataSource } from "../../domain/datasource/user.datasource.js";
 import { CONVERSATION_TIMEOUT_MS } from "../../domain/data/constants.js";
 import { escapeMarkdown } from "../common/stringHelper.js";
+import { formatTypeBadges, renderStat } from "../common/pokemonFormat.js";
 
 export interface PokedexConversationDeps {
   pokeApi: PokeApiService;
   userDataSource: UserDataSource;
-}
-
-const TYPE_BADGES: Record<string, string> = {
-  normal: "⚪ Normal",
-  fire: "🔥 Fire",
-  water: "💧 Water",
-  electric: "⚡ Electric",
-  grass: "🌿 Grass",
-  ice: "❄️ Ice",
-  fighting: "🥊 Fighting",
-  poison: "☠️ Poison",
-  ground: "🏜️ Ground",
-  flying: "🦅 Flying",
-  psychic: "🔮 Psychic",
-  bug: "🐛 Bug",
-  rock: "🪨 Rock",
-  ghost: "👻 Ghost",
-  dragon: "🐉 Dragon",
-  steel: "⚙️ Steel",
-  fairy: "✨ Fairy",
-  dark: "🌑 Dark",
-};
-
-function renderStat(name: string, value: number, max = 150): string {
-  const bars = Math.min(10, Math.max(1, Math.round((value / max) * 10)));
-  const filled = "█".repeat(bars);
-  const empty = "░".repeat(10 - bars);
-  return `${name.padEnd(7)} ${filled}${empty} ${String(value).padStart(3, " ")}`;
 }
 
 export async function pokedexConversation(
@@ -73,7 +46,7 @@ export async function pokedexConversation(
     ? `✅ In your bag (Caught: ${owned.timesCaught}x${owned.isShiny ? " ✨Shiny" : ""})`
     : "⚪ Not yet in your collection";
 
-  const formattedTypes = entry.types.map((t) => TYPE_BADGES[t.toLowerCase()] ?? t).join(" / ");
+  const formattedTypes = formatTypeBadges(entry.types);
 
   const totalStats =
     entry.stats.hp +
