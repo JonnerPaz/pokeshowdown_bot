@@ -5,6 +5,7 @@ import { CONVERSATION_TIMEOUT_MS } from "../../domain/data/constants.js";
 import type { UserEntity } from "../../domain/entities/users.entity.js";
 import type { UserDataSource } from "../../domain/datasource/user.datasource.js";
 import type { AppContext, AppConversation } from "../../presentation/data/types.js";
+import { escapeMarkdown } from "../common/stringHelper.js";
 import type { BattleService } from "./battle.service.js";
 import {
   createBattleInviteKeyboard,
@@ -41,7 +42,7 @@ export async function battleConversation(
   }
 
   const battleId = await conv.external(() => randomUUID().slice(0, 8));
-  const challengerName = challengerUser.username;
+  const challengerName = escapeMarkdown(challengerUser.username);
 
   const acceptKeyboard = createBattleInviteKeyboard(battleId);
   const inviteMsg = await ctx.reply(
@@ -116,7 +117,7 @@ export async function battleConversation(
   await ctx.api.deleteMessage(pickMsgA.chat.id, pickMsgA.message_id).catch(() => {});
 
   // Opponent Pokemon Selection
-  const opponentName = opponentUser.username;
+  const opponentName = escapeMarkdown(opponentUser.username);
   const opponentKb = createPokemonPickKeyboard(battleId, "B", opponentUser.pokemons);
   const pickMsgB = await ctx.reply(`🔵 **${opponentName}**, choose your battle Pokémon:`, {
     reply_markup: opponentKb,

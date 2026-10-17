@@ -221,4 +221,24 @@ describe("Profile & Leaderboard Bot Commands Integration", () => {
     const updatedUser = await botCtx.userDataSource.findUserByTelegramId(920);
     expect(updatedUser?.buddyPokemonId).toBe(72);
   });
+
+  it("/buddy escapes Markdown characters in the current buddy nickname", async () => {
+    const mime = createMockPokemon("mr-mime", "psychic", { id: 80, nickname: "Mr_Mime*" });
+    botCtx.userDataSource.seedUser(
+      new UserEntity({
+        id: 3,
+        telegramId: 921,
+        username: "nick_fan",
+        createdAt: new Date(),
+        updatedAt: new Date(),
+        pokemons: [mime],
+        buddyPokemonId: 80,
+      }),
+    );
+
+    await botCtx.dispatchCommand("/buddy", { fromId: 921 });
+
+    const sent = botCtx.client.getSentMessages();
+    expect(sent[0]?.text).toContain("Mr\\_Mime\\*");
+  });
 });

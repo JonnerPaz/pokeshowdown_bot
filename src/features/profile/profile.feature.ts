@@ -67,7 +67,11 @@ export function createProfileFeature(deps: ProfileFeatureDeps): Composer<AppCont
     if (!query) {
       const currentBuddy = getBuddyPokemon(user);
       const buddyInfo = currentBuddy
-        ? `${currentBuddy.nickname ? `${currentBuddy.nickname} (${currentBuddy.name})` : currentBuddy.name}`
+        ? escapeMarkdown(
+            currentBuddy.nickname
+              ? `${currentBuddy.nickname} (${currentBuddy.name})`
+              : currentBuddy.name,
+          )
         : "None";
       await ctx.reply(
         `⭐ *Your current buddy:* ${buddyInfo}\n\nTo set or change your buddy, use:\n\`/buddy <pokemon_name>\``,

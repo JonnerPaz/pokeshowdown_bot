@@ -14,6 +14,7 @@ import {
   MAX_PKMN_PARTY,
   SHINY_CAP,
 } from "../../domain/data/constants.js";
+import { escapeMarkdown } from "../common/stringHelper.js";
 import { evolvePokemonOperation, getPokemonFrontSprite } from "./pokemon.service.js";
 import type { GroupEncounterService } from "./groupEncounter.service.js";
 import {
@@ -138,9 +139,10 @@ export async function generatePokemonConversation(
     deps.pokeApi.getPokemonCaptureRate(currentPokemon.name),
   );
 
+  const escapedWildName = escapeMarkdown(currentPokemon.name);
   const photoMsg = await ctx.api.sendPhoto(ctx.chat!.id, getPokemonFrontSprite(currentPokemon));
   const promptMsg = await ctx.reply(
-    `A wild *${currentPokemon.name}* appeared! Choose a Pokéball to throw:`,
+    `A wild *${escapedWildName}* appeared! Choose a Pokéball to throw:`,
     {
       reply_markup: createCatchKeyboard(user),
       parse_mode: "Markdown",
@@ -251,7 +253,7 @@ export async function generatePokemonConversation(
     await ctx.api.editMessageText(
       choice.chat!.id,
       promptMsg.message_id,
-      `💥 The wild *${currentPokemon.name}* broke free! It's watching you cautiously.\nChoose another Pokéball to throw:`,
+      `💥 The wild *${escapedWildName}* broke free! It's watching you cautiously.\nChoose another Pokéball to throw:`,
       {
         reply_markup: createCatchKeyboard(user),
         parse_mode: "Markdown",

@@ -53,6 +53,30 @@ describe("BattleService", () => {
     expect(battlePokemon.spriteUrl).toBe("https://example.com/charizard.png");
   });
 
+  it("escapes Markdown characters in the battle display name", async () => {
+    const mockPokeApi = {
+      getPokemonBaseStats: vi.fn().mockResolvedValue({
+        hp: 60,
+        attack: 60,
+        defense: 60,
+        specialAttack: 60,
+        specialDefense: 60,
+        speed: 60,
+      }),
+    } as unknown as PokeApiService;
+
+    const battleService = new BattleService(
+      mockPokeApi,
+      {} as unknown as UserDataSource,
+      {} as unknown as PokemonDataSource,
+    );
+
+    const pokemon = makePokemon({ nickname: "Mr_Mime*" });
+    const battlePokemon = await battleService.resolveBattlePokemon(pokemon);
+
+    expect(battlePokemon.name).toBe("Mr\\_Mime\\*");
+  });
+
   it("awards victory by incrementing timesCaught for the winning pokemon", async () => {
     const mockPokemon = makePokemon({ id: 42, timesCaught: 5 });
     const mockUser = new UserEntity({

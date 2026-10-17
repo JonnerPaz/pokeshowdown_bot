@@ -2,6 +2,7 @@ import type { AppContext, AppConversation } from "../../presentation/data/types.
 import type { PokeApiService } from "../../presentation/services/pokeapi.service.js";
 import type { UserDataSource } from "../../domain/datasource/user.datasource.js";
 import { CONVERSATION_TIMEOUT_MS } from "../../domain/data/constants.js";
+import { escapeMarkdown } from "../common/stringHelper.js";
 
 export interface PokedexConversationDeps {
   pokeApi: PokeApiService;
@@ -91,7 +92,7 @@ export async function pokedexConversation(
     "",
     `*Status:* ${ownedStatus}`,
     "",
-    `_"${entry.flavorText}"_`,
+    `_"${escapeMarkdown(entry.flavorText)}"_`,
     "",
     "📊 *Base Stats:*",
     `\`${renderStat("HP", entry.stats.hp)}\``,

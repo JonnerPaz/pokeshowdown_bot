@@ -1,4 +1,4 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import { createMockPokemon, createTestBot } from "../../harness/testHarness.js";
 import { UserEntity } from "../../../src/domain/entities/users.entity.js";
 
@@ -35,6 +35,38 @@ describe("Pokedex Feature Integration (/pokedex)", () => {
 
     const sent = client.getSentMessages();
     expect(sent.some((m) => m.text?.includes("In your bag (Caught: 4x)"))).toBe(true);
+  });
+
+  it("escapes Markdown characters in flavor text", async () => {
+    const { dispatchCommand, client, pokeApi } = await createTestBot();
+
+    vi.spyOn(pokeApi, "getPokedexEntry").mockResolvedValue({
+      id: 25,
+      name: "pikachu",
+      types: ["electric"],
+      heightM: 0.4,
+      weightKg: 6,
+      ability: "static",
+      flavorText: "It stores _electricity* in its cheeks.",
+      spriteUrl: "",
+      stats: {
+        hp: 35,
+        attack: 55,
+        defense: 40,
+        specialAttack: 50,
+        specialDefense: 50,
+        speed: 90,
+      },
+      isLegendary: false,
+      isMythical: false,
+    });
+
+    await dispatchCommand("/pokedex pikachu", { fromId: 705 });
+
+    const sent = client.getSentMessages();
+    expect(sent.some((m) => m.text?.includes("It stores \\_electricity\\* in its cheeks."))).toBe(
+      true,
+    );
   });
 
   it("handles unknown pokemon gracefully with helpful error message", async () => {

@@ -4,6 +4,7 @@ import type { PokeApiService } from "../../presentation/services/pokeapi.service
 import type { UserDataSource } from "../../domain/datasource/user.datasource.js";
 import type { PokemonDataSource } from "../../domain/datasource/pokemon.datasource.js";
 import type { UserEntity } from "../../domain/entities/users.entity.js";
+import { escapeMarkdown } from "../common/stringHelper.js";
 
 export class BattleService {
   constructor(
@@ -28,7 +29,8 @@ export class BattleService {
 
     return {
       id: pokemon.id,
-      name: pokemon.nickname ?? pokemon.name,
+      // Escape once here so every Markdown battlefield/log render is entity-safe.
+      name: escapeMarkdown(pokemon.nickname ?? pokemon.name),
       nickname: pokemon.nickname,
       types: pokemon.types,
       primaryType,
