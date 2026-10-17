@@ -37,7 +37,11 @@ export function createBattleActionKeyboard(
   return kb;
 }
 
-export function renderBattlefield(state: BattleState, combatLog?: string): string {
+export function renderBattlefield(
+  state: BattleState,
+  combatLog?: string,
+  finalNote?: string,
+): string {
   const pA = state.trainerA.pokemon;
   const pB = state.trainerB.pokemon;
   const hpBarA = BattleEngine.renderHpBar(pA.currentHp, pA.maxHp);
@@ -60,6 +64,8 @@ export function renderBattlefield(state: BattleState, combatLog?: string): strin
     const winner = state.winnerTrainerId === state.trainerA.id ? state.trainerA : state.trainerB;
     const winnerPokemon = winner.pokemon;
     text += `\n🏆 **VICTORY!**\n🎉 **${winner.name}** and **${winnerPokemon.name}** won the battle!\n⭐ **${winnerPokemon.name}** gained +1 combat experience!`;
+  } else if (finalNote) {
+    text += `\n${finalNote}`;
   } else {
     const activeTrainer =
       state.currentTurnTrainerId === state.trainerA.id ? state.trainerA : state.trainerB;

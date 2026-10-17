@@ -242,4 +242,20 @@ export async function battleConversation(
       )
       .catch(() => {});
   }
+
+  // Turn cap reached without a knockout — call it a draw (no wins/losses recorded).
+  if (!battleState.isFinished) {
+    await ctx.api
+      .editMessageText(
+        battleMsg.chat.id,
+        battleMsg.message_id,
+        renderBattlefield(
+          battleState,
+          battleState.lastTurnLog,
+          "🏳️ **Turn limit reached!** The battle was called a draw.",
+        ),
+        { parse_mode: "Markdown" },
+      )
+      .catch(() => {});
+  }
 }
