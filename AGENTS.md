@@ -10,7 +10,7 @@
 - `pnpm-workspace.yaml` holds pnpm settings (e.g. `onlyBuiltDependencies` for prisma/esbuild build scripts).
 - Package manager: pnpm 10.x (`corepack enable pnpm`).
 - Stack: grammy bot framework, @grammyjs commands/conversations, Prisma/Postgres, pokenode-ts, Express.
-- Runs in **webhook mode**: Express `Server` registers the webhook with a `secret_token`; no long polling.
+- Runs in **Dual-Mode** (`BOT_MODE=polling` or `BOT_MODE=webhook`): In polling mode (ideal for Dokploy, local homelabs, and dynamic IP), `bot.start()` runs with zero inbound ports or tunnels; in webhook mode, Express `Server` registers the webhook with a `secret_token`. Express serves `/health` in both modes.
 - CI: `.github/workflows/ci.yml` runs install → `prisma:generate` → typecheck → lint → format check.
 - Layers: `domain` (entities/contracts/constants), `infrastructure` (datasources), `presentation` (controllers/services/bot/server), `generated/prisma` output.
 - Secrets: `.env` holds `API_KEY`, `DATABASE_URL`, `PORT`, `WEBHOOK_URL`, `WEBHOOK_SECRET`, etc. Never commit or echo secret values.
@@ -29,8 +29,9 @@
 
 ## 2. Build · Lint · Test
 
-- **Dev watch**: `pnpm dev` (tsx watch `src/index.ts`, boots bot + Express shell).
-- **One-off run**: `pnpm start` (single execution, useful for smoke tests or maintenance scripts).
+- **Build**: `pnpm run build` (bundles `src/index.ts` to `dist/index.js` using `esbuild` in ~20ms with sourcemaps).
+- **Production run**: `pnpm start` (executes pre-built `node dist/index.js` via `prestart` hook for minimal memory and zero JIT overhead).
+- **Dev watch**: `pnpm dev` (tsx watch `src/index.ts`, boots bot + Express shell with hot reloading).
 - **Static analysis**: `pnpm run typecheck` (tsc --noEmit, strict null checks on).
 - **Lint / format**: `pnpm lint`, `pnpm lint:fix`, `pnpm format`, `pnpm format:check` (Prettier; formatted paths are scoped in package.json to avoid `postgres/` permission issues).
 - **Migrations**: `pnpm run prisma:migrate -- --name <desc>` (requires live DB connection).
@@ -206,6 +207,10 @@ Phase 14 (landed on `main`): Official grammY Plugin Evaluation & Inline Query Sy
 Phase 15 (landed on `main`): PC Storage Box System & Pokémon Release with Pokéball Rewards (active 6-member party with auto-routing 7th+ catches to PC Storage Box with `isInParty: false`, `/box` PC storage carousel with Withdraw, Deposit, and Swap actions, `/release` with 2-step confirmation and Professor Oak rewards [+3 Pokéballs standard, +5 Pokéballs & +1 Great Ball shiny], and lone Pokémon protection guards).
 
 Phase 16 (landed on `main`): Correctness & Hardening Audit Sweep (atomic group-catch mutex in `groupEncounter.service.ts`, evolution re-stacks `timesCaught` with `1 + remainingCaught` instead of duplicating rows, buddy migration on evolution merge, consistent Telegram Markdown escaping and single-asterisk format, scoped command menus registered with `CommandGroup.setCommands`, buddy "none" state, per-user atomic ball deduction + rate limiting for group catches, Postgres decrement guard against negative ball counts, immutable `BattleEngine` state with turn-cap resolution, pruned in-memory rate-limit/activity maps, removal of dead `BattleService.awardVictory`, and the `/pokemonsummary` detailed stats view).
+
+Phase 17 (landed on `main`): Dual-Mode (Long Polling & Webhook), Dynamic IP Resilience & Dokploy Compose Support (`src/presentation/server.ts` and `src/index.ts` supporting `BOT_MODE=polling` and `BOT_MODE=webhook`, `deleteWebhook` and `DROP_PENDING_UPDATES` queue protection after power outages, Express `/health` check in polling mode, `compose.dokploy.yaml` production stack with named volume `postgres_data` and automatic `prisma migrate deploy`, and full feature parity preservation for conversations, encounters, and inline queries).
+
+Phase 18 (landed on `main`): High-Speed Production Build & Fancy Documentation Modernization (`esbuild` bundling to `dist/index.js` in ~20ms, production runtime `node dist/index.js`, Dockerfile build step, `.gitignore` `dist/`, removal of verbose Cloudflare tunnel tutorials and all mermaid diagrams from README, comprehensive showcase of all 9 bot gameplay domains, and Dokploy/Compose quickstart guide).
 
 Conventions: each feature = one scoped commit set, verified with typecheck/lint/format + `pnpm test`, README/AGENTS updated. No new shared mutable state for encounters or battles (keep them conversation-local).
 

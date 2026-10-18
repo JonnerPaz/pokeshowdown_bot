@@ -1,0 +1,55 @@
+services:
+  db:
+    image: postgres:17-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-postgres}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-postgres}
+      POSTGRES_DB: ${POSTGRES_DB:-pokemons}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-postgres} -d ${POSTGRES_DB:-pokemons}"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+    networks:
+      - pokebot-net
+
+  bot:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    restart: unless-stopped
+    environment:
+      CI: "true"
+      API_KEY: ${API_KEY}
+      DATABASE_URL: postgresql://${POSTGRES_USER:-postgres}:${POSTGRES_PASSWORD:-postgres}@db:5432/${POSTGRES_DB:-pokemons}?schema=public
+      BOT_MODE: ${BOT_MODE:-polling}
+      DROP_PENDING_UPDATES: ${DROP_PENDING_UPDATES:-true}
+      PORT: 5000
+    depends_on:
+      db:
+        condition: service_healthy
+    command: >
+      sh -c "pnpm exec prisma migrate deploy && pnpm start"
+    healthcheck:
+      test:
+        [
+          "CMD-SHELL",
+          'node -e ''fetch("http://127.0.0.1:5000/health").then(r => r.ok ? process.exit(0) : process.exit(1)).catch(() => process.exit(1))''',
+        ]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+      start_period: 15s
+    networks:
+      - pokebot-net
+
+volumes:
+  postgres_data:
+    driver: local
+
+networks:
+  pokebot-net:
+    driver: bridge

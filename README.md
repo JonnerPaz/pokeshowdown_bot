@@ -1,384 +1,328 @@
-# PokeBotShowdown
+# ⚡ PokeBotShowdown
+
+<div align="center">
 
 [![CI](https://github.com/JonnerPaz/pokeshowdown_bot/actions/workflows/ci.yml/badge.svg)](https://github.com/JonnerPaz/pokeshowdown_bot/actions/workflows/ci.yml)
 [![Release Please](https://github.com/JonnerPaz/pokeshowdown_bot/actions/workflows/release-please.yml/badge.svg)](https://github.com/JonnerPaz/pokeshowdown_bot/actions/workflows/release-please.yml)
-![Node.js Version](https://img.shields.io/badge/node-%3E%3D22.0.0-brightgreen)
-![pnpm](https://img.shields.io/badge/pnpm-10.x-orange)
-![TypeScript](https://img.shields.io/badge/TypeScript-ESM-blue)
+![Node.js Version](https://img.shields.io/badge/node-%3E%3D22.0.0-339933?logo=node.js&logoColor=white)
+![pnpm](https://img.shields.io/badge/pnpm-10.x-F69220?logo=pnpm&logoColor=white)
+![TypeScript](https://img.shields.io/badge/TypeScript-ESM-3178C6?logo=typescript&logoColor=white)
 [![code style: prettier](https://img.shields.io/badge/code_style-prettier-ff69b4.svg)](https://github.com/prettier/prettier)
-![License](https://img.shields.io/badge/license-MIT-blue)
+![License](https://img.shields.io/badge/license-MIT-blue.svg)
 
-A Telegram bot to catch, evolve, and trade Pokemon with your friends.
+**A competitive, feature-complete Pokémon experience directly inside Telegram.**
 
-## What it does
+Catch, evolve, trade, battle fellow trainers and more!
 
-- Register users and choose a starter Pokemon.
-- Spawn wild Pokemon encounters and catch them (solo or spontaneous multiplayer group chat encounters).
-- View and manage your Pokemon collection.
-- Evolve Pokemon and set companion buddy Pokemon.
-- Player-to-player Pokemon trading and turn-based PvP battles with rank leaderboards.
-- Inventory system with Pokeball tiers, daily rewards, and Pokedex encyclopedia.
-- Telegram Inline Mode (`@pokeshowdown_bot <pokemon|buddy|team>`) to showcase stats anywhere.
-- Delete account and related user data.
+[Features](#-features--gameplay) • [Operational Modes](#-operational-modes) • [Quickstart](#-quickstart) • [Dokploy Deployment](#-deploying-on-dokploy) • [Commands](#-bot-commands) • [Tech Stack](#-tech-stack)
+
+</div>
 
 ---
 
-## Architecture & Why a Reverse Proxy is Needed
+## 🌟 Features & Gameplay
 
-PokeBotShowdown operates exclusively in **Webhook Mode** via Express and grammY (`src/presentation/server.ts`).
+PokeBotShowdown brings the depth of authentic Pokémon mechanics into solo chats
+and bustling Telegram groups.
 
-Unlike _Long Polling_ (where the bot periodically asks Telegram for updates), in Webhook mode:
+### Turn-Based PvP Battle Engine
 
-1. When the bot starts, it registers its public HTTPS URL with Telegram's API via `setWebhook`.
-2. Every time a user interacts with the bot on Telegram, Telegram's servers send an HTTP `POST` request directly to that URL.
-3. Telegram **requires** this endpoint to be publicly accessible over the internet with a valid **HTTPS** SSL/TLS certificate.
-4. During local development, your computer is behind a local router/NAT (`localhost:5000`) without a public IP or SSL certificate.
+- **Authentic Combat Formulas**: Damage calculated using base stats, levels, and
+  a complete Gen 1–9 elemental type effectiveness matrix
+  (super effective, resisted, immunities).
 
-To bridge this gap, a **reverse proxy / tunnel** like **Cloudflare Tunnel (`cloudflared`)** exposes your local port `5000` to a secure public HTTPS URL (e.g., `https://<random-id>.trycloudflare.com`).
+- **Interactive Battlefield**: Dynamic Telegram inline keyboards with live HP
+  bars, active turn prompts, and surrender options.
 
-```mermaid
-flowchart LR
-    A["Telegram User"] --> B["Telegram Servers"]
-    B -- "HTTPS POST (Webhook + Secret Token)" --> C["Cloudflare Tunnel<br/>(cloudflared)"]
-    C -- "HTTP localhost:5000" --> D["Express Server<br/>(src/presentation/server.ts)"]
-    D --> E["grammY Bot Middleware<br/>(MainBot & Feature Composers)"]
-    E --> F[("PostgreSQL Database")]
-```
+- **Fair Play & Draw Resolution**: 10-turn strategic cap with tie-break draw
+  handling to prevent stalling, plus automatic battle records (wins/losses)
+  logged to user profiles.
+
+### Spontaneous Group Chat Encounters
+
+- **Activity-Driven Spawns**: Wild Pokémon appear spontaneously in group chats
+  based on conversation message thresholds, safeguarded by burst anti-spam protection.
+
+- **Multiplayer Catch Races**: Multiple group members can throw balls
+  simultaneously. Handled with synchronous atomic reservation mutexes to eliminate
+  race conditions.
+
+- **Authentic Mechanics**: Wild Pokémon can be spooked, break free from balls,
+  or flee if too many attempts fail.
+
+### Pokéball Tiers & Bag Inventory
+
+- **4 Authentic Ball Tiers**:
+  - 🔴 **Pokéball** (1.0x catch rate)
+  - 🔵 **Great Ball** (1.5x catch rate)
+  - ⚫ **Ultra Ball** (2.0x catch rate)
+  - 🟣 **Master Ball** (100% guaranteed catch rate)
+- **Live Bag Inspection**: View your inventory anytime with `/bag`.
+- **Daily Rewards & Streaks**: Claim free supplies with `/daily`—consecutive
+  daily logins grant progressive streak bonuses.
+
+### PC Storage Box & Party Management
+
+- **Active 6-Member Party**: Your top 6 Pokémon form your active battle and
+  showcase party.
+
+- **Automatic Overflow Routing**: Any Pokémon caught beyond 6 are automatically
+  routed to your PC Storage Box (`/box`).
+
+- **Full Box Operations**: Browse, Withdraw, Deposit, and Swap Pokémon seamlessly
+  between your active team and PC storage.
+
+- **Release for Rewards**: Release duplicate Pokémon with `/release` to earn
+  Professor Oak rewards
+  (+3 Pokéballs standard; +5 Pokéballs & +1 Great Ball for shinies). Built-in
+  guards prevent releasing your last remaining Pokémon.
+
+### 🎠 Interactive Pokémon Carousel & Detailed Stats
+
+- **Paged Card Viewer (`/pokemons`)**: Interactive inline carousel showing
+  Pokémon sprites, derived battle levels, dual types, abilities, and evolution
+  progress.
+
+- **Detailed Stat Inspector (`/pokemonsummary`)**: Comprehensive breakdown of
+  individual stats—HP, Attack, Defense, Special Attack, Special Defense, Speed,
+  Base Stat Total (BST), and custom nicknames.
+
+### 📖 National Pokédex Encyclopedia
+
+- **All 1025 Pokémon Supported**: Look up any Pokémon across Generations 1
+  through 9 with `/pokedex <name|id>`.
+
+- **Lore & Stats**: High-resolution artwork, official Pokédex lore flavor text,
+  elemental badges, and clamped visual base stat bars.
+
+- **Bag Ownership Indicator**: Automatically displays whether you already own
+  the searched species in your collection.
+
+### 💬 Telegram Inline Mode
+
+Query the bot from **any** chat, private conversation, or channel without adding it by typing `@bot_username`:
+
+- `@bot <pokemon>`: Instant Pokédex preview card with artwork, types, and stats.
+- `@bot buddy`: Showcase your companion buddy Pokémon, battle rank, and win rate.
+- `@bot team`: Share your active 6-member battle team party into any conversation.
+
+### 🏆 Trainer Profiles & Leaderboard
+
+- **Trainer Card (`/profile`)**: Displays trainer rank titles, total wins,
+  losses, win rate percentage, collection counts, and active companion buddy sprite.
+
+- **Global Leaderboard (`/leaderboard`)**: Real-time top 10 rankings with
+  podium medals (🥇, 🥈, 🥉) and the caller's current rank position.
+
+- **Buddy System (`/buddy`)**: Choose your favorite companion Pokémon to
+  accompany your profile and inline cards.
+
+### 🤝 Trading & Evolution
+
+- **Safe 2-Way Trading**: Player-to-player trade proposals with secure,
+  namespaced inline confirmation buttons.
+
+- **Evolution System**: Evolve your Pokémon when they reach catch thresholds.
+  The system preserves companion buddy assignments and merges duplicates cleanly.
 
 ---
 
-## Requirements
+## ⚙️ Operational Modes
 
-Before starting, ensure you have the following installed on your machine:
+PokeBotShowdown is engineered with a **Dual-Mode** runtime, ensuring seamless
+operation regardless of your hosting environment:
 
-- **Node.js**: 22+ (CI uses Node 26)
+### 1. Long Polling Mode (`BOT_MODE="polling"`) — _Recommended_
+
+- **Zero Inbound Ports / Tunnels**: The bot makes outbound HTTPS requests to
+  Telegram (`api.telegram.org:443`). No port forwarding, public IP, domain, or
+  SSL certificate required.
+
+- **Dynamic IP & Power Outage Resilient**: If your home server reboots after a
+  power outage or your internet provider rotates your public IP, the bot
+  automatically reconnects in seconds.
+
+- **Healthcheck Endpoint**: Automatically serves `GET /health` on `PORT`
+  (default: 5000) for container health monitoring (Dokploy, Docker, Uptime Kuma).
+
+- **Queue Protection**: Supports `DROP_PENDING_UPDATES="true"` to prevent
+  processing a backlog of stale messages after a server restart.
+
+### 2. Webhook Mode (`BOT_MODE="webhook"`)
+
+- Designed for cloud production environments with a static IP and public domain.
+
+- Securely validates incoming Telegram HTTP POST updates using `WEBHOOK_SECRET`.
+
+- Can be paired with a reverse proxy (Caddy, Nginx, Traefik) or tunneling
+  solutions (such as Cloudflare Tunnel) if inbound routing is desired.
+
+---
+
+## 🚀 Quickstart
+
+### Prerequisites
+
+- **Node.js**: 22+ (TypeScript ESM)
 - **pnpm**: 10.x (`corepack enable pnpm`)
-- **Docker & Docker Compose**: for running PostgreSQL (and optional containerized bot)
+- **Docker & Docker Compose**: for PostgreSQL
 - **Telegram Bot Token**: from [@BotFather](https://t.me/botfather)
-- **Cloudflare Tunnel (`cloudflared`)**: for exposing your local development server to Telegram
 
----
-
-## Installing `cloudflared` (From Scratch)
-
-If you are setting up a fresh development machine and do not have `cloudflared` installed:
-
-### Linux
-
-- **Debian / Ubuntu / Pop!\_OS / Linux Mint**:
-
-  ```bash
-  curl -L --output cloudflared.deb https://github.com/cloudflare/cloudflared/releases/latest/download/cloudflared-linux-amd64.deb
-  sudo dpkg -i cloudflared.deb && rm cloudflared.deb
-  ```
-
-- **Fedora / RHEL / Rocky Linux**:
-
-  ```bash
-  sudo dnf install -y https://github.com/cloudflare/cloudflared/releases/latest/download/cloudflared-linux-x86_64.rpm
-  ```
-
-- **Arch Linux / Manjaro**:
-  ```bash
-  sudo pacman -S cloudflared
-  ```
-
-### macOS
-
-Using [Homebrew](https://brew.sh):
+### Option A: Local Development
 
 ```bash
-brew install cloudflare/cloudflare/cloudflared
-```
-
-### Windows
-
-Using Windows Package Manager (PowerShell as Administrator):
-
-```powershell
-winget install --id Cloudflare.cloudflared
-```
-
-_Or using Chocolatey:_
-
-```powershell
-choco install cloudflared
-```
-
-### Verify Installation
-
-```bash
-cloudflared --version
-```
-
----
-
-## Local Setup (Step-by-Step)
-
-Follow these steps in chronological order:
-
-### 1. Clone & Install Dependencies
-
-```bash
-git clone <repository-url>
+# 1. Clone repository and install dependencies
+git clone https://github.com/JonnerPaz/pokeshowdown_bot.git
 cd pokeshowdown_bot
 pnpm install
-```
 
-### 2. Prepare Environment File
-
-Copy the template environment file:
-
-```bash
+# 2. Configure environment variables
 cp env-sample.env .env
+# Edit .env and set your API_KEY and DATABASE_URL
+
+# 3. Start local PostgreSQL
+docker compose up -d db
+
+# 4. Generate Prisma client & apply database migrations
+pnpm run prisma:generate
+pnpm run prisma:deploy
+
+# 5. Start bot in development mode (hot-reload)
+pnpm dev
 ```
 
-Open `.env` and fill in:
+### Option B: High-Speed Production Run
 
-- `API_KEY`: Your Telegram Bot API token obtained from [@BotFather](https://t.me/botfather).
-- `WEBHOOK_SECRET`: A random secret token (1-256 characters) used to verify that incoming webhook requests genuinely originate from Telegram. You can generate one via:
-  ```bash
-  openssl rand -hex 32
-  ```
-
-Leave `WEBHOOK_URL` empty for now; you will obtain it in the next step.
-
-### 3. Start the Cloudflare Tunnel
-
-Open a dedicated terminal window (keep it running throughout your development session):
+The project includes an ultra-fast build pipeline powered by `esbuild`:
 
 ```bash
-pnpm tunnel
-# or: cloudflared tunnel --url http://localhost:5000
-```
+# Compile TypeScript to an optimized ESM bundle in ~20ms
+pnpm run build
 
-> [!NOTE]
-> This command starts a **Cloudflare Quick Tunnel** (TryCloudflare). It requires **no Cloudflare account**, no login, and no custom domain.
->
-> In the console output, look for a line containing your public HTTPS tunnel URL:
->
-> ```text
-> +--------------------------------------------------------------------------------------------+
-> |  Your quick Tunnel has been created! Visit it at (it may take some time to be reachable):  |
-> |  https://orange-apples-random-words.trycloudflare.com                                      |
-> +--------------------------------------------------------------------------------------------+
-> ```
-
-### 4. Set `WEBHOOK_URL` in `.env`
-
-Copy the HTTPS URL output by `cloudflared` into `.env`:
-
-```env
-WEBHOOK_URL="https://orange-apples-random-words.trycloudflare.com"
+# Start production server (pure V8 execution, minimal RAM)
+pnpm start
 ```
 
 ---
 
-### 5. Start the Application
+## 🐳 Deploying on Dokploy
 
-Choose **one** of the two workflows below:
+PokeBotShowdown provides a preconfigured, production-ready stack in `compose.dokploy.yaml`. It sets up PostgreSQL 17 with persistent storage and runs the bot in Long Polling mode—requiring zero open ports on your router:
 
-#### Workflow A: Host Development (Recommended)
-
-In this workflow, PostgreSQL runs in a lightweight Docker container while the bot runs directly on your host machine with instant TypeScript hot-reloading (`tsx watch`).
-
-1. **Start PostgreSQL in Docker**:
-   ```bash
-   docker compose up -d db
+1. **Create Compose Service in Dokploy**:
+   - In Dokploy, go to **Projects** → select your project → **Create Service** → **Compose**.
+   - Point the compose file path to: `compose.dokploy.yaml`.
+2. **Configure Environment Variables**:
+   In Dokploy's **Environment** tab, set:
+   ```env
+   API_KEY="your_telegram_bot_token"
+   BOT_MODE="polling"
+   DROP_PENDING_UPDATES="true"
+   POSTGRES_USER="postgres"
+   POSTGRES_PASSWORD="your_secure_password"
+   POSTGRES_DB="pokemons"
    ```
-2. **Generate Prisma Client & Apply Migrations**:
-   ```bash
-   pnpm run prisma:generate
-   pnpm run prisma:migrate
-   ```
-3. **Run the Bot in Development Mode**:
-   ```bash
-   pnpm dev
-   ```
-
-You will see:
-
-```text
-COMMANDS REGISTERED
-Server running on port 5000
-```
-
-#### Workflow B: Full Docker Development
-
-In this workflow, both PostgreSQL and the bot run in Docker containers.
-
-```bash
-docker compose up -d
-```
-
-This starts the `db` and `dev` containers, generates the Prisma client, runs migrations, and boots the bot on port `5000`.
-
-> [!IMPORTANT]
-> If your Cloudflare Tunnel restarts and issues a new URL, you must update `WEBHOOK_URL` in `.env` and recreate the container:
->
-> ```bash
-> docker compose up -d --force-recreate dev
-> ```
->
-> (`docker compose restart` does **not** reload `.env` values in existing containers).
+3. **Deploy**:
+   - Click **Deploy**. Dokploy will spin up PostgreSQL, run Prisma schema
+     migrations automatically, and start the bot in polling mode with internal
+     health checks on `/health`.
 
 ---
 
-## Verifying the Webhook
-
-To confirm that Telegram successfully registered your webhook URL:
-
-```bash
-curl -s "https://api.telegram.org/bot<YOUR_API_KEY>/getWebhookInfo"
-```
-
-Expected JSON response:
-
-```json
-{
-  "ok": true,
-  "result": {
-    "url": "https://orange-apples-random-words.trycloudflare.com",
-    "has_custom_certificate": false,
-    "pending_update_count": 0
-  }
-}
-```
-
-Now open Telegram, search for your bot, and send `/start`.
-
----
-
-## Alternative Tunneling Tools
-
-While `cloudflared` is the primary and recommended tool, you can use these alternatives if preferred:
-
-### Pinggy (SSH - Zero Installation)
-
-Requires no tools installed beyond an SSH client:
-
-```bash
-ssh -p 443 -R0:localhost:5000 a.pinggy.io
-```
-
-Copy the resulting `https://...` URL into `WEBHOOK_URL` in `.env`.
-
-### ngrok
-
-```bash
-ngrok http 5000
-```
-
-Copy the generated `https://...ngrok-free.app` URL into `WEBHOOK_URL` in `.env`.
-
----
-
-## Troubleshooting
-
-- **`Error: WEBHOOK_URL is not defined`**:
-  Make sure you started your tunnel, copied the HTTPS URL, and saved it into `.env` under `WEBHOOK_URL`.
-- **Tunnel URL changed on restart**:
-  Quick tunnels assign a new random URL each time `cloudflared` is restarted. Whenever this happens, paste the new URL into `WEBHOOK_URL` in `.env` and restart your bot (`pnpm dev` or `docker compose up -d --force-recreate dev`).
-- **Port 5000 already in use**:
-  Ensure you are not running both `pnpm dev` on the host and the `dev` service in Docker Compose simultaneously. Stop one before running the other (`docker compose stop dev`).
-- **Telegram updates not arriving**:
-  Check `getWebhookInfo` via the curl command above. If `last_error_message` is present in the response, Telegram will describe why the delivery failed (e.g., timeout or SSL handshake error).
-- **`generated/` or `postgres/` permission issues**:
-  Files written by Docker containers may be owned by `root`. If running on host after Docker, you may need to adjust ownership: `sudo chown -R $USER:$USER generated/`.
-
----
-
-## Bot Commands
+## 📋 Bot Commands
 
 All commands are case sensitive and must start with `/`.
 
-| English Command     | Spanish Alias      | Description                                      |
-| :------------------ | :----------------- | :----------------------------------------------- |
-| `/start`            | `/comenzar`        | Start the bot                                    |
-| `/register`         | `/registrarse`     | Register user and choose starter Pokemon         |
-| `/delete_account`   | `/borrar_cuenta`   | Delete account and associated data               |
-| `/help`             | `/ayuda`           | Display command list and instructions            |
-| `/generate_pokemon` | `/generar_pokemon` | Spawn a wild Pokemon encounter                   |
-| `/pokemons`         | `/pokemons`        | Browse Pokemon collection (interactive carousel) |
-| `/pokemonsummary`   | `/resumen_pokemon` | View detailed stats of one of your Pokemon       |
-| `/box`              | `/caja`            | Browse PC Storage Box collection                 |
-| `/release`          | `/liberar`         | Release a Pokemon for Pokeball rewards           |
-| `/evolve`           | `/evolucionar`     | Evolve an owned Pokemon                          |
-| `/shiny`            | `/brillante`       | Make one of your pokemons shiny                  |
-| `/nickname`         | `/nickname`        | Add a custom nickname to your pokemon            |
-| `/trade`            | `/intercambiar`    | Trade a Pokemon with another user                |
-| `/battle`           | `/batalla`         | Challenge another trainer to a turn-based battle |
-| `/pokedex`          | `/pokedex`         | Look up any Pokemon in the national Pokedex      |
-| `/bag`              | `/mochila`         | View your Pokeballs and item inventory           |
-| `/daily`            | `/diario`          | Claim daily Pokeballs and streak bonuses         |
-| `/profile`          | `/perfil`          | View your Trainer Card, battle records & buddy   |
-| `/leaderboard`      | `/ranking`         | View battle rankings and top trainers            |
-| `/buddy`            | `/companero`       | Set or view your favorite buddy Pokemon          |
+### ⚔️ Battle & PvP
 
-### Inline Mode Queries
+| Command   | Spanish Alias | Description                                          |
+| :-------- | :------------ | :--------------------------------------------------- |
+| `/battle` | `/batalla`    | Challenge another trainer to a turn-based PvP battle |
 
-You can use the bot in **any chat, group, or channel** without adding it by typing `@<bot_username>` followed by a query:
+### 🌲 Wild Encounters & Catching
 
-- `@bot <pokemon_name>`: Instant Pokédex card with artwork, types, lore, and visual stat bars.
-- `@bot buddy`: Showcase your companion buddy Pokémon, battle stats, and win rate.
-- `@bot team`: Share your active Pokémon party roster directly into any conversation.
+| Command             | Spanish Alias      | Description                                                             |
+| :------------------ | :----------------- | :---------------------------------------------------------------------- |
+| `/generate_pokemon` | `/generar_pokemon` | Spawn a wild Pokémon encounter                                          |
+| `/bag`              | `/mochila`         | View inventory of Pokéballs, Great Balls, Ultra Balls, and Master Balls |
+| `/daily`            | `/diario`          | Claim daily Pokéball supplies and streak bonuses                        |
+
+### 📦 Party, PC Box & Collection
+
+| Command           | Spanish Alias      | Description                                                |
+| :---------------- | :----------------- | :--------------------------------------------------------- |
+| `/pokemons`       | `/pokemons`        | Interactive carousel of your active 6-member party         |
+| `/pokemonsummary` | `/resumen_pokemon` | View detailed base stats, BST, and nicknames               |
+| `/box`            | `/caja`            | Browse PC Storage Box, withdraw, deposit, and swap Pokémon |
+| `/release`        | `/liberar`         | Release Pokémon for Professor Oak Pokéball rewards         |
+| `/evolve`         | `/evolucionar`     | Evolve an owned Pokémon when catch threshold is met        |
+| `/shiny`          | `/brillante`       | Convert a qualified Pokémon into its shiny form            |
+| `/nickname`       | `/nickname`        | Set a custom nickname for your Pokémon                     |
+
+### 🤝 Social & Information
+
+| Command        | Spanish Alias   | Description                                                    |
+| :------------- | :-------------- | :------------------------------------------------------------- |
+| `/trade`       | `/intercambiar` | Propose a secure trade with another trainer in group chat      |
+| `/pokedex`     | `/pokedex`      | Look up any Pokémon (Gen 1–9) with lore and stat bars          |
+| `/profile`     | `/perfil`       | View your Trainer Card, win/loss record, rank title, and buddy |
+| `/leaderboard` | `/ranking`      | Global top 10 trainer rankings                                 |
+| `/buddy`       | `/companero`    | Set your favorite Pokémon companion                            |
+
+### ⚙️ Account & Setup
+
+| Command           | Spanish Alias    | Description                                              |
+| :---------------- | :--------------- | :------------------------------------------------------- |
+| `/start`          | `/comenzar`      | Initialize the bot and welcome screen                    |
+| `/register`       | `/registrarse`   | Register your trainer account and pick a starter Pokémon |
+| `/delete_account` | `/borrar_cuenta` | Delete account and all associated Pokémon data           |
+| `/help`           | `/ayuda`         | Display command list and instructions                    |
 
 ---
 
-## Testing
+## 🧪 Testing
 
-The project includes unit and end-to-end integration test suites powered by [Vitest](https://vitest.dev/):
+The repository features comprehensive unit and integration test suites powered by [Vitest](https://vitest.dev/):
 
 ```bash
-# Run all tests (unit + integration)
+# Run all tests
 pnpm test
 
 # Run tests in watch mode
 pnpm vitest
 
-# Run only feature tests
-pnpm vitest run tests/features
+# Run TypeScript typechecking
+pnpm run typecheck
+
+# Run linter & formatter checks
+pnpm lint
+pnpm format:check
 ```
 
-Integration tests utilize grammY's `ApiClientOptions.fetch` to intercept outgoing Telegram Bot API requests locally in-memory, paired with an in-memory repository harness. No external network credentials, live Telegram servers, or PostgreSQL instances are required to run the test suite.
+Integration tests utilize an in-memory repository harness and grammY's `ApiClientOptions.fetch` to intercept Bot API calls with zero network latency and no live Telegram connection required.
 
 ---
 
-## Tech Stack
+## 🛠️ Tech Stack
 
-- **Runtime**: Node.js 22+ (TypeScript ESM, `moduleResolution: nodenext`)
-- **Framework**: [grammY](https://grammy.dev/) (`@grammyjs/commands`, `@grammyjs/conversations`, `@grammyjs/auto-retry`)
-- **Database**: PostgreSQL with [Prisma ORM](https://www.prisma.io/)
-- **Server**: Express (Webhook middleware)
-- **External API**: [pokenode-ts](https://github.com/Gabb-c/pokenode-ts) (with in-memory caching)
-
----
-
-## Project Structure
-
-```text
-src/
-├── domain/            # Entities, repository contracts, battle engine, and domain constants
-├── features/          # Feature slices (auth, battle, inventory, pokedex, pokemon, profile, system) with composers & conversations
-├── infrastructure/    # Prisma-backed repository implementations
-├── presentation/      # MainBot wiring, Express server shell, and shared types
-prisma/                # Prisma schema and database migrations
-generated/prisma/      # Auto-generated Prisma client
-```
+- **Runtime**: Node.js 22+ (Strict ESM, `moduleResolution: nodenext`)
+- **Bot Framework**: [grammY](https://grammy.dev/) (`@grammyjs/commands`, `@grammyjs/conversations`, `@grammyjs/auto-retry`)
+- **Database & ORM**: PostgreSQL with [Prisma ORM](https://www.prisma.io/)
+- **Build Engine**: [esbuild](https://esbuild.github.io/) (~20ms bundle times)
+- **HTTP Server**: Express 5 (Health checks and optional Webhook adapter)
+- **External API**: [pokenode-ts](https://github.com/Gabb-c/pokenode-ts) with in-memory caching
+- **Testing**: [Vitest](https://vitest.dev/) with native ESM execution
 
 ---
 
-## Contributing & Community
-
-We welcome contributions from the community! Please consult the following guides:
-
-- [Contributing Guidelines](CONTRIBUTING.md) — Setup, Conventional Commits, Git workflow, and architecture rules.
-- [Code of Conduct](CODE_OF_CONDUCT.md) — Standards and community pledge (Contributor Covenant v2.1).
-- [Security Policy](SECURITY.md) — Vulnerability reporting and credential guidelines.
-- [Changelog](CHANGELOG.md) — Documented release history and updates.
-
----
-
-## License
+## 📄 License
 
 This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
+
+## Special thanks
+
+This project relies heavily on [pokenode-ts](https://github.com/Gabb-c/pokenode-ts)
+to get access to the PokeAPI. So from here, I want to give a special thanks to
+[Gabb-c](https://github.com/Gabb-c) for creating and maintaining this library,
+and the PokeAPI team for maintaining and providing the data. Also, thanks to
+the [Grammy team](https://grammy.dev/) for bringing joy to building telegram bots.
