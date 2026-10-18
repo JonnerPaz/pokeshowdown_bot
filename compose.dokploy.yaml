@@ -14,6 +14,8 @@ services:
       - postgres_data:/var/lib/postgresql
     expose:
       - "5432"
+    ports:
+      - "${DB_PORT_BIND:-2300}:5432"
     healthcheck:
       # -h 127.0.0.1 forces a TCP check: with the default Unix socket this probe
       # also succeeds against the temporary server initdb starts, reporting the
@@ -28,8 +30,12 @@ services:
       retries: 10
       start_period: 10s
     networks:
-      - default
-      - pokebot-net
+      default:
+        aliases:
+          - db
+      pokebot-net:
+        aliases:
+          - db
 
   bot:
     build:
@@ -43,7 +49,7 @@ services:
       # (e.g. DB_HOST=<container-name>) to point at a Dokploy-managed database.
       DB_HOST: ${DB_HOST:-db}
       DB_PORT: ${DB_PORT:-5432}
-      DATABASE_URL: postgresql://${POSTGRES_USER:-postgres}:${POSTGRES_PASSWORD:-postgres}@${DB_HOST:-db}:${DB_PORT:-5432}/${POSTGRES_DB:-pokemons}?schema=public
+      DATABASE_URL: ${DATABASE_URL:-postgresql://${POSTGRES_USER:-postgres}:${POSTGRES_PASSWORD:-postgres}@${DB_HOST:-db}:${DB_PORT:-5432}/${POSTGRES_DB:-pokemons}?schema=public}
       BOT_MODE: ${BOT_MODE:-polling}
       DROP_PENDING_UPDATES: ${DROP_PENDING_UPDATES:-true}
       PORT: ${PORT:-5000}

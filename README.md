@@ -207,11 +207,11 @@ pnpm start
 
 ## 🐳 Deploying on Dokploy
 
-PokeBotShowdown provides a preconfigured, production-ready stack in `compose.dokploy.yaml`. It sets up PostgreSQL 18 with persistent storage and runs the bot in Long Polling mode—requiring zero open ports on your router:
+PokeBotShowdown provides a preconfigured, production-ready stack in `compose.yaml` (also mirrored in `compose.dokploy.yaml`). It sets up PostgreSQL 18 with persistent storage and runs the bot in Long Polling mode—requiring zero open ports on your router:
 
 1. **Create Compose Service in Dokploy**:
    - In Dokploy, go to **Projects** → select your project → **Create Service** → **Compose**.
-   - Set **Compose Path** to `compose.dokploy.yaml`.
+   - Keep default **Compose Path** (`compose.yaml` or `compose.dokploy.yaml`).
    - Keep **Compose Type** on **Docker Compose**. The **Stack** type does not support
      `build`, so the bot image could not be built from this file.
 2. **Configure Environment Variables**:
@@ -229,11 +229,13 @@ PokeBotShowdown provides a preconfigured, production-ready stack in `compose.dok
 
    Optional overrides:
 
-   | Variable          | Default | Purpose                                                                         |
-   | :---------------- | :------ | :------------------------------------------------------------------------------ |
-   | `DB_HOST`         | `db`    | Hostname of the database. Change it when using an external Dokploy database.    |
-   | `DB_MAX_ATTEMPTS` | `40`    | How many times the entrypoint retries `prisma migrate deploy` before giving up. |
-   | `PORT`            | `5000`  | Port used by the internal `/health` endpoint.                                   |
+   | Variable          | Default            | Purpose                                                                                         |
+   | :---------------- | :----------------- | :---------------------------------------------------------------------------------------------- |
+   | `DATABASE_URL`    | `postgresql://...` | Full connection string. Useful when targeting an external or Dokploy-managed database directly. |
+   | `DB_HOST`         | `db`               | Hostname of the database. Change it when using an external Dokploy database.                    |
+   | `DB_PORT`         | `5432`             | Port of the database.                                                                           |
+   | `DB_MAX_ATTEMPTS` | `40`               | How many times the entrypoint retries `prisma migrate deploy` before giving up.                 |
+   | `PORT`            | `5000`             | Port used by the internal `/health` endpoint.                                                   |
 
 3. **Deploy**:
    - Click **Deploy**. Dokploy will spin up PostgreSQL, run Prisma schema
@@ -242,7 +244,7 @@ PokeBotShowdown provides a preconfigured, production-ready stack in `compose.dok
 
 > ℹ️ **Environment variables are not injected into containers automatically.**
 > Dokploy writes them to a `.env` file next to the compose file and only reaches
-> your services through the `${VAR}` references in `compose.dokploy.yaml`. Keep
+> your services through the `${VAR}` references in `compose.yaml`. Keep
 > those references in place (or add `env_file: .env`) if you edit the file.
 
 ### Troubleshooting: the bot cannot reach the database

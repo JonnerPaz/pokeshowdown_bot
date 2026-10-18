@@ -12,31 +12,70 @@
 # double-escaping (`$$VAR`) inside YAML.
 set -eu
 
-HOST="${DB_HOST:-db}"
-PORT="${DB_PORT:-5432}"
+HOST="${DB_HOST:-}"
+PORT="${DB_PORT:-}"
+
+if [ -z "${HOST}" ] || [ -z "${PORT}" ]; then
+  if [ -n "${DATABASE_URL:-}" ]; then
+    PARSED="$(node -e '
+      try {
+        const u = new URL(process.env.DATABASE_URL);
+        console.log((u.hostname || "db") + " " + (u.port || "5432"));
+      } catch {
+        console.log("db 5432");
+      }
+    ')"
+    HOST="${HOST:-$(echo "${PARSED}" | cut -d' ' -f1)}"
+    PORT="${PORT:-$(echo "${PARSED}" | cut -d' ' -f2)}"
+  else
+    HOST="${HOST:-db}"
+    PORT="${PORT:-5432}"
+  fi
+fi
+
 MAX_ATTEMPTS="${DB_MAX_ATTEMPTS:-40}"
 RETRY_DELAY="${DB_RETRY_DELAY:-3}"
 
-echo "[entrypoint] Waiting for PostgreSQL at ${HOST}:${PORT}"
+echo "[entrypoint] Target PostgreSQL: ${HOST}:${PORT}"
 
-if getent hosts "${HOST}" >/dev/null 2>&1; then
-  RESOLVED="$(getent hosts "${HOST}" | awk '{ print $1 }' | tr '\n' ' ')"
-  echo "[entrypoint] ${HOST} resolves to: ${RESOLVED}"
-else
-  echo "[entrypoint] WARNING: '${HOST}' does not resolve inside this network." >&2
-  echo "[entrypoint] Verify the database shares a Docker network with the bot, then set DB_HOST accordingly." >&2
-fi
+DB_TARGET_HOST="${HOST}" DB_TARGET_PORT="${PORT}" DB_MAX_ATTEMPTS="${MAX_ATTEMPTS}" DB_RETRY_DELAY="${RETRY_DELAY}" node -e "
+const net = require('node:net');
+const dns = require('node:dns/promises');
 
-attempt=0
-until pnpm run prisma:deploy; do
-  attempt=$((attempt + 1))
-  if [ "${attempt}" -ge "${MAX_ATTEMPTS}" ]; then
-    echo "[entrypoint] PostgreSQL unreachable after ${attempt} attempts. Aborting." >&2
-    exit 1
-  fi
-  echo "[entrypoint] Database not ready (attempt ${attempt}/${MAX_ATTEMPTS}), retrying in ${RETRY_DELAY}s..." >&2
-  sleep "${RETRY_DELAY}"
-done
+(async () => {
+  const host = process.env.DB_TARGET_HOST || 'db';
+  const port = Number(process.env.DB_TARGET_PORT || 5432);
+  const maxAttempts = Number(process.env.DB_MAX_ATTEMPTS || 40);
+  const delayMs = Number(process.env.DB_RETRY_DELAY || 3) * 1000;
+
+  for (let attempt = 1; attempt <= maxAttempts; attempt++) {
+    try {
+      const lookup = await dns.lookup(host);
+      await new Promise((resolve, reject) => {
+        const s = net.connect(port, lookup.address, () => {
+          s.end();
+          resolve();
+        });
+        s.on('error', reject);
+        s.setTimeout(3000, () => s.destroy(new Error('ETIMEDOUT')));
+      });
+      console.log(\`[entrypoint] Connected successfully to \${host}:\${port} (\${lookup.address})\`);
+      process.exit(0);
+    } catch (err) {
+      console.log(\`[entrypoint] Waiting for \${host}:\${port} (attempt \${attempt}/\${maxAttempts}): \${err.code || err.message}\`);
+      if (attempt < maxAttempts) {
+        await new Promise((r) => setTimeout(r, delayMs));
+      }
+    }
+  }
+  console.error(\`[entrypoint] ERROR: Could not connect to \${host}:\${port} after \${maxAttempts} attempts.\`);
+  process.exit(1);
+})();
+"
+
+echo "[entrypoint] Applying Prisma migrations..."
+pnpm run prisma:deploy
 
 echo "[entrypoint] Migrations applied. Starting bot..."
 exec node dist/index.js
+

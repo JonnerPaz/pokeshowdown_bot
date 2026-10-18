@@ -1,48 +1,89 @@
-# Local development stack only. Production/Dokploy deployments must use
-# compose.dokploy.yaml; this file bind-mounts the repository and the local
-# Postgres data directory, which does not survive Dokploy redeployments.
 services:
   db:
     image: postgres:18-alpine
-    restart: always
+    hostname: db
+    restart: unless-stopped
     environment:
-      POSTGRES_USER: ${POSTGRES_USER}
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
-      POSTGRES_DB: ${POSTGRES_DB}
+      POSTGRES_USER: ${POSTGRES_USER:-postgres}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-postgres}
+      POSTGRES_DB: ${POSTGRES_DB:-pokemons}
     volumes:
-      # PostgreSQL 18 stores its cluster in /var/lib/postgresql/<major>/docker,
-      # so the bind mount must target /var/lib/postgresql, not .../data.
-      - ./postgres:/var/lib/postgresql
+      # PostgreSQL 18 keeps its cluster in /var/lib/postgresql/<major>/docker,
+      # so the volume must be mounted one level above the cluster directory.
+      # (On PostgreSQL 16 and older this path is /var/lib/postgresql/data.)
+      - postgres_data:/var/lib/postgresql
     expose:
       - "5432"
     ports:
-      - "2300:5432"
+      # Exposes port 2300 on the host (e.g. for external tools/inspections)
+      - "${DB_PORT_BIND:-2300}:5432"
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -h 127.0.0.1 -U $${POSTGRES_USER} -d $${POSTGRES_DB}"]
+      # -h 127.0.0.1 forces a TCP check: with the default Unix socket this probe
+      # also succeeds against the temporary server initdb starts, reporting the
+      # database as healthy before it is actually accepting client connections.
+      test:
+        [
+          "CMD-SHELL",
+          "pg_isready -h 127.0.0.1 -p 5432 -U $${POSTGRES_USER:-postgres} -d $${POSTGRES_DB:-pokemons}",
+        ]
       interval: 5s
       timeout: 5s
       retries: 10
+      start_period: 10s
+    networks:
+      default:
+        aliases:
+          - db
+      pokebot-net:
+        aliases:
+          - db
 
-  dev:
-    build: .
+  bot:
+    build:
+      context: .
+      dockerfile: Dockerfile
     restart: unless-stopped
-    env_file: .env
     environment:
       CI: "true"
-      DATABASE_URL: postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@db:5432/${POSTGRES_DB}?schema=public
-    volumes:
-      - .:/app
-      - node_modules:/app/node_modules
-    ports:
-      - "5000:5000"
+      API_KEY: ${API_KEY}
+      # Hostname of the database. Keep "db" for the bundled service; override it
+      # (e.g. DB_HOST=<container-name>) to point at a Dokploy-managed database.
+      DB_HOST: ${DB_HOST:-db}
+      DB_PORT: ${DB_PORT:-5432}
+      DATABASE_URL: ${DATABASE_URL:-postgresql://${POSTGRES_USER:-postgres}:${POSTGRES_PASSWORD:-postgres}@${DB_HOST:-db}:${DB_PORT:-5432}/${POSTGRES_DB:-pokemons}?schema=public}
+      BOT_MODE: ${BOT_MODE:-polling}
+      DROP_PENDING_UPDATES: ${DROP_PENDING_UPDATES:-true}
+      PORT: ${PORT:-5000}
+      WEBHOOK_URL: ${WEBHOOK_URL:-}
+      WEBHOOK_SECRET: ${WEBHOOK_SECRET:-}
+      SHINY_ODDS: ${SHINY_ODDS:-}
+      SPAWN_POOL_SIZE: ${SPAWN_POOL_SIZE:-}
     depends_on:
       db:
         condition: service_healthy
-    command: >
-      sh -c "pnpm install --frozen-lockfile --store-dir=/pnpm-store &&
-             pnpm run prisma:generate &&
-             pnpm exec prisma migrate deploy &&
-             pnpm dev"
+    # Waits for the database, runs `prisma migrate deploy` with retries and then
+    # starts the bot. See docker-entrypoint.sh for the details.
+    entrypoint: ["/bin/sh", "/app/docker-entrypoint.sh"]
+    healthcheck:
+      test:
+        [
+          "CMD-SHELL",
+          'node -e "fetch(''http://127.0.0.1:''+(process.env.PORT||5000)+''/health'').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"',
+        ]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+      start_period: 20s
+    networks:
+      - default
+      - pokebot-net
 
 volumes:
-  node_modules:
+  postgres_data:
+    driver: local
+
+networks:
+  default:
+    driver: bridge
+  pokebot-net:
+    driver: bridge
