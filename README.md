@@ -252,12 +252,12 @@ and retries the migrations, so a slow boot is not the problem. If the logs show
 `P1001: Can't reach database server at db:5432` for more than a minute, the two
 containers are not on the same Docker network. Common causes and fixes:
 
-| Symptom                                                      | Cause                                                                                    | Fix                                                                                                                            |
-| :----------------------------------------------------------- | :--------------------------------------------------------------------------------------- | :----------------------------------------------------------------------------------------------------------------------------- |
-| `getent hosts db` prints nothing inside the bot container    | The database service is missing, isolated, or belongs to another Docker Compose project. | Deploy the whole stack from `compose.dokploy.yaml` as a **single** Compose service so both containers share a project network. |
-| The database is a **Dokploy Database** (created separately)  | A standalone database lives on its own network and is not reachable as `db`.             | Attach the bot to that database's network and set `DB_HOST` to its real container name (see Dokploy → Docker).                 |
-| The database container shows a legacy Postgres major version | An older `postgres_data` volume is being reused.                                         | Remove the volume and redeploy; PostgreSQL refuses to start on a data directory from another major.                            |
-| Everything resolves but connections hang behind Docker Swarm | The host kernel lacks the IPVS modules used by Swarm's VIP load balancing.               | Switch Dokploy's endpoints to DNSRR mode, or use the `tasks.<service>` hostname as `DB_HOST`.                                  |
+| Symptom                                                      | Cause                                                                                    | Fix                                                                                                                                                                |
+| :----------------------------------------------------------- | :--------------------------------------------------------------------------------------- | :----------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `getent hosts db` prints nothing inside the bot container    | The database service is missing, isolated, or belongs to another Docker Compose project. | Deploy the whole stack from `compose.dokploy.yaml` as a **single** Compose service so both containers share a project network.                                     |
+| The database is a **Dokploy Database** (created separately)  | A standalone database lives on its own network and is not reachable as `db`.             | Attach the bot to that database's network and set `DB_HOST` to its real container name (see Dokploy → Docker).                                                     |
+| The database container shows a legacy Postgres major version | An older `postgres_data` volume is being reused.                                         | Recreate the volume (see [Recreating the bundled database](#recreating-the-bundled-database)); PostgreSQL refuses to start on a data directory from another major. |
+| Everything resolves but connections hang behind Docker Swarm | The host kernel lacks the IPVS modules used by Swarm's VIP load balancing.               | Switch Dokploy's endpoints to DNSRR mode, or use the `tasks.<service>` hostname as `DB_HOST`.                                                                      |
 
 Handy diagnostic commands (replace `<bot>`/`<db>` with the container names
 shown in Dokploy → Docker):
@@ -268,6 +268,33 @@ docker inspect <bot> --format '{{json .NetworkSettings.Networks}}'
 docker inspect <db>  --format '{{json .NetworkSettings.Networks}}'
 docker exec <bot> getent hosts db
 ```
+
+### Recreating the bundled database
+
+The named volume `postgres_data` is tied to a PostgreSQL major version: version
+18 changed the on-disk layout to `/var/lib/postgresql/<major>/docker`, while
+previous majors stored the cluster directly at `/var/lib/postgresql/data`. When a
+volume initialised by an older major is mounted at `/var/lib/postgresql`, the
+container exits with `there appears to be PostgreSQL data in: /var/lib/postgresql`
+and restarts in a loop.
+
+The bundled database holds no data until migrations run, so the fix is to
+recreate the volume:
+
+```bash
+# 1. Identify the volume and confirm which major initialised it
+docker volume ls | grep -i postgres      # → <appName>_postgres_data
+docker run --rm -v <appName>_postgres_data:/v alpine sh -c 'cat /v/PG_VERSION'
+
+# 2. Stop the Compose service in Dokploy (a restarting container keeps the volume in use)
+
+# 3. Remove the stale volume
+docker volume rm <appName>_postgres_data
+```
+
+Redeploy afterwards: Docker recreates the volume and the container runs `initdb`
+with the current PostgreSQL version. To keep the existing cluster instead, pin
+`postgres:17-alpine` and mount the volume back at `/var/lib/postgresql/data`.
 
 ---
 
