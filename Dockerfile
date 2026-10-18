@@ -10,4 +10,4 @@ RUN pnpm install --frozen-lockfile
 COPY . .
 RUN pnpm run prisma:generate && pnpm run build
 
-CMD ["pnpm", "start"]
+CMD ["node", "dist/index.js"]

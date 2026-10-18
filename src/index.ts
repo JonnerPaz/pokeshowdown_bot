@@ -15,9 +15,11 @@ async function startup() {
   if (!apiKey) throw new Error("API_KEY is not defined");
 
   const mode =
-    rawBotMode?.toLowerCase() === "polling" || (!webhookUrl && !webhookSecret)
-      ? "polling"
-      : "webhook";
+    rawBotMode?.toLowerCase() === "webhook"
+      ? "webhook"
+      : rawBotMode?.toLowerCase() === "polling" || !webhookUrl
+        ? "polling"
+        : "webhook";
 
   const dropPendingUpdates = rawDropPending === "true";
 
