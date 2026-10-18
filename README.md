@@ -23,26 +23,33 @@ A Telegram bot to catch, evolve, and trade Pokemon with your friends.
 
 ---
 
-## Architecture & Why a Reverse Proxy is Needed
+## Architecture & Operational Modes
 
-PokeBotShowdown operates exclusively in **Webhook Mode** via Express and grammY (`src/presentation/server.ts`).
+PokeBotShowdown supports **Dual-Mode** operation via grammY and Express (`src/presentation/server.ts`):
 
-Unlike _Long Polling_ (where the bot periodically asks Telegram for updates), in Webhook mode:
+### 1. Long Polling Mode (`BOT_MODE="polling"`) — Recommended for Dokploy, Homelabs & Dynamic IP
 
-1. When the bot starts, it registers its public HTTPS URL with Telegram's API via `setWebhook`.
-2. Every time a user interacts with the bot on Telegram, Telegram's servers send an HTTP `POST` request directly to that URL.
-3. Telegram **requires** this endpoint to be publicly accessible over the internet with a valid **HTTPS** SSL/TLS certificate.
-4. During local development, your computer is behind a local router/NAT (`localhost:5000`) without a public IP or SSL certificate.
+- The bot establishes an outbound connection to Telegram (`api.telegram.org:443`).
+- **Zero Inbound Ports / Tunnels**: Completely eliminates the need for Cloudflare Tunnels, reverse proxies, public domains, or SSL certificates.
+- **Dynamic IP & Power Outage Resilient**: When your internet provider changes your public IP or when your server reboots after a power outage, the bot automatically reconnects without any manual intervention.
+- An internal Express server serves `GET /health` on `PORT` for Docker/Dokploy healthchecks.
 
-To bridge this gap, a **reverse proxy / tunnel** like **Cloudflare Tunnel (`cloudflared`)** exposes your local port `5000` to a secure public HTTPS URL (e.g., `https://<random-id>.trycloudflare.com`).
+### 2. Webhook Mode (`BOT_MODE="webhook"`) — For Cloud Environments with Static IP / Domains
+
+- Telegram sends inbound HTTP `POST` requests to `WEBHOOK_URL` secured with `WEBHOOK_SECRET`.
+- Requires an accessible public HTTPS endpoint with a valid SSL/TLS certificate (or a tunnel like `cloudflared` for local development).
 
 ```mermaid
-flowchart LR
-    A["Telegram User"] --> B["Telegram Servers"]
-    B -- "HTTPS POST (Webhook + Secret Token)" --> C["Cloudflare Tunnel<br/>(cloudflared)"]
-    C -- "HTTP localhost:5000" --> D["Express Server<br/>(src/presentation/server.ts)"]
-    D --> E["grammY Bot Middleware<br/>(MainBot & Feature Composers)"]
-    E --> F[("PostgreSQL Database")]
+flowchart TD
+    subgraph Polling ["Long Polling Mode (Dokploy / Dynamic IP)"]
+        D1["Dokploy / Server<br/>(ShowdownBot Container)"] -- "Outbound HTTPS (443)" --> TG1["Telegram API Server"]
+        TG1 -- "getUpdates Stream" --> D1
+    end
+
+    subgraph Webhook ["Webhook Mode (Cloud / Static IP)"]
+        TG2["Telegram API Server"] -- "HTTPS POST (Webhook)" --> CF["Reverse Proxy / Tunnel"]
+        CF --> D2["Express Server (:5000)"]
+    end
 ```
 
 ---
@@ -270,6 +277,40 @@ ngrok http 5000
 ```
 
 Copy the generated `https://...ngrok-free.app` URL into `WEBHOOK_URL` in `.env`.
+
+---
+
+## Deploying to Dokploy (Self-Hosted / Dynamic IP)
+
+You can easily deploy PokeBotShowdown on [Dokploy](https://dokploy.com/) using the preconfigured `compose.dokploy.yaml` stack (Postgres + Bot in Long Polling mode).
+
+### Step 1: Create a Compose Project in Dokploy
+
+1. In Dokploy, go to **Projects** → select/create a project → **Create Service** → **Compose**.
+2. Set the Compose file path to: `compose.dokploy.yaml` (or connect your GitHub repository and branch `main`).
+
+### Step 2: Configure Environment Variables
+
+In the **Environment** tab, set:
+
+```env
+API_KEY="your-telegram-bot-token"
+BOT_MODE="polling"
+DROP_PENDING_UPDATES="true"
+POSTGRES_USER="postgres"
+POSTGRES_PASSWORD="your-secure-password"
+POSTGRES_DB="pokemons"
+```
+
+### Step 3: Deploy
+
+Click **Deploy**. Dokploy will:
+
+1. Boot PostgreSQL 17 with a persistent Docker volume (`postgres_data`).
+2. Run database health checks.
+3. Apply Prisma database migrations automatically (`prisma migrate deploy`).
+4. Start the bot in **Long Polling mode** and expose `/health` internally for health checks.
+5. Auto-recover and reconnect upon power outages or dynamic IP changes with zero downtime.
 
 ---
 

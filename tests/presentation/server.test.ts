@@ -50,4 +50,53 @@ describe("Server", () => {
       secret_token: "super-secret-token",
     });
   });
+
+  it("serves GET /health with status 200 without registering webhook in polling mode", async () => {
+    const mockClient = new MockTelegramClient();
+    const bot = new Bot<AppContext>("mock-token", {
+      client: {
+        apiRoot: "https://api.telegram.org",
+        fetch: mockClient.createFetch(),
+      },
+    });
+
+    server = new Server({
+      port: 0,
+      bot,
+      mode: "polling",
+    });
+
+    await server.setup();
+
+    const address = server.httpServer?.address() as AddressInfo;
+    expect(address).toBeDefined();
+    expect(address.port).toBeGreaterThan(0);
+
+    const res = await fetch(`http://127.0.0.1:${address.port}/health`);
+    expect(res.status).toBe(200);
+
+    const body = (await res.json()) as { status: string };
+    expect(body).toEqual({ status: "ok" });
+
+    const setWebhookCall = mockClient.getCalls().find((call) => call.method === "setWebhook");
+    expect(setWebhookCall).toBeUndefined();
+  });
+
+  it("throws error in webhook mode if webhookUrl or webhookSecret is missing", async () => {
+    const mockClient = new MockTelegramClient();
+    const bot = new Bot<AppContext>("mock-token", {
+      client: {
+        apiRoot: "https://api.telegram.org",
+        fetch: mockClient.createFetch(),
+      },
+    });
+
+    server = new Server({
+      port: 0,
+      bot,
+      mode: "webhook",
+    });
+
+    await expect(server.setup()).rejects.toThrow("webhookUrl and webhookSecret are required");
+  });
 });
