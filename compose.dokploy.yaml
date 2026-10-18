@@ -30,9 +30,6 @@ services:
       retries: 10
       start_period: 10s
     networks:
-      default:
-        aliases:
-          - db
       pokebot-net:
         aliases:
           - db
@@ -74,7 +71,6 @@ services:
       retries: 3
       start_period: 20s
     networks:
-      - default
       - pokebot-net
 
 volumes:
@@ -82,7 +78,9 @@ volumes:
     driver: local
 
 networks:
-  default:
-    driver: bridge
+  # An attachable Swarm overlay network runs inside an isolated Swarm network
+  # namespace, preventing host-level firewalld/br_netfilter rules on Fedora/RHEL
+  # from rejecting container-to-container bridge packets with EHOSTUNREACH.
   pokebot-net:
-    driver: bridge
+    driver: overlay
+    attachable: true
