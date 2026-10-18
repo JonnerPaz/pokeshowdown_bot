@@ -1,6 +1,6 @@
 services:
   db:
-    image: postgres:17-alpine
+    image: postgres:18-alpine
     hostname: db
     restart: unless-stopped
     environment:
@@ -8,8 +8,16 @@ services:
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-postgres}
       POSTGRES_DB: ${POSTGRES_DB:-pokemons}
     volumes:
-      - postgres_data:/var/lib/postgresql/data
+      # PostgreSQL 18 keeps its cluster in /var/lib/postgresql/<major>/docker,
+      # so the volume must be mounted one level above the cluster directory.
+      # (On PostgreSQL 16 and older this path is /var/lib/postgresql/data.)
+      - postgres_data:/var/lib/postgresql
+    expose:
+      - "5432"
     healthcheck:
+      # -h 127.0.0.1 forces a TCP check: with the default Unix socket this probe
+      # also succeeds against the temporary server initdb starts, reporting the
+      # database as healthy before it is actually accepting client connections.
       test:
         [
           "CMD-SHELL",
@@ -18,13 +26,10 @@ services:
       interval: 5s
       timeout: 5s
       retries: 10
+      start_period: 10s
     networks:
-      default:
-        aliases:
-          - db
-      pokebot-net:
-        aliases:
-          - db
+      - default
+      - pokebot-net
 
   bot:
     build:
@@ -34,7 +39,11 @@ services:
     environment:
       CI: "true"
       API_KEY: ${API_KEY}
-      DATABASE_URL: postgresql://${POSTGRES_USER:-postgres}:${POSTGRES_PASSWORD:-postgres}@db:5432/${POSTGRES_DB:-pokemons}?schema=public
+      # Hostname of the database. Keep "db" for the bundled service; override it
+      # (e.g. DB_HOST=<container-name>) to point at a Dokploy-managed database.
+      DB_HOST: ${DB_HOST:-db}
+      DB_PORT: ${DB_PORT:-5432}
+      DATABASE_URL: postgresql://${POSTGRES_USER:-postgres}:${POSTGRES_PASSWORD:-postgres}@${DB_HOST:-db}:${DB_PORT:-5432}/${POSTGRES_DB:-pokemons}?schema=public
       BOT_MODE: ${BOT_MODE:-polling}
       DROP_PENDING_UPDATES: ${DROP_PENDING_UPDATES:-true}
       PORT: ${PORT:-5000}
@@ -45,39 +54,19 @@ services:
     depends_on:
       db:
         condition: service_healthy
-    command: >
-      sh -c 'node -e "
-      const net = require(\"node:net\");
-      const dns = require(\"node:dns/promises\");
-      (async () => {
-        for (let i = 1; i <= 15; i++) {
-          try {
-            const { address } = await dns.lookup(\"db\");
-            await new Promise((resolve, reject) => {
-              const s = net.connect(5432, address, () => { s.end(); resolve(); });
-              s.on(\"error\", reject);
-              s.setTimeout(2000, () => s.destroy(new Error(\"ETIMEDOUT\")));
-            });
-            console.log(\"Database reachable at db:5432 (\" + address + \")\");
-            process.exit(0);
-          } catch (err) {
-            console.error(\"Waiting for db:5432 (attempt \" + i + \"/15):\", err.code || err.message);
-            await new Promise((r) => setTimeout(r, 2000));
-          }
-        }
-        process.exit(1);
-      })();
-      " && pnpm run prisma:deploy && exec node dist/index.js'
+    # Waits for the database, runs `prisma migrate deploy` with retries and then
+    # starts the bot. See docker-entrypoint.sh for the details.
+    entrypoint: ["/bin/sh", "/app/docker-entrypoint.sh"]
     healthcheck:
       test:
         [
           "CMD-SHELL",
-          'node -e ''fetch("http://127.0.0.1:${PORT:-5000}/health").then(r => r.ok ? process.exit(0) : process.exit(1)).catch(() => process.exit(1))''',
+          'node -e "fetch(''http://127.0.0.1:''+(process.env.PORT||5000)+''/health'').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"',
         ]
       interval: 10s
       timeout: 5s
       retries: 3
-      start_period: 15s
+      start_period: 20s
     networks:
       - default
       - pokebot-net

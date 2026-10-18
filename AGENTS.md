@@ -212,6 +212,10 @@ Phase 17 (landed on `main`): Dual-Mode (Long Polling & Webhook), Dynamic IP Resi
 
 Phase 18 (landed on `main`): High-Speed Production Build & Fancy Documentation Modernization (`esbuild` bundling to `dist/index.js` in ~20ms, production runtime `node dist/index.js`, Dockerfile build step, `.gitignore` `dist/`, removal of verbose Cloudflare tunnel tutorials and all mermaid diagrams from README, comprehensive showcase of all 9 bot gameplay domains, and Dokploy/Compose quickstart guide).
 
+Phase 19 (landed on `main`): Container Startup Resilience & Dokploy Networking Fix (`docker-entrypoint.sh` waits for PostgreSQL, retries `prisma migrate deploy` with a bounded attempt count and logs DNS diagnostics before starting the bot; `DB_HOST`/`DB_PORT`/`DB_MAX_ATTEMPTS` overrides in `compose.dokploy.yaml` so the bot can target a Dokploy-managed database; PostgreSQL 18 pinned in both compose files with the `<major>/docker` volume layout; TCP-based `pg_isready -h 127.0.0.1` healthchecks to avoid false positives during `initdb`; and a Dokploy troubleshooting matrix in the README).
+
 Conventions: each feature = one scoped commit set, verified with typecheck/lint/format + `pnpm test`, README/AGENTS updated. No new shared mutable state for encounters or battles (keep them conversation-local).
+
+Deployment gotchas worth remembering: `compose.dokploy.yaml` is the only stack meant for Dokploy (`compose.yaml` bind-mounts the repo and local Postgres data). Dokploy only injects environment variables through `${VAR}` references or `env_file`, never implicitly. Keep the storage layout in sync with the Postgres major version (`/var/lib/postgresql` for 18+, `/var/lib/postgresql/data` for 16 and older) and never reuse a volume across majors.
 
 Stay disciplined, document discoveries, and keep this guide trustworthy for the next agent.

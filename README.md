@@ -207,13 +207,17 @@ pnpm start
 
 ## 🐳 Deploying on Dokploy
 
-PokeBotShowdown provides a preconfigured, production-ready stack in `compose.dokploy.yaml`. It sets up PostgreSQL 17 with persistent storage and runs the bot in Long Polling mode—requiring zero open ports on your router:
+PokeBotShowdown provides a preconfigured, production-ready stack in `compose.dokploy.yaml`. It sets up PostgreSQL 18 with persistent storage and runs the bot in Long Polling mode—requiring zero open ports on your router:
 
 1. **Create Compose Service in Dokploy**:
    - In Dokploy, go to **Projects** → select your project → **Create Service** → **Compose**.
-   - Point the compose file path to: `compose.dokploy.yaml`.
+   - Set **Compose Path** to `compose.dokploy.yaml`.
+   - Keep **Compose Type** on **Docker Compose**. The **Stack** type does not support
+     `build`, so the bot image could not be built from this file.
 2. **Configure Environment Variables**:
+
    In Dokploy's **Environment** tab, set:
+
    ```env
    API_KEY="your_telegram_bot_token"
    BOT_MODE="polling"
@@ -222,10 +226,48 @@ PokeBotShowdown provides a preconfigured, production-ready stack in `compose.dok
    POSTGRES_PASSWORD="your_secure_password"
    POSTGRES_DB="pokemons"
    ```
+
+   Optional overrides:
+
+   | Variable          | Default | Purpose                                                                         |
+   | :---------------- | :------ | :------------------------------------------------------------------------------ |
+   | `DB_HOST`         | `db`    | Hostname of the database. Change it when using an external Dokploy database.    |
+   | `DB_MAX_ATTEMPTS` | `40`    | How many times the entrypoint retries `prisma migrate deploy` before giving up. |
+   | `PORT`            | `5000`  | Port used by the internal `/health` endpoint.                                   |
+
 3. **Deploy**:
    - Click **Deploy**. Dokploy will spin up PostgreSQL, run Prisma schema
      migrations automatically, and start the bot in polling mode with internal
      health checks on `/health`.
+
+> ℹ️ **Environment variables are not injected into containers automatically.**
+> Dokploy writes them to a `.env` file next to the compose file and only reaches
+> your services through the `${VAR}` references in `compose.dokploy.yaml`. Keep
+> those references in place (or add `env_file: .env`) if you edit the file.
+
+### Troubleshooting: the bot cannot reach the database
+
+The container entrypoint (`docker-entrypoint.sh`) already waits for PostgreSQL
+and retries the migrations, so a slow boot is not the problem. If the logs show
+`P1001: Can't reach database server at db:5432` for more than a minute, the two
+containers are not on the same Docker network. Common causes and fixes:
+
+| Symptom                                                      | Cause                                                                                    | Fix                                                                                                                            |
+| :----------------------------------------------------------- | :--------------------------------------------------------------------------------------- | :----------------------------------------------------------------------------------------------------------------------------- |
+| `getent hosts db` prints nothing inside the bot container    | The database service is missing, isolated, or belongs to another Docker Compose project. | Deploy the whole stack from `compose.dokploy.yaml` as a **single** Compose service so both containers share a project network. |
+| The database is a **Dokploy Database** (created separately)  | A standalone database lives on its own network and is not reachable as `db`.             | Attach the bot to that database's network and set `DB_HOST` to its real container name (see Dokploy → Docker).                 |
+| The database container shows a legacy Postgres major version | An older `postgres_data` volume is being reused.                                         | Remove the volume and redeploy; PostgreSQL refuses to start on a data directory from another major.                            |
+| Everything resolves but connections hang behind Docker Swarm | The host kernel lacks the IPVS modules used by Swarm's VIP load balancing.               | Switch Dokploy's endpoints to DNSRR mode, or use the `tasks.<service>` hostname as `DB_HOST`.                                  |
+
+Handy diagnostic commands (replace `<bot>`/`<db>` with the container names
+shown in Dokploy → Docker):
+
+```bash
+docker ps --format '{{.Names}}\t{{.Image}}'
+docker inspect <bot> --format '{{json .NetworkSettings.Networks}}'
+docker inspect <db>  --format '{{json .NetworkSettings.Networks}}'
+docker exec <bot> getent hosts db
+```
 
 ---
 
