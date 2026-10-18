@@ -1,6 +1,7 @@
 services:
   db:
     image: postgres:17-alpine
+    hostname: db
     restart: unless-stopped
     environment:
       POSTGRES_USER: ${POSTGRES_USER:-postgres}
@@ -9,12 +10,21 @@ services:
     volumes:
       - postgres_data:/var/lib/postgresql/data
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-postgres} -d ${POSTGRES_DB:-pokemons}"]
+      test:
+        [
+          "CMD-SHELL",
+          "pg_isready -h 127.0.0.1 -p 5432 -U $${POSTGRES_USER:-postgres} -d $${POSTGRES_DB:-pokemons}",
+        ]
       interval: 5s
       timeout: 5s
       retries: 10
     networks:
-      - pokebot-net
+      default:
+        aliases:
+          - db
+      pokebot-net:
+        aliases:
+          - db
 
   bot:
     build:
@@ -36,7 +46,28 @@ services:
       db:
         condition: service_healthy
     command: >
-      sh -c "pnpm run prisma:deploy && exec node dist/index.js"
+      sh -c 'node -e "
+      const net = require(\"node:net\");
+      const dns = require(\"node:dns/promises\");
+      (async () => {
+        for (let i = 1; i <= 15; i++) {
+          try {
+            const { address } = await dns.lookup(\"db\");
+            await new Promise((resolve, reject) => {
+              const s = net.connect(5432, address, () => { s.end(); resolve(); });
+              s.on(\"error\", reject);
+              s.setTimeout(2000, () => s.destroy(new Error(\"ETIMEDOUT\")));
+            });
+            console.log(\"Database reachable at db:5432 (\" + address + \")\");
+            process.exit(0);
+          } catch (err) {
+            console.error(\"Waiting for db:5432 (attempt \" + i + \"/15):\", err.code || err.message);
+            await new Promise((r) => setTimeout(r, 2000));
+          }
+        }
+        process.exit(1);
+      })();
+      " && pnpm run prisma:deploy && exec node dist/index.js'
     healthcheck:
       test:
         [
@@ -48,6 +79,7 @@ services:
       retries: 3
       start_period: 15s
     networks:
+      - default
       - pokebot-net
 
 volumes:
@@ -55,5 +87,7 @@ volumes:
     driver: local
 
 networks:
+  default:
+    driver: bridge
   pokebot-net:
     driver: bridge
