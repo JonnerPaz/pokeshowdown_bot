@@ -61,7 +61,7 @@
     "husky": "^9.1.7",
     "lint-staged": "^17.6.0",
     "prettier": "^3.9.9",
-    "prisma": "^7.9.1",
+    "prisma": "^7.10.0",
     "typescript-eslint": "^8.70.1",
     "vitest": "^5.0.2"
   },
