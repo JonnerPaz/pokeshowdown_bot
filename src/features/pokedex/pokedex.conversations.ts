@@ -24,7 +24,7 @@ export async function pokedexConversation(
     const answer = await conv
       .waitFrom(ctx.from!.id, { maxMilliseconds: CONVERSATION_TIMEOUT_MS })
       .andFor(":text")
-      .unless((c) => Boolean(c.message?.text?.startsWith("/")));
+      .unless((c) => Boolean(c.message?.text?.startsWith("/")), { next: true });
     target = answer.message?.text?.trim() ?? "";
   }
 

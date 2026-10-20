@@ -133,7 +133,7 @@ export async function pokemonSummaryConversation(
     const answer = await conv
       .waitFrom(ctx.from!.id, { maxMilliseconds: CONVERSATION_TIMEOUT_MS })
       .andFor(":text")
-      .unless((c) => Boolean(c.message?.text?.startsWith("/")));
+      .unless((c) => Boolean(c.message?.text?.startsWith("/")), { next: true });
     target = answer.message?.text?.trim() ?? "";
   }
 
@@ -356,7 +356,7 @@ export async function evolvePokemonConversation(
   const choice = await conv
     .waitFrom(ctx.from!.id, { maxMilliseconds: CONVERSATION_TIMEOUT_MS })
     .andFor(":text")
-    .unless((c) => Boolean(c.message?.text?.startsWith("/")));
+    .unless((c) => Boolean(c.message?.text?.startsWith("/")), { next: true });
   const pokemon = user.pokemons.find(
     (el) => el.name.toLowerCase() === choice!.message!.text.toLowerCase(),
   );
@@ -409,7 +409,7 @@ export async function shinyPokemonConversation(
   const choice = await conv
     .waitFrom(ctx.from!.id, { maxMilliseconds: CONVERSATION_TIMEOUT_MS })
     .andFor(":text")
-    .unless((c) => Boolean(c.message?.text?.startsWith("/")));
+    .unless((c) => Boolean(c.message?.text?.startsWith("/")), { next: true });
   const pokemon = user.pokemons.find(
     (el) => el.name.toLowerCase() === choice!.message!.text.toLowerCase(),
   );
@@ -469,7 +469,7 @@ async function prepareUserTrade(
   const userInput = await conv
     .waitFrom(userId, { maxMilliseconds: CONVERSATION_TIMEOUT_MS })
     .andFor(":text")
-    .unless((c) => Boolean(c.message?.text?.startsWith("/")));
+    .unless((c) => Boolean(c.message?.text?.startsWith("/")), { next: true });
   const inputText = userInput.message?.text?.trim().toLowerCase() ?? "";
   const userPkmn = user.pokemons.find((el) => el.name.toLowerCase() === inputText);
 
@@ -604,7 +604,7 @@ export async function nicknameConversation(
   const choice = await conv
     .waitFrom(ctx.from!.id, { maxMilliseconds: CONVERSATION_TIMEOUT_MS })
     .andFor(":text")
-    .unless((c) => Boolean(c.message?.text?.startsWith("/")));
+    .unless((c) => Boolean(c.message?.text?.startsWith("/")), { next: true });
   const pokemon = user.pokemons.find(
     (el) => el.name.toLowerCase() === choice!.message!.text.toLowerCase(),
   );
@@ -618,7 +618,7 @@ export async function nicknameConversation(
   const nickname = await conv
     .waitFrom(ctx.from!.id, { maxMilliseconds: CONVERSATION_TIMEOUT_MS })
     .andFor(":text")
-    .unless((c) => Boolean(c.message?.text?.startsWith("/")));
+    .unless((c) => Boolean(c.message?.text?.startsWith("/")), { next: true });
 
   const newNick = nickname.message?.text?.trim();
   if (!newNick || newNick.length > 20) {
@@ -633,7 +633,7 @@ export async function nicknameConversation(
   const confirm = await conv
     .waitFrom(ctx.from!.id, { maxMilliseconds: CONVERSATION_TIMEOUT_MS })
     .andFor(":text")
-    .unless((c) => Boolean(c.message?.text?.startsWith("/")));
+    .unless((c) => Boolean(c.message?.text?.startsWith("/")), { next: true });
   if (confirm.message?.text?.trim().toLowerCase() !== "yes") {
     await ctx.reply("Nickname not changed!");
     return;
