@@ -1,6 +1,7 @@
 import type { PokemonDataSource } from "../../domain/datasource/pokemon.datasource.js";
 import type { UserEntity } from "../../domain/entities/users.entity.js";
 import { PokemonEntity } from "../../domain/entities/pokemon.entity.js";
+import { MAX_PKMN_PARTY } from "../../domain/data/constants.js";
 import { prisma } from "../../data/postgres/index.js";
 
 export class PokemonDataSourceImpl implements PokemonDataSource {
@@ -177,6 +178,23 @@ export class PokemonDataSourceImpl implements PokemonDataSource {
         where: { id: pokemonB.id! },
         data: { userId: userA.id! },
       });
+
+      // Ownership already moved, so a pokemon received in the party keeps the
+      // receiver within the party limit by being stored in the box instead.
+      const receiverPartyA = await tx.pokemon.count({
+        where: { userId: userA.id!, isInParty: true },
+      });
+      if (pokemonB.isInParty && receiverPartyA > MAX_PKMN_PARTY) {
+        await tx.pokemon.update({ where: { id: pokemonB.id! }, data: { isInParty: false } });
+      }
+
+      const receiverPartyB = await tx.pokemon.count({
+        where: { userId: userB.id!, isInParty: true },
+      });
+      if (pokemonA.isInParty && receiverPartyB > MAX_PKMN_PARTY) {
+        await tx.pokemon.update({ where: { id: pokemonA.id! }, data: { isInParty: false } });
+      }
+
       if (userA.buddyPokemonId === pokemonA.id) {
         await tx.user.update({
           where: { id: userA.id! },

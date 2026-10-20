@@ -3,6 +3,7 @@ import type { PokemonDataSource } from "../../src/domain/datasource/pokemon.data
 import { UserEntity } from "../../src/domain/entities/users.entity.js";
 import { PokemonEntity } from "../../src/domain/entities/pokemon.entity.js";
 import { getBallUserField, type BallType } from "../../src/domain/items/ballTypes.js";
+import { MAX_PKMN_PARTY } from "../../src/domain/data/constants.js";
 
 export class InMemoryUserDataSource implements UserDataSource {
   public users = new Map<number, UserEntity>();
@@ -218,6 +219,15 @@ export class InMemoryPokemonDataSource implements PokemonDataSource {
 
     targetA.pokemons.push(entityB);
     targetB.pokemons.push(entityA);
+
+    // Mirror the production datasource: a pokemon received in the party is moved
+    // to the box when the receiver's battle party is already full.
+    if (entityB.isInParty && targetA.pokemons.filter((p) => p.isInParty).length > MAX_PKMN_PARTY) {
+      entityB.isInParty = false;
+    }
+    if (entityA.isInParty && targetB.pokemons.filter((p) => p.isInParty).length > MAX_PKMN_PARTY) {
+      entityA.isInParty = false;
+    }
 
     if (targetA.buddyPokemonId === entityA.id) {
       targetA.buddyPokemonId = null;

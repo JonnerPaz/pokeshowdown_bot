@@ -1,6 +1,7 @@
 import { describe, expect, it, vi } from "vitest";
 import { createMockPokemon, createTestBot } from "../../harness/testHarness.js";
 import { UserEntity } from "../../../src/domain/entities/users.entity.js";
+import { MAX_PKMN_PARTY } from "../../../src/domain/data/constants.js";
 
 describe("Pokemon Operations Integration (/pokemons, /generate_pokemon)", () => {
   it("shows error when unregistered user attempts to view pokemons", async () => {
@@ -1039,5 +1040,83 @@ describe("Pokemon Operations Integration (/pokemons, /generate_pokemon)", () => 
     await tradePromise;
 
     expect(client.getSentMessages().some((m) => m.text?.includes("Trade cancelled!"))).toBe(true);
+  });
+
+  it("sends a traded party pokemon to the box when the receiver party is full", async () => {
+    const { dispatchCommand, dispatchText, dispatchCallback, client, userDataSource } =
+      await createTestBot();
+
+    const userAId = 907;
+    const userBId = 908;
+
+    const fullParty = Array.from({ length: MAX_PKMN_PARTY }, (_, index) =>
+      createMockPokemon(`party${index}`, "normal", { id: 600 + index, isInParty: true }),
+    );
+    const boxPokemon = createMockPokemon("rattata", "normal", { id: 610, isInParty: false });
+    const incomingParty = createMockPokemon("mewtwo", "psychic", { id: 611, isInParty: true });
+
+    userDataSource.seedUser(
+      new UserEntity({
+        id: 47,
+        telegramId: BigInt(userAId),
+        username: "full_party_trainer",
+        createdAt: new Date(),
+        updatedAt: new Date(),
+        pokemons: [...fullParty, boxPokemon],
+      }),
+    );
+    userDataSource.seedUser(
+      new UserEntity({
+        id: 48,
+        telegramId: BigInt(userBId),
+        username: "legend_giver",
+        createdAt: new Date(),
+        updatedAt: new Date(),
+        pokemons: [incomingParty],
+      }),
+    );
+
+    // 1. Trainer B starts the trade with their party mewtwo
+    const tradePromise = dispatchCommand("/trade", { fromId: userBId, isGroup: true });
+    await new Promise((resolve) => setTimeout(resolve, 50));
+    await dispatchText("mewtwo", { fromId: userBId, isGroup: true });
+    await new Promise((resolve) => setTimeout(resolve, 50));
+
+    const inviteMsg = client
+      .getSentMessages()
+      .find((m) => m.text?.includes("Click the button below to accept the trade"));
+    expect(inviteMsg).toBeDefined();
+    const tradeId = JSON.stringify(inviteMsg?.reply_markup).match(/trade-accept:([a-f0-9-]+)/)![1]!;
+
+    // 2. Trainer A accepts and offers a pokemon from their storage box
+    await dispatchCallback(`trade-accept:${tradeId}`, { fromId: userAId, isGroup: true });
+    await new Promise((resolve) => setTimeout(resolve, 50));
+    await dispatchText("rattata", { fromId: userAId, isGroup: true });
+    await new Promise((resolve) => setTimeout(resolve, 50));
+
+    // 3. Both trainers confirm
+    const confirmForB = client
+      .getSentMessages()
+      .filter((m) => m.text?.includes("would you like to trade your mewtwo"))
+      .at(-1);
+    const acceptForB = JSON.stringify(confirmForB?.reply_markup).match(/trade-accept:[^"]+/)![0];
+    await dispatchCallback(acceptForB, { fromId: userBId, isGroup: true });
+    await new Promise((resolve) => setTimeout(resolve, 50));
+
+    const confirmForA = client
+      .getSentMessages()
+      .filter((m) => m.text?.includes("would you like to trade your rattata"))
+      .at(-1);
+    const acceptForA = JSON.stringify(confirmForA?.reply_markup).match(/trade-accept:[^"]+/)![0];
+    await dispatchCallback(acceptForA, { fromId: userAId, isGroup: true });
+    await tradePromise;
+
+    const receiver = await userDataSource.findUserByTelegramId(userAId);
+    expect(receiver?.party).toHaveLength(MAX_PKMN_PARTY);
+    expect(receiver?.party.some((p) => p.name === "mewtwo")).toBe(false);
+
+    const received = receiver?.pokemons.find((p) => p.name === "mewtwo");
+    expect(received).toBeDefined();
+    expect(received?.isInParty).toBe(false);
   });
 });
