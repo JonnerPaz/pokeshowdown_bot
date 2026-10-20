@@ -93,8 +93,11 @@
 - Add translations for every command inside `src/presentation/controllers/commands.ts` (English + Spanish). Remove placeholder or offensive entries immediately.
 - Conversations: Standalone functions taking `(conv: AppConversation, ctx: AppContext, deps: ...)`, mounted via `feature.use(createConversation<AppContext, AppContext>(...))`. No classes or decorators.
 - Guard callback queries with `.andFrom(ctx.from!)` or `.andFrom(userCallback.callbackQuery.from)` so other users cannot hijack flows.
-- Namespace trade callbacks with a per-trade `tradeId` (e.g. `trade-accept:${tradeId}` / `trade-reject:${tradeId}`) so buttons can't be reused across chats.
+- Namespace trade callbacks with a per-trade `tradeId` (e.g. `trade-accept:${tradeId}` / `trade-reject:${tradeId}`) so buttons can't be reused across chats. Confirmation buttons must also carry the target trainer (`trade-confirm:${tradeId}:${telegramId}`) so a click from the wrong member is answered as "not yours" instead of being mistaken for an expired trade.
+- Remember that conversation state is keyed **per chat** (`ctx.chatId`), not per user. `ctx.conversation.exitAll()` therefore aborts every flow in a group, including other trainers' battles: `registerFeatureConversationCommand` only uses it in private chats and just exits the restarted conversation in groups.
 - Add `{ maxMilliseconds: CONVERSATION_TIMEOUT_MS }` to every `waitForCallbackQuery`/`waitFrom` so hung conversations don't leak memory.
+- Return `{ next: true }` from every `.unless(...)` used to ignore commands in a text prompt so the command reaches its handler even if the conversation stops being parallel.
+- Everything returned by `conv.external` is a `structuredClone`: entities lose their prototype. Rehydrate with `Entity.fromObject(...)` before calling methods such as `spendForShiny`, and use plain properties (`user.pokemons`) instead of getters (`user.party`, `user.box`).
 - Delete temporary messages (`ctx.api.deleteMessage`) when flows complete to keep chats tidy.
 
 ---
@@ -219,6 +222,8 @@ Phase 20 (landed on `main`): Dokploy Compose Unification & Preflight TCP Probe (
 Phase 21 (landed on `main`): Dokploy Swarm Overlay Networking & Entrypoint `PORT` Isolation (`pokebot-net` in `compose.yaml` and `compose.dokploy.yaml` switched to a single `driver: overlay` network with `attachable: true` so container-to-container traffic runs inside Docker Swarm's isolated network namespace and bypasses host-level `firewalld` + `br_netfilter` `EHOSTUNREACH` rejections on Fedora/RHEL servers; `docker-entrypoint.sh` internal variables renamed to `TARGET_DB_HOST`/`TARGET_DB_PORT` so the exported `PORT=5000` environment variable is never overwritten with `5432` before `exec node dist/index.js`, ensuring the `/health` endpoint and container healthcheck succeed).
 
 Phase 22 (landed on `main`): Trade Conversation Replay, Parallel Lockout & Group Trade Hardening (`src/features/pokemon/pokemon.conversations.ts` wrapping `randomUUID()` in `conv.external` to preserve `tradeId` across replays, `BigInt` equality checks on Telegram IDs in self-trade validation, `parallel: true` across all conversation registrations to eliminate chat lockout, `registerFeatureConversationCommand` calling `ctx.conversation.exitAll()` before starting new flows, command pass-through via `.unless()` in text prompts, in-memory trade collection synchronization, buddy clearing on trade in datasources, and full integration test harness coverage for trade flows and command concurrency).
+
+Phase 23 (landed on `main`): Trade Flow Correctness & Conversation Isolation (`registerFeatureConversationCommand` no longer calls `ctx.conversation.exitAll()` in groups so a bystander's `/start` cannot abort another trainer's trade or battle, `tradePokemon` demotes a received party pokemon to the box to preserve `MAX_PKMN_PARTY`, per-trainer `trade-confirm:${tradeId}:${telegramId}` callbacks plus a non-destructive fallback listener that reports "not meant for you" instead of a false "expired", explicit `{ next: true }` on every command-ignoring `.unless()`, and regression tests for all four behaviours).
 
 Conventions: each feature = one scoped commit set, verified with typecheck/lint/format + `pnpm test`, README/AGENTS updated. No new shared mutable state for encounters or battles (keep them conversation-local).
 
