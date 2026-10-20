@@ -25,10 +25,31 @@ export function registerFeatureConversationCommand<T extends AppContext>(
 ): Command<T> {
   return registerFeatureCommand(group, cmdName, async (ctx: T) => {
     try {
-      await ctx.conversation.exitAll();
+      await exitActiveConversations(ctx, conversationName);
       await ctx.conversation.enter(conversationName);
     } catch (error) {
       await displayCommandError(error as Error, ctx);
     }
   });
+}
+
+/**
+ * Clears stale state before entering a conversation again.
+ *
+ * Conversation state is keyed per chat, so in a private chat every active flow
+ * belongs to the same trainer and clearing everything is safe. In a group the
+ * same key is shared by all trainers, hence exiting everything would abort other
+ * trainers' ongoing trades or battles: only the conversation being restarted is
+ * exited.
+ */
+async function exitActiveConversations<T extends AppContext>(
+  ctx: T,
+  conversationName: string,
+): Promise<void> {
+  if (ctx.chat?.type === "private") {
+    await ctx.conversation.exitAll();
+    return;
+  }
+
+  await ctx.conversation.exit(conversationName);
 }

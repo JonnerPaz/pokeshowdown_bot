@@ -964,4 +964,80 @@ describe("Pokemon Operations Integration (/pokemons, /generate_pokemon)", () => 
       client.getSentMessages().some((m) => m.text?.includes("eevee is now known as Sparky")),
     ).toBe(true);
   });
+
+  it("keeps an ongoing group trade alive when another trainer runs /start", async () => {
+    const { dispatchCommand, dispatchText, dispatchCallback, client, userDataSource } =
+      await createTestBot();
+
+    const userAId = 904;
+    const userBId = 905;
+    const userCId = 906;
+
+    userDataSource.seedUser(
+      new UserEntity({
+        id: 44,
+        telegramId: BigInt(userAId),
+        username: "ash_alive",
+        createdAt: new Date(),
+        updatedAt: new Date(),
+        pokemons: [createMockPokemon("pikachu", "electric", { id: 504 })],
+      }),
+    );
+    userDataSource.seedUser(
+      new UserEntity({
+        id: 45,
+        telegramId: BigInt(userBId),
+        username: "misty_alive",
+        createdAt: new Date(),
+        updatedAt: new Date(),
+        pokemons: [createMockPokemon("charmander", "fire", { id: 505 })],
+      }),
+    );
+    userDataSource.seedUser(
+      new UserEntity({
+        id: 46,
+        telegramId: BigInt(userCId),
+        username: "brock_bystander",
+        createdAt: new Date(),
+        updatedAt: new Date(),
+        pokemons: [createMockPokemon("onix", "rock", { id: 506 })],
+      }),
+    );
+
+    // 1. Trainer A opens a trade and leaves it pending
+    const tradePromise = dispatchCommand("/trade", { fromId: userAId, isGroup: true });
+    await new Promise((resolve) => setTimeout(resolve, 50));
+    await dispatchText("pikachu", { fromId: userAId, isGroup: true });
+    await new Promise((resolve) => setTimeout(resolve, 50));
+
+    const inviteMsg = client
+      .getSentMessages()
+      .find((m) => m.text?.includes("Click the button below to accept the trade"));
+    expect(inviteMsg).toBeDefined();
+    const tradeId = JSON.stringify(inviteMsg?.reply_markup).match(/trade-accept:([a-f0-9-]+)/)![1]!;
+
+    // 2. A third trainer runs /start in the same group
+    await dispatchCommand("/start", { fromId: userCId, isGroup: true });
+    expect(
+      client.getSentMessages().some((m) => m.text?.includes("Welcome to PokeBotShowdown")),
+    ).toBe(true);
+
+    // 3. The trade must survive: trainer B can still accept the invite
+    await dispatchCallback(`trade-accept:${tradeId}`, { fromId: userBId, isGroup: true });
+    await new Promise((resolve) => setTimeout(resolve, 50));
+    await dispatchText("charmander", { fromId: userBId, isGroup: true });
+    await new Promise((resolve) => setTimeout(resolve, 50));
+
+    const confirmMsg = client
+      .getSentMessages()
+      .find((m) => m.text?.includes("would you like to trade your pikachu"));
+    expect(confirmMsg).toBeDefined();
+
+    // Close the flow cleanly so the conversation does not stay suspended
+    const rejectData = JSON.stringify(confirmMsg?.reply_markup).match(/trade-reject:[^"]+/)![0];
+    await dispatchCallback(rejectData, { fromId: userAId, isGroup: true });
+    await tradePromise;
+
+    expect(client.getSentMessages().some((m) => m.text?.includes("Trade cancelled!"))).toBe(true);
+  });
 });
