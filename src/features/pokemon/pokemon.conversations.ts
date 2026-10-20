@@ -6,7 +6,7 @@ import type { UserDataSource } from "../../domain/datasource/user.datasource.js"
 import type { PokemonDataSource } from "../../domain/datasource/pokemon.datasource.js";
 import type { PokeApiService } from "../../presentation/services/pokeapi.service.js";
 import type { RateLimiterService } from "../../presentation/services/rateLimiter.service.js";
-import type { PokemonEntity } from "../../domain/entities/pokemon.entity.js";
+import { PokemonEntity } from "../../domain/entities/pokemon.entity.js";
 import type { UserEntity } from "../../domain/entities/users.entity.js";
 import {
   CONVERSATION_TIMEOUT_MS,
@@ -69,10 +69,11 @@ export async function sendPokemonPhotos(
 
 async function checkUserExists(
   userId: number,
+  conv: AppConversation,
   ctx: AppContext,
   userDataSource: UserDataSource,
 ): Promise<UserEntity | null> {
-  const user = await userDataSource.findUserByTelegramId(userId);
+  const user = await conv.external(() => userDataSource.findUserByTelegramId(userId));
   if (!user) {
     await ctx.reply("You are not registered!");
     return null;
@@ -111,7 +112,7 @@ export async function pokemonSummaryConversation(
   ctx: AppContext,
   deps: Pick<PokemonConversationDeps, "userDataSource" | "pokeApi">,
 ) {
-  const user = await checkUserExists(ctx.from!.id, ctx, deps.userDataSource);
+  const user = await checkUserExists(ctx.from!.id, conv, ctx, deps.userDataSource);
   if (!user) return;
 
   if (user.pokemons.length === 0) {
@@ -131,7 +132,8 @@ export async function pokemonSummaryConversation(
 
     const answer = await conv
       .waitFrom(ctx.from!.id, { maxMilliseconds: CONVERSATION_TIMEOUT_MS })
-      .andFor(":text");
+      .andFor(":text")
+      .unless((c) => Boolean(c.message?.text?.startsWith("/")));
     target = answer.message?.text?.trim() ?? "";
   }
 
@@ -338,7 +340,7 @@ export async function evolvePokemonConversation(
   ctx: AppContext,
   deps: Pick<PokemonConversationDeps, "userDataSource" | "pokemonDataSource" | "pokeApi">,
 ) {
-  const user = await checkUserExists(ctx.from!.id, ctx, deps.userDataSource);
+  const user = await checkUserExists(ctx.from!.id, conv, ctx, deps.userDataSource);
   if (!user) return;
 
   const pokemonNames = user.pokemons.map((el) => el.name);
@@ -353,7 +355,8 @@ export async function evolvePokemonConversation(
 
   const choice = await conv
     .waitFrom(ctx.from!.id, { maxMilliseconds: CONVERSATION_TIMEOUT_MS })
-    .andFor(":text");
+    .andFor(":text")
+    .unless((c) => Boolean(c.message?.text?.startsWith("/")));
   const pokemon = user.pokemons.find(
     (el) => el.name.toLowerCase() === choice!.message!.text.toLowerCase(),
   );
@@ -366,11 +369,8 @@ export async function evolvePokemonConversation(
   }
 
   const wasBuddy = user.buddyPokemonId === pokemon.id;
-  const evolvedPokemon = await evolvePokemonOperation(
-    pokemon,
-    deps.pokeApi,
-    deps.pokemonDataSource,
-    user.id ?? undefined,
+  const evolvedPokemon = await conv.external(() =>
+    evolvePokemonOperation(pokemon, deps.pokeApi, deps.pokemonDataSource, user.id ?? undefined),
   );
 
   if (evolvedPokemon.name === pokemon.name) {
@@ -393,7 +393,7 @@ export async function shinyPokemonConversation(
   ctx: AppContext,
   deps: Pick<PokemonConversationDeps, "userDataSource" | "pokemonDataSource">,
 ) {
-  const user = await checkUserExists(ctx.from!.id, ctx, deps.userDataSource);
+  const user = await checkUserExists(ctx.from!.id, conv, ctx, deps.userDataSource);
   if (!user) return;
 
   const pokemonNames = user.pokemons.map((el) => el.name);
@@ -408,7 +408,8 @@ export async function shinyPokemonConversation(
 
   const choice = await conv
     .waitFrom(ctx.from!.id, { maxMilliseconds: CONVERSATION_TIMEOUT_MS })
-    .andFor(":text");
+    .andFor(":text")
+    .unless((c) => Boolean(c.message?.text?.startsWith("/")));
   const pokemon = user.pokemons.find(
     (el) => el.name.toLowerCase() === choice!.message!.text.toLowerCase(),
   );
@@ -429,7 +430,7 @@ export async function shinyPokemonConversation(
   }
 
   await conv.external(() => {
-    const shinyPokemon = pokemon.spendForShiny(SHINY_CAP);
+    const shinyPokemon = PokemonEntity.fromObject(pokemon).spendForShiny(SHINY_CAP);
     return deps.pokemonDataSource.updatePokemon(pokemon, {
       isShiny: shinyPokemon.isShiny,
       timesCaught: shinyPokemon.timesCaught,
@@ -446,10 +447,14 @@ async function prepareUserTrade(
   ctx: AppContext,
   userDataSource: UserDataSource,
 ): Promise<[UserEntity, PokemonEntity] | [null, null]> {
-  const user = await conv.external(() => checkUserExists(userId, ctx, userDataSource));
+  const user = await checkUserExists(userId, conv, ctx, userDataSource);
 
   if (!user) {
-    await ctx.reply("You are not registered!");
+    return [null, null];
+  }
+
+  if (user.pokemons.length === 0) {
+    await ctx.reply("You don't have any pokemon yet!");
     return [null, null];
   }
 
@@ -463,10 +468,10 @@ async function prepareUserTrade(
 
   const userInput = await conv
     .waitFrom(userId, { maxMilliseconds: CONVERSATION_TIMEOUT_MS })
-    .andFor(":text");
-  const userPkmn = user.pokemons.find(
-    (el) => el.name.toLowerCase() === userInput!.message!.text.toLowerCase(),
-  );
+    .andFor(":text")
+    .unless((c) => Boolean(c.message?.text?.startsWith("/")));
+  const inputText = userInput.message?.text?.trim().toLowerCase() ?? "";
+  const userPkmn = user.pokemons.find((el) => el.name.toLowerCase() === inputText);
 
   if (!userPkmn) {
     await ctx.reply("You don't have that pokemon");
@@ -494,13 +499,15 @@ async function confirmSelection(
     })
     .andFrom(userId);
 
+  await tradeResult.answerCallbackQuery();
+
   if (tradeResult.callbackQuery.data === `trade-reject:${tradeId}`) {
     await ctx.reply("Trade cancelled!");
-    await ctx.api.deleteMessage(ctx.chat!.id, msg.message_id);
+    await ctx.api.deleteMessage(ctx.chat!.id, msg.message_id).catch(() => {});
     return false;
   }
 
-  await ctx.api.deleteMessage(ctx.chat!.id, msg.message_id);
+  await ctx.api.deleteMessage(ctx.chat!.id, msg.message_id).catch(() => {});
   return true;
 }
 
@@ -511,12 +518,12 @@ export async function tradeConversation(
 ) {
   if (!isGroupChat(ctx)) {
     await ctx.reply(
-      "🔄 Trades need a group chat! Invite a friend and send /trade from a group to swap Pokemon.",
+      "🔄 Trades need a group chat! Invite a friend and send /trade from a group to trade Pokemon.",
     );
     return;
   }
 
-  const tradeId = randomUUID();
+  const tradeId = await conv.external(() => randomUUID());
 
   const [userReq, userReqPkmn] = await prepareUserTrade(
     ctx.from!.id,
@@ -524,6 +531,8 @@ export async function tradeConversation(
     ctx,
     deps.userDataSource,
   );
+
+  // No valid trade data
   if (!userReq || !userReqPkmn) return;
 
   const reqMsg = await ctx.reply(
@@ -537,11 +546,18 @@ export async function tradeConversation(
     maxMilliseconds: CONVERSATION_TIMEOUT_MS,
   });
 
-  if (userCallback.callbackQuery.from.id === userReq.telegramId) {
-    await ctx.api.deleteMessage(ctx.chat!.id, reqMsg.message_id);
+  if (BigInt(userCallback.callbackQuery.from.id) === BigInt(userReq.telegramId ?? ctx.from!.id)) {
+    await userCallback.answerCallbackQuery({
+      text: "You can't trade with yourself!",
+      show_alert: true,
+    });
+    await ctx.api.deleteMessage(ctx.chat!.id, reqMsg.message_id).catch(() => {});
     await ctx.reply("You can't trade with yourself!");
     return;
   }
+
+  await userCallback.answerCallbackQuery();
+  await ctx.api.deleteMessage(ctx.chat!.id, reqMsg.message_id).catch(() => {});
 
   const [userRes, userResPkmn] = await prepareUserTrade(
     userCallback.callbackQuery.from.id,
@@ -551,15 +567,12 @@ export async function tradeConversation(
   );
   if (!userRes || !userResPkmn) return;
 
-  const trainers = {
-    1: { user: userReq, pokemon: userReqPkmn },
-    2: { user: userRes, pokemon: userResPkmn },
-  };
+  const trainers = [
+    { user: userReq, pokemon: userReqPkmn, trainerId: ctx.from!.id },
+    { user: userRes, pokemon: userResPkmn, trainerId: userCallback.callbackQuery.from.id },
+  ];
 
-  for (const { user, pokemon } of Object.values(trainers)) {
-    const trainerId =
-      userReq.telegramId === user.telegramId ? ctx.from!.id : userCallback.callbackQuery.from.id;
-
+  for (const { user, pokemon, trainerId } of trainers) {
     if (!(await confirmSelection(conv, ctx, user, trainerId, pokemon, tradeId))) {
       return;
     }
@@ -577,7 +590,7 @@ export async function nicknameConversation(
   ctx: AppContext,
   deps: Pick<PokemonConversationDeps, "userDataSource" | "pokemonDataSource">,
 ) {
-  const user = await checkUserExists(ctx.from!.id, ctx, deps.userDataSource);
+  const user = await checkUserExists(ctx.from!.id, conv, ctx, deps.userDataSource);
   if (!user) return;
 
   const pokemonNames = user.pokemons.map((el) => el.name);
@@ -590,7 +603,8 @@ export async function nicknameConversation(
 
   const choice = await conv
     .waitFrom(ctx.from!.id, { maxMilliseconds: CONVERSATION_TIMEOUT_MS })
-    .andFor(":text");
+    .andFor(":text")
+    .unless((c) => Boolean(c.message?.text?.startsWith("/")));
   const pokemon = user.pokemons.find(
     (el) => el.name.toLowerCase() === choice!.message!.text.toLowerCase(),
   );
@@ -603,7 +617,8 @@ export async function nicknameConversation(
   await ctx.reply(`Enter the nickname you want to give to ${pokemon.name} (max 20 characters):`);
   const nickname = await conv
     .waitFrom(ctx.from!.id, { maxMilliseconds: CONVERSATION_TIMEOUT_MS })
-    .andFor(":text");
+    .andFor(":text")
+    .unless((c) => Boolean(c.message?.text?.startsWith("/")));
 
   const newNick = nickname.message?.text?.trim();
   if (!newNick || newNick.length > 20) {
@@ -617,7 +632,8 @@ export async function nicknameConversation(
 
   const confirm = await conv
     .waitFrom(ctx.from!.id, { maxMilliseconds: CONVERSATION_TIMEOUT_MS })
-    .andFor(":text");
+    .andFor(":text")
+    .unless((c) => Boolean(c.message?.text?.startsWith("/")));
   if (confirm.message?.text?.trim().toLowerCase() !== "yes") {
     await ctx.reply("Nickname not changed!");
     return;

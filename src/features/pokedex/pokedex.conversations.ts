@@ -23,7 +23,8 @@ export async function pokedexConversation(
     await ctx.reply("Which Pokemon do you want to look up? Send its name or Pokédex number:");
     const answer = await conv
       .waitFrom(ctx.from!.id, { maxMilliseconds: CONVERSATION_TIMEOUT_MS })
-      .andFor(":text");
+      .andFor(":text")
+      .unless((c) => Boolean(c.message?.text?.startsWith("/")));
     target = answer.message?.text?.trim() ?? "";
   }
 

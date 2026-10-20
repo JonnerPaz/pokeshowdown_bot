@@ -69,7 +69,7 @@ export async function registerConversation(
   }
 
   const pokemonName = selectedPokemon.text;
-  const starter = await deps.pokeApi.createPokemon(pokemonName);
+  const starter = await conv.external(() => deps.pokeApi.createPokemon(pokemonName));
 
   const createdUser = await conv.external(() =>
     deps.userDataSource.createUser(

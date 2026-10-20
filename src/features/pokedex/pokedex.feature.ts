@@ -12,7 +12,7 @@ export function createPokedexFeature(deps: PokedexConversationDeps): Composer<Ap
   feature.use(
     createConversation<AppContext, AppContext>(
       (conv, ctx) => pokedexConversation(conv, ctx, deps),
-      "pokedex",
+      { id: "pokedex", parallel: true },
     ),
   );
 

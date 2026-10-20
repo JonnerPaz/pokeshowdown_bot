@@ -21,17 +21,22 @@ export function createAuthFeature(deps: AuthFeatureDeps): Composer<AppContext> {
   const commandGroup = new CommandGroup<AppContext>();
 
   // Mount conversations
-  feature.use(createConversation<AppContext, AppContext>(startConversation, "start"));
+  feature.use(
+    createConversation<AppContext, AppContext>(startConversation, {
+      id: "start",
+      parallel: true,
+    }),
+  );
   feature.use(
     createConversation<AppContext, AppContext>(
       (conv, ctx) => registerConversation(conv, ctx, deps),
-      "register",
+      { id: "register", parallel: true },
     ),
   );
   feature.use(
     createConversation<AppContext, AppContext>(
       (conv, ctx) => deleteAccountConversation(conv, ctx, deps),
-      "deleteAccount",
+      { id: "deleteAccount", parallel: true },
     ),
   );
 

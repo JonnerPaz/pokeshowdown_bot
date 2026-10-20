@@ -205,17 +205,32 @@ export class InMemoryPokemonDataSource implements PokemonDataSource {
     userB: UserEntity,
     pokemonB: PokemonEntity,
   ): Promise<void> {
-    userA.pokemons = userA.pokemons.filter((p) => p.id !== pokemonA.id);
-    userB.pokemons = userB.pokemons.filter((p) => p.id !== pokemonB.id);
+    const entityA = PokemonEntity.fromObject(pokemonA);
+    const entityB = PokemonEntity.fromObject(pokemonB);
 
-    userA.pokemons.push(pokemonB);
-    userB.pokemons.push(pokemonA);
+    const targetA =
+      (userA.id !== null ? this.userDataSource.users.get(userA.id) : undefined) ?? userA;
+    const targetB =
+      (userB.id !== null ? this.userDataSource.users.get(userB.id) : undefined) ?? userB;
 
-    if (pokemonA.id !== null && userB.id !== null) {
-      this.pokemons.set(pokemonA.id, { pokemon: pokemonA, userId: userB.id });
+    targetA.pokemons = targetA.pokemons.filter((p) => p.id !== entityA.id);
+    targetB.pokemons = targetB.pokemons.filter((p) => p.id !== entityB.id);
+
+    targetA.pokemons.push(entityB);
+    targetB.pokemons.push(entityA);
+
+    if (targetA.buddyPokemonId === entityA.id) {
+      targetA.buddyPokemonId = null;
     }
-    if (pokemonB.id !== null && userA.id !== null) {
-      this.pokemons.set(pokemonB.id, { pokemon: pokemonB, userId: userA.id });
+    if (targetB.buddyPokemonId === entityB.id) {
+      targetB.buddyPokemonId = null;
+    }
+
+    if (entityA.id !== null && targetB.id !== null) {
+      this.pokemons.set(entityA.id, { pokemon: entityA, userId: targetB.id });
+    }
+    if (entityB.id !== null && targetA.id !== null) {
+      this.pokemons.set(entityB.id, { pokemon: entityB, userId: targetA.id });
     }
   }
 

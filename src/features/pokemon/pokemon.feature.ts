@@ -603,37 +603,37 @@ export function createPokemonFeature(deps: PokemonConversationDeps): Composer<Ap
   feature.use(
     createConversation<AppContext, AppContext>(
       (conv, ctx) => pokemonSummaryConversation(conv, ctx, effectiveDeps),
-      "pokemonSummary",
+      { id: "pokemonSummary", parallel: true },
     ),
   );
   feature.use(
     createConversation<AppContext, AppContext>(
       (conv, ctx) => generatePokemonConversation(conv, ctx, effectiveDeps),
-      "generatePokemon",
+      { id: "generatePokemon", parallel: true },
     ),
   );
   feature.use(
     createConversation<AppContext, AppContext>(
       (conv, ctx) => evolvePokemonConversation(conv, ctx, effectiveDeps),
-      "evolvePokemon",
+      { id: "evolvePokemon", parallel: true },
     ),
   );
   feature.use(
     createConversation<AppContext, AppContext>(
       (conv, ctx) => shinyPokemonConversation(conv, ctx, effectiveDeps),
-      "shinyPokemon",
+      { id: "shinyPokemon", parallel: true },
     ),
   );
   feature.use(
     createConversation<AppContext, AppContext>(
       (conv, ctx) => tradeConversation(conv, ctx, effectiveDeps),
-      "trade",
+      { id: "trade", parallel: true },
     ),
   );
   feature.use(
     createConversation<AppContext, AppContext>(
       (conv, ctx) => nicknameConversation(conv, ctx, effectiveDeps),
-      "nickname",
+      { id: "nickname", parallel: true },
     ),
   );
 
@@ -641,6 +641,15 @@ export function createPokemonFeature(deps: PokemonConversationDeps): Composer<Ap
   feature.callbackQuery(/^catch(:.+)?$/, async (ctx) => {
     await ctx.answerCallbackQuery({
       text: "💨 This wild Pokémon has already fled! Use /generate_pokemon to find another.",
+      show_alert: true,
+    });
+    await ctx.editMessageReplyMarkup({ reply_markup: new InlineKeyboard() }).catch(() => {});
+  });
+
+  // Fallback trade listener for expired or orphaned trade invites/confirmations
+  feature.callbackQuery(/^trade-(accept|reject):.+$/, async (ctx) => {
+    await ctx.answerCallbackQuery({
+      text: "⌛ This trade request has expired! Use /trade to start a new trade.",
       show_alert: true,
     });
     await ctx.editMessageReplyMarkup({ reply_markup: new InlineKeyboard() }).catch(() => {});

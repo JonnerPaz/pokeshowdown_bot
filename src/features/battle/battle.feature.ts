@@ -18,10 +18,10 @@ export function createBattleFeature(deps: BattleFeatureDeps): Composer<AppContex
 
   // Mount conversations
   feature.use(
-    createConversation<AppContext, AppContext>(
-      (conv, ctx) => battleConversation(conv, ctx, deps),
-      "battle",
-    ),
+    createConversation<AppContext, AppContext>((conv, ctx) => battleConversation(conv, ctx, deps), {
+      id: "battle",
+      parallel: true,
+    }),
   );
 
   // Mount commands

@@ -700,4 +700,268 @@ describe("Pokemon Operations Integration (/pokemons, /generate_pokemon)", () => 
       randomSpy.mockRestore();
     }
   });
+
+  it("prevents a trainer from accepting their own trade invite in a group chat", async () => {
+    const { dispatchCommand, dispatchText, dispatchCallback, client, userDataSource } =
+      await createTestBot();
+
+    const userAId = 901;
+    const pikachu = createMockPokemon("pikachu", "electric", { id: 501 });
+    userDataSource.seedUser(
+      new UserEntity({
+        id: 41,
+        telegramId: BigInt(userAId),
+        username: "ash_trader",
+        createdAt: new Date(),
+        updatedAt: new Date(),
+        pokemons: [pikachu],
+      }),
+    );
+
+    const tradePromise = dispatchCommand("/trade", { fromId: userAId, isGroup: true });
+    await new Promise((resolve) => setTimeout(resolve, 50));
+
+    await dispatchText("pikachu", { fromId: userAId, isGroup: true });
+    await new Promise((resolve) => setTimeout(resolve, 50));
+
+    const inviteMsg = client
+      .getSentMessages()
+      .find((m) => m.text?.includes("Click the button below to accept the trade"));
+    expect(inviteMsg).toBeDefined();
+
+    const match = JSON.stringify(inviteMsg?.reply_markup).match(/trade-accept:([a-f0-9-]+)/);
+    expect(match).not.toBeNull();
+    const tradeId = match![1]!;
+
+    // Initiator clicks their own trade-accept button
+    await dispatchCallback(`trade-accept:${tradeId}`, { fromId: userAId, isGroup: true });
+    await tradePromise;
+
+    const sent = client.getSentMessages();
+    expect(sent.some((m) => m.text?.includes("You can't trade with yourself!"))).toBe(true);
+    expect(
+      client
+        .getAnsweredCallbacks()
+        .some((cb) => cb.text?.includes("You can't trade with yourself!")),
+    ).toBe(true);
+  });
+
+  it("completes full group trade flow between two trainers and swaps pokemons", async () => {
+    const { dispatchCommand, dispatchText, dispatchCallback, client, userDataSource } =
+      await createTestBot();
+
+    const userAId = 902;
+    const userBId = 903;
+    const pikachu = createMockPokemon("pikachu", "electric", { id: 502 });
+    const charmander = createMockPokemon("charmander", "fire", { id: 503 });
+
+    userDataSource.seedUser(
+      new UserEntity({
+        id: 42,
+        telegramId: BigInt(userAId),
+        username: "ash_trade",
+        createdAt: new Date(),
+        updatedAt: new Date(),
+        pokemons: [pikachu],
+        buddyPokemonId: 502,
+      }),
+    );
+
+    userDataSource.seedUser(
+      new UserEntity({
+        id: 43,
+        telegramId: BigInt(userBId),
+        username: "misty_trade",
+        createdAt: new Date(),
+        updatedAt: new Date(),
+        pokemons: [charmander],
+      }),
+    );
+
+    // 1. User A starts /trade and selects pikachu
+    const tradePromise = dispatchCommand("/trade", { fromId: userAId, isGroup: true });
+    await new Promise((resolve) => setTimeout(resolve, 50));
+
+    await dispatchText("pikachu", { fromId: userAId, isGroup: true });
+    await new Promise((resolve) => setTimeout(resolve, 50));
+
+    const inviteMsg = client
+      .getSentMessages()
+      .find((m) => m.text?.includes("Click the button below to accept the trade"));
+    expect(inviteMsg).toBeDefined();
+    const match = JSON.stringify(inviteMsg?.reply_markup).match(/trade-accept:([a-f0-9-]+)/);
+    expect(match).not.toBeNull();
+    const tradeId = match![1]!;
+
+    // 2. User B accepts the trade invite and selects charmander
+    await dispatchCallback(`trade-accept:${tradeId}`, { fromId: userBId, isGroup: true });
+    await new Promise((resolve) => setTimeout(resolve, 50));
+
+    await dispatchText("charmander", { fromId: userBId, isGroup: true });
+    await new Promise((resolve) => setTimeout(resolve, 50));
+
+    // 3. User A confirms selection
+    await dispatchCallback(`trade-accept:${tradeId}`, { fromId: userAId, isGroup: true });
+    await new Promise((resolve) => setTimeout(resolve, 50));
+
+    // 4. User B confirms selection
+    await dispatchCallback(`trade-accept:${tradeId}`, { fromId: userBId, isGroup: true });
+    await tradePromise;
+
+    const sent = client.getSentMessages();
+    expect(sent.some((m) => m.text?.includes("Trade successful!"))).toBe(true);
+
+    const updatedA = await userDataSource.findUserByTelegramId(userAId);
+    const updatedB = await userDataSource.findUserByTelegramId(userBId);
+    expect(updatedA?.pokemons.map((p) => p.name)).toEqual(["charmander"]);
+    expect(updatedB?.pokemons.map((p) => p.name)).toEqual(["pikachu"]);
+    // Traded buddy is cleared
+    expect(updatedA?.buddyPokemonId).toBeNull();
+  });
+
+  it("cancels trade when either trainer rejects the confirmation prompt", async () => {
+    const { dispatchCommand, dispatchText, dispatchCallback, client, userDataSource } =
+      await createTestBot();
+
+    const userAId = 904;
+    const userBId = 905;
+    const squirtle = createMockPokemon("squirtle", "water", { id: 504 });
+    const bulbasaur = createMockPokemon("bulbasaur", "grass", { id: 505 });
+
+    userDataSource.seedUser(
+      new UserEntity({
+        id: 44,
+        telegramId: BigInt(userAId),
+        username: "trainer_a",
+        createdAt: new Date(),
+        updatedAt: new Date(),
+        pokemons: [squirtle],
+      }),
+    );
+
+    userDataSource.seedUser(
+      new UserEntity({
+        id: 45,
+        telegramId: BigInt(userBId),
+        username: "trainer_b",
+        createdAt: new Date(),
+        updatedAt: new Date(),
+        pokemons: [bulbasaur],
+      }),
+    );
+
+    const tradePromise = dispatchCommand("/trade", { fromId: userAId, isGroup: true });
+    await new Promise((resolve) => setTimeout(resolve, 50));
+
+    await dispatchText("squirtle", { fromId: userAId, isGroup: true });
+    await new Promise((resolve) => setTimeout(resolve, 50));
+
+    const inviteMsg = client
+      .getSentMessages()
+      .find((m) => m.text?.includes("Click the button below to accept the trade"));
+    const tradeId = JSON.stringify(inviteMsg?.reply_markup).match(/trade-accept:([a-f0-9-]+)/)![1]!;
+
+    await dispatchCallback(`trade-accept:${tradeId}`, { fromId: userBId, isGroup: true });
+    await new Promise((resolve) => setTimeout(resolve, 50));
+
+    await dispatchText("bulbasaur", { fromId: userBId, isGroup: true });
+    await new Promise((resolve) => setTimeout(resolve, 50));
+
+    // User A rejects confirmation
+    await dispatchCallback(`trade-reject:${tradeId}`, { fromId: userAId, isGroup: true });
+    await tradePromise;
+
+    expect(client.getSentMessages().some((m) => m.text?.includes("Trade cancelled!"))).toBe(true);
+    const updatedA = await userDataSource.findUserByTelegramId(userAId);
+    const updatedB = await userDataSource.findUserByTelegramId(userBId);
+    expect(updatedA?.pokemons.map((p) => p.name)).toEqual(["squirtle"]);
+    expect(updatedB?.pokemons.map((p) => p.name)).toEqual(["bulbasaur"]);
+  });
+
+  it("does not lock up the bot or fail on /start and /daily while a trade conversation is pending", async () => {
+    const { dispatchCommand, dispatchText, client, userDataSource } = await createTestBot();
+
+    const userAId = 906;
+    const pikachu = createMockPokemon("pikachu", "electric", { id: 506 });
+
+    userDataSource.seedUser(
+      new UserEntity({
+        id: 46,
+        telegramId: BigInt(userAId),
+        username: "resilient_trainer",
+        createdAt: new Date(),
+        updatedAt: new Date(),
+        pokemons: [pikachu],
+      }),
+    );
+
+    // Start /trade and select pikachu so the conversation is waiting for trade-accept callback
+    void dispatchCommand("/trade", { fromId: userAId, isGroup: true });
+    await new Promise((resolve) => setTimeout(resolve, 50));
+    await dispatchText("pikachu", { fromId: userAId, isGroup: true });
+    await new Promise((resolve) => setTimeout(resolve, 50));
+
+    client.clear();
+
+    // User runs /daily while trade invite is pending -> works without error
+    await dispatchCommand("/daily", { fromId: userAId, isGroup: true });
+    const afterDaily = client.getSentMessages();
+    expect(afterDaily.some((m) => m.text?.includes("There was an error during request"))).toBe(
+      false,
+    );
+    expect(afterDaily.some((m) => m.text?.includes("Daily Reward"))).toBe(true);
+
+    client.clear();
+
+    // User runs /start while trade invite is pending -> cleanly resets and responds with welcome message
+    await dispatchCommand("/start", { fromId: userAId, isGroup: true });
+    const afterStart = client.getSentMessages();
+    expect(afterStart.some((m) => m.text?.includes("There was an error during request"))).toBe(
+      false,
+    );
+    expect(afterStart.some((m) => m.text?.includes("Welcome to PokeBotShowdown"))).toBe(true);
+  });
+
+  it("converts a pokemon to shiny and updates nickname across conversation replays", async () => {
+    const { dispatchCommand, dispatchText, client, userDataSource } = await createTestBot();
+
+    const userId = 907;
+    const eevee = createMockPokemon("eevee", "normal", { id: 507, timesCaught: 12 });
+    userDataSource.seedUser(
+      new UserEntity({
+        id: 47,
+        telegramId: BigInt(userId),
+        username: "shiny_nick_trainer",
+        createdAt: new Date(),
+        updatedAt: new Date(),
+        pokemons: [eevee],
+      }),
+    );
+
+    // 1. Make eevee shiny
+    const shinyPromise = dispatchCommand("/shiny", { fromId: userId });
+    await new Promise((resolve) => setTimeout(resolve, 50));
+    await dispatchText("eevee", { fromId: userId });
+    await shinyPromise;
+
+    let updated = await userDataSource.findUserByTelegramId(userId);
+    expect(updated?.pokemons[0]?.isShiny).toBe(true);
+    expect(updated?.pokemons[0]?.timesCaught).toBe(9);
+
+    // 2. Give eevee a nickname
+    const nickPromise = dispatchCommand("/nickname", { fromId: userId });
+    await new Promise((resolve) => setTimeout(resolve, 50));
+    await dispatchText("eevee", { fromId: userId });
+    await new Promise((resolve) => setTimeout(resolve, 50));
+    await dispatchText("Sparky", { fromId: userId });
+    await new Promise((resolve) => setTimeout(resolve, 50));
+    await dispatchText("yes", { fromId: userId });
+    await nickPromise;
+
+    updated = await userDataSource.findUserByTelegramId(userId);
+    expect(updated?.pokemons[0]?.nickname).toBe("Sparky");
+    expect(
+      client.getSentMessages().some((m) => m.text?.includes("eevee is now known as Sparky")),
+    ).toBe(true);
+  });
 });

@@ -25,6 +25,7 @@ export function registerFeatureConversationCommand<T extends AppContext>(
 ): Command<T> {
   return registerFeatureCommand(group, cmdName, async (ctx: T) => {
     try {
+      await ctx.conversation.exitAll();
       await ctx.conversation.enter(conversationName);
     } catch (error) {
       await displayCommandError(error as Error, ctx);

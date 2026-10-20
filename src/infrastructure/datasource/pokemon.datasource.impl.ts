@@ -168,16 +168,28 @@ export class PokemonDataSourceImpl implements PokemonDataSource {
     if (!userA.id || !userB.id) throw new Error("User ID is missing for trade");
     if (!pokemonA.id || !pokemonB.id) throw new Error("Pokemon ID is missing for trade");
 
-    await prisma.$transaction([
-      prisma.pokemon.update({
-        where: { id: pokemonA.id },
-        data: { userId: userB.id },
-      }),
-      prisma.pokemon.update({
-        where: { id: pokemonB.id },
-        data: { userId: userA.id },
-      }),
-    ]);
+    await prisma.$transaction(async (tx) => {
+      await tx.pokemon.update({
+        where: { id: pokemonA.id! },
+        data: { userId: userB.id! },
+      });
+      await tx.pokemon.update({
+        where: { id: pokemonB.id! },
+        data: { userId: userA.id! },
+      });
+      if (userA.buddyPokemonId === pokemonA.id) {
+        await tx.user.update({
+          where: { id: userA.id! },
+          data: { buddyPokemonId: null },
+        });
+      }
+      if (userB.buddyPokemonId === pokemonB.id) {
+        await tx.user.update({
+          where: { id: userB.id! },
+          data: { buddyPokemonId: null },
+        });
+      }
+    });
   }
 
   async setPokemonPartyStatus(pokemonId: number, isInParty: boolean): Promise<PokemonEntity> {
