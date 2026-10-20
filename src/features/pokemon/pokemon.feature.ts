@@ -646,13 +646,18 @@ export function createPokemonFeature(deps: PokemonConversationDeps): Composer<Ap
     await ctx.editMessageReplyMarkup({ reply_markup: new InlineKeyboard() }).catch(() => {});
   });
 
-  // Fallback trade listener for expired or orphaned trade invites/confirmations
-  feature.callbackQuery(/^trade-(accept|reject):.+$/, async (ctx) => {
+  // Fallback trade listener for expired or orphaned trade invites/confirmations,
+  // and for buttons pressed by a trainer who is not the one being asked
+  feature.callbackQuery(/^trade-(accept|confirm|reject):.+$/, async (ctx) => {
+    const tradeIsRunning = "trade" in ctx.conversation.active();
     await ctx.answerCallbackQuery({
-      text: "⌛ This trade request has expired! Use /trade to start a new trade.",
+      text: "⌛ This trade button has expired or is not meant for you. Use /trade to start a new trade.",
       show_alert: true,
     });
-    await ctx.editMessageReplyMarkup({ reply_markup: new InlineKeyboard() }).catch(() => {});
+    // Keep the live trade buttons usable when the click came from the wrong trainer
+    if (!tradeIsRunning) {
+      await ctx.editMessageReplyMarkup({ reply_markup: new InlineKeyboard() }).catch(() => {});
+    }
   });
 
   // Mount /pokemons interactive carousel command

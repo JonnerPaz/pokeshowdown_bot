@@ -33,10 +33,10 @@ export function createTradeInviteKeyboard(tradeId: string): InlineKeyboard {
   return new InlineKeyboard().text("Accept", `trade-accept:${tradeId}`);
 }
 
-export function createTradeConfirmKeyboard(tradeId: string): InlineKeyboard {
+export function createTradeConfirmKeyboard(tradeId: string, trainerId: number): InlineKeyboard {
   return new InlineKeyboard()
-    .text("Accept", `trade-accept:${tradeId}`)
-    .text("Reject", `trade-reject:${tradeId}`);
+    .text("Accept", `trade-confirm:${tradeId}:${trainerId}`)
+    .text("Reject", `trade-reject:${tradeId}:${trainerId}`);
 }
 
 export function createPokemonCarouselKeyboard(

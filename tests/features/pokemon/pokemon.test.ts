@@ -802,11 +802,17 @@ describe("Pokemon Operations Integration (/pokemons, /generate_pokemon)", () => 
     await new Promise((resolve) => setTimeout(resolve, 50));
 
     // 3. User A confirms selection
-    await dispatchCallback(`trade-accept:${tradeId}`, { fromId: userAId, isGroup: true });
+    await dispatchCallback(`trade-confirm:${tradeId}:${userAId}`, {
+      fromId: userAId,
+      isGroup: true,
+    });
     await new Promise((resolve) => setTimeout(resolve, 50));
 
     // 4. User B confirms selection
-    await dispatchCallback(`trade-accept:${tradeId}`, { fromId: userBId, isGroup: true });
+    await dispatchCallback(`trade-confirm:${tradeId}:${userBId}`, {
+      fromId: userBId,
+      isGroup: true,
+    });
     await tradePromise;
 
     const sent = client.getSentMessages();
@@ -869,7 +875,10 @@ describe("Pokemon Operations Integration (/pokemons, /generate_pokemon)", () => 
     await new Promise((resolve) => setTimeout(resolve, 50));
 
     // User A rejects confirmation
-    await dispatchCallback(`trade-reject:${tradeId}`, { fromId: userAId, isGroup: true });
+    await dispatchCallback(`trade-reject:${tradeId}:${userAId}`, {
+      fromId: userAId,
+      isGroup: true,
+    });
     await tradePromise;
 
     expect(client.getSentMessages().some((m) => m.text?.includes("Trade cancelled!"))).toBe(true);
@@ -1099,7 +1108,7 @@ describe("Pokemon Operations Integration (/pokemons, /generate_pokemon)", () => 
       .getSentMessages()
       .filter((m) => m.text?.includes("would you like to trade your mewtwo"))
       .at(-1);
-    const acceptForB = JSON.stringify(confirmForB?.reply_markup).match(/trade-accept:[^"]+/)![0];
+    const acceptForB = JSON.stringify(confirmForB?.reply_markup).match(/trade-confirm:[^"]+/)![0];
     await dispatchCallback(acceptForB, { fromId: userBId, isGroup: true });
     await new Promise((resolve) => setTimeout(resolve, 50));
 
@@ -1107,7 +1116,7 @@ describe("Pokemon Operations Integration (/pokemons, /generate_pokemon)", () => 
       .getSentMessages()
       .filter((m) => m.text?.includes("would you like to trade your rattata"))
       .at(-1);
-    const acceptForA = JSON.stringify(confirmForA?.reply_markup).match(/trade-accept:[^"]+/)![0];
+    const acceptForA = JSON.stringify(confirmForA?.reply_markup).match(/trade-confirm:[^"]+/)![0];
     await dispatchCallback(acceptForA, { fromId: userAId, isGroup: true });
     await tradePromise;
 
@@ -1118,5 +1127,81 @@ describe("Pokemon Operations Integration (/pokemons, /generate_pokemon)", () => 
     const received = receiver?.pokemons.find((p) => p.name === "mewtwo");
     expect(received).toBeDefined();
     expect(received?.isInParty).toBe(false);
+  });
+
+  it("ignores a confirmation pressed by the wrong trainer without expiring the trade", async () => {
+    const { dispatchCommand, dispatchText, dispatchCallback, client, userDataSource } =
+      await createTestBot();
+
+    const userAId = 909;
+    const userBId = 910;
+
+    userDataSource.seedUser(
+      new UserEntity({
+        id: 49,
+        telegramId: BigInt(userAId),
+        username: "trade_owner",
+        createdAt: new Date(),
+        updatedAt: new Date(),
+        pokemons: [createMockPokemon("pikachu", "electric", { id: 612 })],
+      }),
+    );
+    userDataSource.seedUser(
+      new UserEntity({
+        id: 50,
+        telegramId: BigInt(userBId),
+        username: "trade_partner",
+        createdAt: new Date(),
+        updatedAt: new Date(),
+        pokemons: [createMockPokemon("charmander", "fire", { id: 613 })],
+      }),
+    );
+
+    const tradePromise = dispatchCommand("/trade", { fromId: userAId, isGroup: true });
+    await new Promise((resolve) => setTimeout(resolve, 50));
+    await dispatchText("pikachu", { fromId: userAId, isGroup: true });
+    await new Promise((resolve) => setTimeout(resolve, 50));
+
+    const inviteMsg = client
+      .getSentMessages()
+      .find((m) => m.text?.includes("Click the button below to accept the trade"));
+    const tradeId = JSON.stringify(inviteMsg?.reply_markup).match(/trade-accept:([a-f0-9-]+)/)![1]!;
+
+    await dispatchCallback(`trade-accept:${tradeId}`, { fromId: userBId, isGroup: true });
+    await new Promise((resolve) => setTimeout(resolve, 50));
+    await dispatchText("charmander", { fromId: userBId, isGroup: true });
+    await new Promise((resolve) => setTimeout(resolve, 50));
+
+    // The confirmation on screen belongs to trainer A
+    const confirmForA = client
+      .getSentMessages()
+      .filter((m) => m.text?.includes("would you like to trade your pikachu"))
+      .at(-1);
+    expect(confirmForA).toBeDefined();
+    const acceptForA = JSON.stringify(confirmForA?.reply_markup).match(/trade-confirm:[^"]+/)![0];
+
+    // Trainer B presses A's confirmation button: no trade, no "expired" lie
+    client.clear();
+    await dispatchCallback(acceptForA, { fromId: userBId, isGroup: true });
+    const wrongClickAlert = client.getAnsweredCallbacks().at(-1);
+    expect(wrongClickAlert?.text).toContain("not meant for you");
+    // The live confirmation keyboard must stay usable for its owner
+    expect(client.getCalls("editMessageReplyMarkup")).toHaveLength(0);
+
+    // The trade is still alive: A confirms and the flow continues
+    await dispatchCallback(acceptForA, { fromId: userAId, isGroup: true });
+    await new Promise((resolve) => setTimeout(resolve, 50));
+
+    const confirmForB = client
+      .getSentMessages()
+      .filter((m) => m.text?.includes("would you like to trade your charmander"))
+      .at(-1);
+    expect(confirmForB).toBeDefined();
+    const acceptForB = JSON.stringify(confirmForB?.reply_markup).match(/trade-confirm:[^"]+/)![0];
+
+    await dispatchCallback(acceptForB, { fromId: userBId, isGroup: true });
+    await tradePromise;
+
+    expect(client.getSentMessages().some((m) => m.text?.includes("Trade successful!"))).toBe(true);
   });
 });

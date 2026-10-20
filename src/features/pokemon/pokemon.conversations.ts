@@ -490,18 +490,18 @@ async function confirmSelection(
   tradeId: string,
 ): Promise<boolean> {
   const msg = await ctx.reply(`@${user.username}, would you like to trade your ${pokemon.name}?`, {
-    reply_markup: createTradeConfirmKeyboard(tradeId),
+    reply_markup: createTradeConfirmKeyboard(tradeId, userId),
   });
 
   const tradeResult = await conv
-    .waitForCallbackQuery(new RegExp(`^trade-(accept|reject):${tradeId}$`), {
+    .waitForCallbackQuery(new RegExp(`^trade-(confirm|reject):${tradeId}:${userId}$`), {
       maxMilliseconds: CONVERSATION_TIMEOUT_MS,
     })
     .andFrom(userId);
 
   await tradeResult.answerCallbackQuery();
 
-  if (tradeResult.callbackQuery.data === `trade-reject:${tradeId}`) {
+  if (tradeResult.callbackQuery.data.startsWith("trade-reject:")) {
     await ctx.reply("Trade cancelled!");
     await ctx.api.deleteMessage(ctx.chat!.id, msg.message_id).catch(() => {});
     return false;
