@@ -2,9 +2,7 @@ import type { AppContext } from "./data/types.js";
 import { Bot, type BotConfig } from "grammy";
 import { commands, LanguageCodes } from "@grammyjs/commands";
 import { conversations } from "@grammyjs/conversations";
-import { PokeApiService } from "./services/pokeapi.service.js";
-import { UserDataSourceImpl } from "../infrastructure/datasource/user.datasource.impl.js";
-import { PokemonDataSourceImpl } from "../infrastructure/datasource/pokemon.datasource.impl.js";
+import type { PokeApiService } from "./services/pokeapi.service.js";
 import type { UserDataSource } from "../domain/datasource/user.datasource.js";
 import type { PokemonDataSource } from "../domain/datasource/pokemon.datasource.js";
 import { getCommandRegistrations } from "./controllers/commands.js";
@@ -17,9 +15,10 @@ import { createInventoryFeature } from "../features/inventory/inventory.feature.
 import { createProfileFeature } from "../features/profile/profile.feature.js";
 import { createInlineFeature } from "../features/inline/inline.feature.js";
 import { autoRetry } from "@grammyjs/auto-retry";
-import { BattleService } from "../features/battle/battle.service.js";
-import { RateLimiterService } from "./services/rateLimiter.service.js";
-import { GroupEncounterService } from "../features/pokemon/groupEncounter.service.js";
+import type { BattleService } from "../features/battle/battle.service.js";
+import type { RateLimiterService } from "./services/rateLimiter.service.js";
+import type { GroupEncounterService } from "../features/pokemon/groupEncounter.service.js";
+import { createAppDeps, type AppDeps } from "./deps.js";
 
 export interface MainBotOptions {
   botConfig?: BotConfig<AppContext> | undefined;
@@ -33,6 +32,7 @@ export interface MainBotOptions {
 
 export class MainBot {
   public readonly bot: Bot<AppContext>;
+  public readonly deps: AppDeps;
   public static instance: MainBot;
 
   constructor(apiKey: string = process.env.API_KEY as string, options: MainBotOptions = {}) {
@@ -49,32 +49,42 @@ export class MainBot {
     this.bot.use(commands());
     this.bot.use(conversations());
 
-    const userDatasource = options.userDatasource ?? new UserDataSourceImpl();
-    const pokemonDatasource = options.pokemonDatasource ?? new PokemonDataSourceImpl();
-
-    const pokeApi = options.pokeApi ?? new PokeApiService();
-    const rateLimiter = options.rateLimiter ?? new RateLimiterService();
-    const battleService =
-      options.battleService ?? new BattleService(pokeApi, userDatasource, pokemonDatasource);
-    const groupEncounterService = options.groupEncounterService ?? new GroupEncounterService();
+    const deps = createAppDeps({
+      userDataSource: options.userDatasource,
+      pokemonDataSource: options.pokemonDatasource,
+      pokeApi: options.pokeApi,
+      rateLimiter: options.rateLimiter,
+      battleService: options.battleService,
+      groupEncounterService: options.groupEncounterService,
+    });
+    this.deps = deps;
 
     // Setup features
     this.bot.use(createSystemFeature());
-    this.bot.use(createAuthFeature({ userDataSource: userDatasource, pokeApi }));
-    this.bot.use(createBattleFeature({ userDataSource: userDatasource, battleService }));
+    this.bot.use(createAuthFeature({ userDataSource: deps.userDataSource, pokeApi: deps.pokeApi }));
     this.bot.use(
-      createPokemonFeature({
-        userDataSource: userDatasource,
-        pokemonDataSource: pokemonDatasource,
-        pokeApi,
-        rateLimiter,
-        groupEncounterService,
+      createBattleFeature({
+        userDataSource: deps.userDataSource,
+        battleService: deps.battleService,
       }),
     );
-    this.bot.use(createPokedexFeature({ pokeApi, userDataSource: userDatasource }));
-    this.bot.use(createInventoryFeature({ userDataSource: userDatasource }));
-    this.bot.use(createProfileFeature({ userDataSource: userDatasource }));
-    this.bot.use(createInlineFeature({ pokeApi, userDataSource: userDatasource }));
+    this.bot.use(
+      createPokemonFeature({
+        userDataSource: deps.userDataSource,
+        pokemonDataSource: deps.pokemonDataSource,
+        pokeApi: deps.pokeApi,
+        rateLimiter: deps.rateLimiter,
+        groupEncounterService: deps.groupEncounterService,
+      }),
+    );
+    this.bot.use(
+      createPokedexFeature({ pokeApi: deps.pokeApi, userDataSource: deps.userDataSource }),
+    );
+    this.bot.use(createInventoryFeature({ userDataSource: deps.userDataSource }));
+    this.bot.use(createProfileFeature({ userDataSource: deps.userDataSource }));
+    this.bot.use(
+      createInlineFeature({ pokeApi: deps.pokeApi, userDataSource: deps.userDataSource }),
+    );
   }
 
   private setupErrorHandler() {
