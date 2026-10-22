@@ -46,25 +46,33 @@ export interface PokemonConversationDeps {
 
 export { getPokemonFrontSprite };
 
+type PhotoId = { message_id: number };
 export async function sendPokemonPhotos(
   ctx: AppContext,
   photos: InputMediaPhoto[],
-): Promise<Array<{ message_id: number }>> {
-  if (photos.length === 0) return [];
-  const single = photos[0];
-  if (photos.length === 1 && single) {
-    const sent = await ctx.api.sendPhoto(ctx.chat!.id, single.media);
-    return [sent];
+): Promise<PhotoId[]> {
+  if (photos.length === 0) {
+    return [];
   }
 
-  const results: Array<{ message_id: number }> = [];
-  const MAX_PER_GROUP = 10;
-  for (let i = 0; i < photos.length; i += MAX_PER_GROUP) {
-    const chunk = photos.slice(i, i + MAX_PER_GROUP);
-    const sentGroup = await ctx.api.sendMediaGroup(ctx.chat!.id, chunk);
-    results.push(...sentGroup);
+  // Send one photo
+  const singlePhoto = photos.at(0);
+  if (photos.length === 1 && singlePhoto) {
+    const photoSent = await ctx.api.sendPhoto(ctx.chat!.id, singlePhoto.media);
+    return [photoSent];
   }
-  return results;
+
+  // telegram prohibits sending more than 10 photos in a group
+  // so it is sent in chunks
+  const photoIds: PhotoId[] = [];
+  const MAX_PER_GROUP_PHOTOS = 10;
+  for (let i = 0; i < photos.length; i += MAX_PER_GROUP_PHOTOS) {
+    const chunk = photos.slice(i, i + MAX_PER_GROUP_PHOTOS);
+    const sentGroup = await ctx.api.sendMediaGroup(ctx.chat!.id, chunk);
+    photoIds.push(...sentGroup);
+  }
+
+  return photoIds;
 }
 
 async function checkUserExists(
@@ -88,13 +96,8 @@ export async function pokemonsConversation(
 ) {
   const user = await conv.external(() => deps.userDataSource.findUserByTelegramId(ctx.from!.id));
 
-  if (!user) {
+  if (!user || user.pokemons.length === 0) {
     await ctx.reply("You are not registered!");
-    return;
-  }
-
-  if (user.pokemons.length === 0) {
-    await ctx.reply("You don't have any pokemon yet!");
     return;
   }
 
@@ -113,13 +116,9 @@ export async function pokemonSummaryConversation(
   deps: Pick<PokemonConversationDeps, "userDataSource" | "pokeApi">,
 ) {
   const user = await checkUserExists(ctx.from!.id, conv, ctx, deps.userDataSource);
-  if (!user) return;
+  if (!user || user.pokemons.length === 0) return;
 
-  if (user.pokemons.length === 0) {
-    await ctx.reply("You don't have any pokemon yet! Catch one with /generate_pokemon.");
-    return;
-  }
-
+  // gets the name of the pokemon when user sends its name alongside the command
   let target = (ctx.message?.text ?? "").split(/\s+/).slice(1).join(" ").trim();
 
   if (!target) {
@@ -133,7 +132,8 @@ export async function pokemonSummaryConversation(
     const answer = await conv
       .waitFrom(ctx.from!.id, { maxMilliseconds: CONVERSATION_TIMEOUT_MS })
       .andFor(":text")
-      .unless((c) => Boolean(c.message?.text?.startsWith("/")), { next: true });
+      .unless((c) => !!c.message?.text?.startsWith("/"), { next: true });
+
     target = answer.message?.text?.trim() ?? "";
   }
 
