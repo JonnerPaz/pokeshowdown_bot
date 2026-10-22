@@ -162,8 +162,14 @@ export class ArenaService {
     }
 
     const stats = await this.battleService.resolveBattlePokemon(pokemon);
-    if (room.status !== "open") {
-      throw new ArenaError("invalid_state", 409, "The battle already started");
+    // The pick awaits PokeAPI; the room may have started, closed or lost this
+    // trainer while the request was in flight.
+    if (
+      room.status !== "open" ||
+      !room.participants.includes(participant) ||
+      this.store.get(room.code) !== room
+    ) {
+      throw new ArenaError("invalid_state", 409, "The room is no longer available");
     }
 
     participant.pokemonId = pokemonId;

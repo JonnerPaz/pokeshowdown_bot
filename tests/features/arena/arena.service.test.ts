@@ -219,6 +219,28 @@ describe("ArenaService lobby", () => {
     expect(room.participants[0]?.pokemon?.name).toBe("Sparky");
   });
 
+  it("ignores a pick that resolves after the room already closed", async () => {
+    const { service, battleService } = setup();
+    track(service);
+    const ash = makeAsh();
+    const room = service.createRoom(ash);
+
+    let release!: () => void;
+    const gate = new Promise<void>((resolve) => {
+      release = resolve;
+    });
+    battleService.resolveBattlePokemon = vi.fn(async (pokemon: PokemonEntity) => {
+      await gate;
+      return makeBattlePort().resolveBattlePokemon(pokemon);
+    });
+
+    const picking = service.pickPokemon(room.code, ash, 11);
+    service.leaveRoom(room.code, ash);
+    release();
+
+    await expectArenaErrorAsync(picking, "invalid_state");
+  });
+
   it("only lets the creator start, and only when both trainers picked", async () => {
     const { service } = setup();
     track(service);
