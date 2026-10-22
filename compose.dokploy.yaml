@@ -52,6 +52,11 @@ services:
       PORT: ${PORT:-5000}
       WEBHOOK_URL: ${WEBHOOK_URL:-}
       WEBHOOK_SECRET: ${WEBHOOK_SECRET:-}
+      # Public HTTPS URL of the Telegram Mini App. Empty disables /api + the
+      # arena menu button. Point it at the Cloudflare tunnel hostname.
+      WEBAPP_URL: ${WEBAPP_URL:-}
+      WEBAPP_AUTH_MAX_AGE_SEC: ${WEBAPP_AUTH_MAX_AGE_SEC:-}
+      ARENA_TURN_TIMEOUT_SEC: ${ARENA_TURN_TIMEOUT_SEC:-}
       SHINY_ODDS: ${SHINY_ODDS:-}
       SPAWN_POOL_SIZE: ${SPAWN_POOL_SIZE:-}
     depends_on:

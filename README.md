@@ -14,7 +14,7 @@
 
 Catch, evolve, trade, battle fellow trainers and more!
 
-[Features](#-features--gameplay) • [Operational Modes](#-operational-modes) • [Quickstart](#-quickstart) • [Dokploy Deployment](#-deploying-on-dokploy) • [Commands](#-bot-commands) • [Tech Stack](#-tech-stack)
+[Features](#-features--gameplay) • [Mini App Arena](#-telegram-mini-app-arena-web) • [Operational Modes](#-operational-modes) • [Quickstart](#-quickstart) • [Dokploy Deployment](#-deploying-on-dokploy) • [Commands](#-bot-commands) • [Tech Stack](#-tech-stack)
 
 </div>
 
@@ -124,6 +124,79 @@ Query the bot from **any** chat, private conversation, or channel without adding
 
 - **Evolution System**: Evolve your Pokémon when they reach catch thresholds.
   The system preserves companion buddy assignments and merges duplicates cleanly.
+
+### 🎮 Telegram Mini App Arena
+
+- **Private Web Duels**: Open the arena from the bot's menu button, create a
+  room, share the six-character code, and battle another trainer from any
+  Telegram client.
+
+- **Live Turn-by-Turn Combat**: REST actions plus Server-Sent Events stream HP,
+  turn deadlines, critical hits, and the battle log without polling.
+
+- **Party Picker & Rankings**: Choose any Pokémon from your active party, watch
+  the rival's pick in the lobby, and have the result recorded in your trainer
+  profile automatically.
+
+- **Bilingual UI**: The Mini App follows the Telegram language and ships English
+  and Spanish copy.
+
+---
+
+## 🎮 Telegram Mini App Arena (Web)
+
+The bot can also serve a small web application from the same Express server that
+handles the webhook:
+
+- `GET /` serves the Mini App shell and its assets (built into `dist/web/`).
+- `GET /api/me` and `/api/battles/...` expose the authenticated REST API.
+- `GET /api/battles/:code/events` streams room updates over SSE.
+
+### Enabling the arena
+
+1. Expose the bot's HTTP port over **HTTPS**. Telegram only opens Mini Apps over
+   HTTPS, so use a reverse proxy, a Cloudflare Tunnel hostname, or the bundled
+   `cloudflared` service.
+2. Set `WEBAPP_URL` to that public URL (no trailing slash), for example:
+
+   ```env
+   WEBAPP_URL="https://arena.example.com"
+   TUNNEL_TOKEN="your_cloudflare_tunnel_token"
+   ```
+
+3. Rebuild and restart:
+
+   ```bash
+   pnpm run build   # compiles dist/index.js and dist/web/
+   pnpm start
+   ```
+
+The bot registers the **Open Arena** menu button automatically. Every API call
+is authenticated with the signed `initData` header Telegram provides to the Mini
+App, so no cookies or extra sessions are required.
+
+### Configuration
+
+| Variable                  | Default | Purpose                                                       |
+| :------------------------ | :------ | :------------------------------------------------------------ |
+| `WEBAPP_URL`              | empty   | Public HTTPS URL. Empty disables the API and the menu button. |
+| `WEBAPP_AUTH_MAX_AGE_SEC` | `86400` | Maximum accepted age of the Telegram `initData` payload.      |
+| `ARENA_TURN_TIMEOUT_SEC`  | `90`    | Seconds a trainer has to act before the turn is skipped.      |
+
+### Local development
+
+```bash
+pnpm dev        # builds the web client once, then watches the server
+pnpm dev:web    # optional: rebuild the client on change (second terminal)
+```
+
+To test the Mini App on your machine, expose port 5000 over HTTPS with
+`pnpm tunnel` (Cloudflare quick tunnel) and set `WEBAPP_URL` to the printed
+`https://...trycloudflare.com` URL.
+
+> ⚠️ Arena rooms live in memory. Restarting the bot (or running more than one
+> replica) drops every lobby and battle. Use a single replica until rooms are
+> persisted.
 
 ---
 
@@ -381,7 +454,8 @@ Integration tests utilize an in-memory repository harness and grammY's `ApiClien
 - **Bot Framework**: [grammY](https://grammy.dev/) (`@grammyjs/commands`, `@grammyjs/conversations`, `@grammyjs/auto-retry`)
 - **Database & ORM**: PostgreSQL with [Prisma ORM](https://www.prisma.io/)
 - **Build Engine**: [esbuild](https://esbuild.github.io/) (~20ms bundle times)
-- **HTTP Server**: Express 5 (Health checks and optional Webhook adapter)
+- **HTTP Server**: Express 5 (health checks, optional webhook adapter, Mini App API + static client)
+- **Mini App**: TypeScript client bundled by esbuild, REST + Server-Sent Events, Telegram `initData` auth
 - **External API**: [pokenode-ts](https://github.com/Gabb-c/pokenode-ts) with in-memory caching
 - **Testing**: [Vitest](https://vitest.dev/) with native ESM execution
 

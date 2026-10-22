@@ -29,9 +29,10 @@
 
 ## 2. Build · Lint · Test
 
-- **Build**: `pnpm run build` (bundles `src/index.ts` to `dist/index.js` using `esbuild` in ~20ms with sourcemaps).
+- **Build**: `pnpm run build` (bundles the server to `dist/index.js` and the Mini App to `dist/web/` using `esbuild` with sourcemaps).
+- **Web client build**: `pnpm run build:web` compiles `src/presentation/web/client/main.ts` to `dist/web/app.js` and copies `index.html` + `styles.css`. `pnpm dev:web` rebuilds on change; `pnpm dev` runs `build:web` once via `predev`.
 - **Production run**: `pnpm start` (executes pre-built `node dist/index.js` via `prestart` hook for minimal memory and zero JIT overhead).
-- **Dev watch**: `pnpm dev` (tsx watch `src/index.ts`, boots bot + Express shell with hot reloading).
+- **Dev watch**: `pnpm dev` (tsx watch `src/index.ts`, boots bot + Express shell with hot reloading; run `pnpm dev:web` in a second terminal for client changes).
 - **Static analysis**: `pnpm run typecheck` (tsc --noEmit, strict null checks on).
 - **Lint / format**: `pnpm lint`, `pnpm lint:fix`, `pnpm format`, `pnpm format:check` (Prettier; formatted paths are scoped in package.json to avoid `postgres/` permission issues).
 - **Migrations**: `pnpm run prisma:migrate -- --name <desc>` (requires live DB connection).
@@ -51,6 +52,11 @@
 - Domain entities (`PokemonEntity`, `UserEntity`) enforce invariants end-to-end. Datasources and services construct these entities directly (no DTO layer). Always return domain entities from persistence.
 - When persisting user-owned pokémon (starters, catches, trades, evolutions), include the owning `userId` in the Prisma insert/connect and wrap the pokémon create + user update in a single transaction so `pokemonIds` stay in sync.
 - `Server` (`src/presentation/server.ts`) is a thin Express wrapper: mount JSON middleware, register the webhook with `secret_token` (fail-fast on error), mount `webhookCallback`, then listen. `index.ts` owns startup; avoid starting the bot anywhere else to prevent double polling.
+- **Mini App Web Layer** (`src/presentation/web/`): `createWebApp()` is mounted before the webhook when `WEBAPP_URL` is set. It serves `dist/web` statically, exposes `/api/me` and `/api/battles/*`, and authenticates every API call from the `X-Telegram-Init-Data` header (HMAC derived from `API_KEY`), never cookies. `ArenaService` (`src/features/arena/`) owns in-memory rooms and SSE listeners; `battle.service.ts` remains the only writer of wins/losses.
+- **Browser SSE**: `EventSource` cannot send the init-data header, so the client reads `/events` with `fetch` + `ReadableStream` (`client/sse.ts`). Reconnects use exponential backoff and the first frame is always a full snapshot.
+- **Client modules**: `client/main.ts` (state/actions), `client/render.ts` (pure templates with escaped user data), `client/api.ts`, `client/i18n.ts` (EN/ES), `client/dom.ts`, `client/types.ts`. No framework and no runtime dependency; the bundle is an IIFE built by `scripts/build-web.mjs`.
+- **Room lifecycle**: rooms are ephemeral and single-replica by design. They expire after 15 min in the lobby or 10 min after finishing; a deploy drops them. Do not add multi-replica claims without moving the store to Postgres/Redis.
+- **Static assets**: `createWebApp` accepts `staticDir` (tests use a temp folder). `dist/web` is gitignored and does not exist in CI until `pnpm build:web` runs, so unit tests must not depend on real assets.
 
 ---
 
@@ -180,6 +186,7 @@
 ## 15. Exit Checklist
 
 - `pnpm run typecheck` + `pnpm lint` + `pnpm format:check` (plus relevant prisma commands) pass.
+- `pnpm run build:web` (or `pnpm run build`) succeeds whenever the Mini App client changed.
 - `pnpm dev` starts without crashes; new commands appear via `bot.api.getMyCommands()`.
 - Database migrations applied or documented; data seeds updated if needed.
 - `git status` clean; no leftover experimental files.
@@ -187,7 +194,7 @@
 
 ---
 
-## 16. Roadmap · Phases 6, 7, 8, 9 & 10
+## 16. Roadmap · Phases 6–25
 
 Previous phases: P1 tooling/CI + webhook hardening, P2 conversation timeouts + conversation-local encounters, P3 PokeAPI caching + gen-9 pool + dead-code sweep, P4 dead datasource/`ErrorEntity` removal + constants tidy, P5 turn-based Battle System + rate-limiter & unit tests, P6 comprehensive integration test harness with `ApiClientOptions.fetch`.
 
@@ -225,8 +232,12 @@ Phase 22 (landed on `main`): Trade Conversation Replay, Parallel Lockout & Group
 
 Phase 23 (landed on `main`): Trade Flow Correctness & Conversation Isolation (`registerFeatureConversationCommand` no longer calls `ctx.conversation.exitAll()` in groups so a bystander's `/start` cannot abort another trainer's trade or battle, `tradePokemon` demotes a received party pokemon to the box to preserve `MAX_PKMN_PARTY`, per-trainer `trade-confirm:${tradeId}:${telegramId}` callbacks plus a non-destructive fallback listener that reports "not meant for you" instead of a false "expired", explicit `{ next: true }` on every command-ignoring `.unless()`, and regression tests for all four behaviours).
 
+Phase 24 (landed on `main`): Telegram Mini App Arena API (`src/presentation/web/` with signed `initData` validation, `X-Telegram-Init-Data` middleware, `/api/me`, in-memory `ArenaService` rooms, REST lobby/action endpoints, SSE snapshots with heartbeat and per-room stream caps, ranking writes on finish, public participant pick summaries, and `WEBAPP_URL`/`ARENA_TURN_TIMEOUT_SEC` wiring in `src/index.ts`).
+
+Phase 25 (landed on `main`): Mini App Arena Client & Static Hosting (`src/presentation/web/client/` TypeScript UI with Telegram theme/haptics, profile + lobby + party picker + live battle + result screens, EN/ES copy, fetch-based SSE with backoff, `dist/web` bundle via `scripts/build-web.mjs`, `express.static` + SPA fallback in `createWebApp`, `pnpm build:web`/`dev:web` scripts, compose env forwarding for `WEBAPP_URL`, and static/SSE/parser regression tests).
+
 Conventions: each feature = one scoped commit set, verified with typecheck/lint/format + `pnpm test`, README/AGENTS updated. No new shared mutable state for encounters or battles (keep them conversation-local).
 
-Deployment gotchas worth remembering: both `compose.yaml` and `compose.dokploy.yaml` are production-ready for Dokploy deployment (run `docker compose -f compose.dev.yaml up` for local live-reload development). On Fedora/RHEL servers running `firewalld` with `br_netfilter`, Linux `bridge` networks reject container-to-container packets with `EHOSTUNREACH` unless interfaces are trusted; using `driver: overlay` with `attachable: true` in `compose.yaml`/`compose.dokploy.yaml` avoids this entirely because Dokploy always runs Docker Swarm. Never assign `PORT=...` inside `docker-entrypoint.sh` because `PORT` is already exported in the container environment for Express (`5000`), and mutating it in `/bin/sh` breaks the `/health` check. Dokploy only injects environment variables through `${VAR}` references or `env_file`, never implicitly. Keep the storage layout in sync with the Postgres major version (`/var/lib/postgresql` for 18+, `/var/lib/postgresql/data` for 16 and older) and never reuse a volume across majors. Remember that port 2300 is only for host-to-container connections; internal container-to-container traffic targets PostgreSQL's internal port 5432.
+Deployment gotchas worth remembering: both `compose.yaml` and `compose.dokploy.yaml` are production-ready for Dokploy deployment (run `docker compose -f compose.dev.yaml up` for local live-reload development). Mini App traffic needs a public HTTPS hostname: set `WEBAPP_URL` to the Cloudflare Tunnel hostname and route it to `http://bot:5000`; leaving it empty disables the web layer and menu button. Compose only forwards the variables it references, so keep `WEBAPP_URL`, `WEBAPP_AUTH_MAX_AGE_SEC`, and `ARENA_TURN_TIMEOUT_SEC` in both compose files. Arena rooms are in memory: use one replica and expect a deploy to drop active rooms. On Fedora/RHEL servers running `firewalld` with `br_netfilter`, Linux `bridge` networks reject container-to-container packets with `EHOSTUNREACH` unless interfaces are trusted; using `driver: overlay` with `attachable: true` in `compose.yaml`/`compose.dokploy.yaml` avoids this entirely because Dokploy always runs Docker Swarm. Never assign `PORT=...` inside `docker-entrypoint.sh` because `PORT` is already exported in the container environment for Express (`5000`), and mutating it in `/bin/sh` breaks the `/health` check. Dokploy only injects environment variables through `${VAR}` references or `env_file`, never implicitly. Keep the storage layout in sync with the Postgres major version (`/var/lib/postgresql` for 18+, `/var/lib/postgresql/data` for 16 and older) and never reuse a volume across majors. Remember that port 2300 is only for host-to-container connections; internal container-to-container traffic targets PostgreSQL's internal port 5432.
 
 Stay disciplined, document discoveries, and keep this guide trustworthy for the next agent.

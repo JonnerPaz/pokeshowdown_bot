@@ -1,4 +1,7 @@
-import { Router } from "express";
+import { existsSync } from "node:fs";
+import path from "node:path";
+
+import express, { Router } from "express";
 import type { ErrorRequestHandler } from "express";
 import type { ArenaService } from "../../features/arena/arena.service.js";
 import type { AppDeps } from "../deps.js";
@@ -7,12 +10,17 @@ import { requireTelegramUser } from "./middleware/auth.js";
 import { createBattlesRouter } from "./routes/battles.js";
 import { createMeRouter } from "./routes/me.js";
 
+/** Built by `pnpm run build:web`; also present in the production image. */
+export const DEFAULT_WEB_ROOT = path.resolve(process.cwd(), "dist", "web");
+
 export interface WebAppOptions {
   deps: AppDeps;
   botToken: string;
   maxAgeSeconds?: number | undefined;
   arena: ArenaService;
   sseHeartbeatMs?: number | undefined;
+  /** Overridable for tests; defaults to `dist/web`. */
+  staticDir?: string | undefined;
 }
 
 /**
@@ -24,6 +32,9 @@ export const TELEGRAM_FRAME_ANCESTORS =
 
 export function createWebApp(options: WebAppOptions): Router {
   const router = Router();
+  const staticDir = options.staticDir ?? DEFAULT_WEB_ROOT;
+  const indexPath = path.join(staticDir, "index.html");
+  const hasClient = existsSync(indexPath);
 
   router.use((_req, res, next) => {
     // Everything here is per-user and authenticated: never cache at the edge.
@@ -36,6 +47,19 @@ export function createWebApp(options: WebAppOptions): Router {
   router.get("/api/health", (_req, res) => {
     res.status(200).json({ status: "ok" });
   });
+
+  if (hasClient) {
+    // Public shell and assets: the app authenticates every API call with the
+    // signed init data header, so static files never need credentials.
+    router.use(
+      express.static(staticDir, {
+        index: "index.html",
+        cacheControl: false,
+        dotfiles: "ignore",
+        etag: true,
+      }),
+    );
+  }
 
   router.use(
     "/api",
@@ -56,6 +80,20 @@ export function createWebApp(options: WebAppOptions): Router {
   router.use("/api", (_req, res) => {
     sendApiError(res, 404, "not_found", "Unknown API route");
   });
+
+  if (hasClient) {
+    // Single-page app fallback. Skip paths with an extension so a missing
+    // asset still returns 404 instead of an HTML page with a 200 status.
+    router.get(/.*/, (req, res, next) => {
+      if (path.extname(req.path)) {
+        next();
+        return;
+      }
+      res.sendFile(indexPath, { cacheControl: false }, (error) => {
+        if (error) next(error);
+      });
+    });
+  }
 
   const errorHandler: ErrorRequestHandler = (error, _req, res, next) => {
     if (res.headersSent) {

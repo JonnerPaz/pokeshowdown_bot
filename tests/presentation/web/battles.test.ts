@@ -191,6 +191,13 @@ describe("battles api", () => {
       body: { pokemonId: 11 },
     });
     expect(pickA.status).toBe(200);
+    const pickedA = (await pickA.json()) as { room: ArenaRoomDto };
+    expect(pickedA.room.participants[0]?.pokemon).toEqual({
+      name: "pikachu",
+      spriteUrl: "https://example.com/pikachu.png",
+      isShiny: false,
+      types: ["normal"],
+    });
 
     const pickB = await call(`/api/battles/${code}/pokemon`, {
       method: "POST",

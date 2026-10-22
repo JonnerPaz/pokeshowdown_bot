@@ -12,6 +12,13 @@ import type {
   ArenaRoomStatus,
 } from "./arena.types.js";
 
+export interface ArenaParticipantPokemonDto {
+  name: string;
+  spriteUrl: string | null;
+  isShiny: boolean;
+  types: string[];
+}
+
 export interface ArenaParticipantDto {
   telegramId: string;
   username: string;
@@ -19,6 +26,8 @@ export interface ArenaParticipantDto {
   pokemonId: number | null;
   hasPicked: boolean;
   consecutiveMisses: number;
+  /** Public summary of the pick, safe to show in the lobby before the battle. */
+  pokemon: ArenaParticipantPokemonDto | null;
 }
 
 export interface ArenaBattleTrainerDto {
@@ -111,6 +120,14 @@ function serializeParticipant(participant: ArenaParticipant): ArenaParticipantDt
     pokemonId: participant.pokemonId,
     hasPicked: participant.pokemon !== null,
     consecutiveMisses: participant.consecutiveMisses,
+    pokemon: participant.pokemon
+      ? {
+          name: participant.pokemon.name,
+          spriteUrl: participant.pokemon.spriteUrl ?? null,
+          isShiny: participant.pokemon.isShiny,
+          types: [...participant.pokemon.types],
+        }
+      : null,
   };
 }
 
