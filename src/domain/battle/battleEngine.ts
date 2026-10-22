@@ -10,15 +10,23 @@ import type {
 export class BattleEngine {
   /**
    * Initializes a new BattleState between two trainers.
-   * Faster Pokemon gets the first turn; if tied, Trainer A goes first.
+   * The faster Pokemon gets the first turn; a speed tie is broken randomly.
+   * `rng` is only consumed when both speeds are equal.
    */
   public static initBattle(
     battleId: string,
     trainerA: TrainerBattleProfile,
     trainerB: TrainerBattleProfile,
+    rng: () => number = Math.random,
   ): BattleState {
     const firstTurnTrainerId =
-      trainerB.pokemon.speed > trainerA.pokemon.speed ? trainerB.id : trainerA.id;
+      trainerB.pokemon.speed > trainerA.pokemon.speed
+        ? trainerB.id
+        : trainerA.pokemon.speed > trainerB.pokemon.speed
+          ? trainerA.id
+          : rng() < 0.5
+            ? trainerA.id
+            : trainerB.id;
 
     return {
       battleId,

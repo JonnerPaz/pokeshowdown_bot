@@ -77,15 +77,35 @@ describe("BattleEngine", () => {
     expect(battle.isFinished).toBe(false);
   });
 
-  it("falls back to Trainer A when speed is tied", () => {
+  it("breaks a speed tie randomly", () => {
     const p1 = makeTestPokemon({ speed: 80 });
     const p2 = makeTestPokemon({ speed: 80 });
 
     const trainerA = makeTrainer("t1", "Trainer A", p1);
     const trainerB = makeTrainer("t2", "Trainer B", p2);
 
-    const battle = BattleEngine.initBattle("battle-2", trainerA, trainerB);
-    expect(battle.currentTurnTrainerId).toBe("t1");
+    const lowRoll = BattleEngine.initBattle("battle-2-low", trainerA, trainerB, () => 0.1);
+    const highRoll = BattleEngine.initBattle("battle-2-high", trainerA, trainerB, () => 0.9);
+
+    expect(lowRoll.currentTurnTrainerId).toBe("t1");
+    expect(highRoll.currentTurnTrainerId).toBe("t2");
+  });
+
+  it("does not consume the rng when speeds differ", () => {
+    let calls = 0;
+    const countingRng = () => {
+      calls += 1;
+      return 0.5;
+    };
+
+    BattleEngine.initBattle(
+      "battle-2-fast",
+      makeTrainer("t1", "Trainer A", makeTestPokemon({ speed: 120 })),
+      makeTrainer("t2", "Trainer B", makeTestPokemon({ speed: 50 })),
+      countingRng,
+    );
+
+    expect(calls).toBe(0);
   });
 
   it("deals damage with physical attack and passes turn", () => {
