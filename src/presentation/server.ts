@@ -1,7 +1,7 @@
 import type { Server as HttpServer } from "node:http";
 
 import express from "express";
-import type { Express } from "express";
+import type { Express, RequestHandler } from "express";
 import { Bot, BotError, GrammyError, HttpError, webhookCallback } from "grammy";
 import type { AppContext } from "./data/types.js";
 
@@ -13,6 +13,8 @@ export interface ServerOptions {
   mode?: ServerMode | undefined;
   webhookUrl?: string | undefined;
   webhookSecret?: string | undefined;
+  /** Web layer (Mini App API). Mounted before the webhook so both can coexist. */
+  webApp?: RequestHandler | undefined;
 }
 
 export class Server {
@@ -22,6 +24,7 @@ export class Server {
   public readonly mode: ServerMode;
   public readonly webhookUrl?: string | undefined;
   public readonly webhookSecret?: string | undefined;
+  public readonly webApp?: RequestHandler | undefined;
   public httpServer?: HttpServer;
 
   constructor(options: ServerOptions) {
@@ -31,6 +34,7 @@ export class Server {
     this.mode = options.mode ?? (options.webhookUrl ? "webhook" : "polling");
     this.webhookUrl = options.webhookUrl;
     this.webhookSecret = options.webhookSecret;
+    this.webApp = options.webApp;
   }
 
   public async setup() {
@@ -40,6 +44,10 @@ export class Server {
     this.app.get("/health", (_req, res) => {
       res.status(200).json({ status: "ok" });
     });
+
+    if (this.webApp) {
+      this.app.use(this.webApp);
+    }
 
     if (this.mode === "webhook") {
       if (!this.webhookUrl || !this.webhookSecret) {
