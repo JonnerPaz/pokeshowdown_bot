@@ -10,6 +10,7 @@ import type { AppContext } from "../../../src/presentation/data/types.js";
 import { createAppDeps } from "../../../src/presentation/deps.js";
 import { Server } from "../../../src/presentation/server.js";
 import { createWebApp } from "../../../src/presentation/web/app.js";
+import { createTestArena } from "../../harness/arena.js";
 import { UserEntity } from "../../../src/domain/entities/users.entity.js";
 import {
   InMemoryPokemonDataSource,
@@ -47,7 +48,8 @@ function buildDeps() {
   const userDataSource = new InMemoryUserDataSource();
   const pokemonDataSource = new InMemoryPokemonDataSource(userDataSource);
   const deps = createAppDeps({ userDataSource, pokemonDataSource });
-  return { deps, userDataSource };
+  const arena = createTestArena();
+  return { deps, userDataSource, arena };
 }
 
 function seedTrainer(userDataSource: InMemoryUserDataSource, telegramId = 42): UserEntity {
@@ -83,9 +85,9 @@ describe("web api", () => {
   });
 
   async function startWebLayer() {
-    const { deps, userDataSource } = buildDeps();
+    const { deps, userDataSource, arena } = buildDeps();
     const app = express();
-    app.use(createWebApp({ deps, botToken: BOT_TOKEN }));
+    app.use(createWebApp({ deps, botToken: BOT_TOKEN, arena }));
 
     httpServer = app.listen(0);
     const address = httpServer.address() as AddressInfo;
@@ -205,13 +207,13 @@ describe("server with the web layer", () => {
     const bot = new Bot<AppContext>(BOT_TOKEN, {
       client: { apiRoot: "https://api.telegram.org", fetch: mockClient.createFetch() },
     });
-    const { deps } = buildDeps();
+    const { deps, arena } = buildDeps();
 
     server = new Server({
       port: 0,
       bot,
       mode: "polling",
-      webApp: createWebApp({ deps, botToken: BOT_TOKEN }),
+      webApp: createWebApp({ deps, botToken: BOT_TOKEN, arena }),
     });
     await server.setup();
 

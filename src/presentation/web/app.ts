@@ -1,14 +1,18 @@
 import { Router } from "express";
 import type { ErrorRequestHandler } from "express";
+import type { ArenaService } from "../../features/arena/arena.service.js";
 import type { AppDeps } from "../deps.js";
 import { sendApiError } from "./errors.js";
 import { requireTelegramUser } from "./middleware/auth.js";
+import { createBattlesRouter } from "./routes/battles.js";
 import { createMeRouter } from "./routes/me.js";
 
 export interface WebAppOptions {
   deps: AppDeps;
   botToken: string;
   maxAgeSeconds?: number | undefined;
+  arena: ArenaService;
+  sseHeartbeatMs?: number | undefined;
 }
 
 /**
@@ -43,6 +47,11 @@ export function createWebApp(options: WebAppOptions): Router {
   );
 
   router.use("/api", createMeRouter());
+
+  router.use(
+    "/api/battles",
+    createBattlesRouter({ arena: options.arena, heartbeatMs: options.sseHeartbeatMs }),
+  );
 
   router.use("/api", (_req, res) => {
     sendApiError(res, 404, "not_found", "Unknown API route");

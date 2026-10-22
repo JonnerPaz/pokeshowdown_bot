@@ -4,6 +4,7 @@ import { Server } from "./presentation/server.js";
 import { MainBot } from "./presentation/mainbot.js";
 import type { AppContext } from "./presentation/data/types.js";
 import { createWebApp } from "./presentation/web/app.js";
+import { ARENA_DEFAULT_TURN_TIMEOUT_MS, ArenaService } from "./features/arena/arena.service.js";
 import { prisma } from "./data/postgres/index.js";
 
 const WEBAPP_MENU_TEXT = "Open Arena";
@@ -23,6 +24,13 @@ function readMaxAgeSeconds(raw: string | undefined): number | undefined {
   const value = Number(raw);
   if (!Number.isFinite(value) || value < 0) return undefined;
   return Math.floor(value);
+}
+
+function readSecondsAsMs(raw: string | undefined, fallbackMs: number): number {
+  if (!raw) return fallbackMs;
+  const value = Number(raw);
+  if (!Number.isFinite(value) || value <= 0) return fallbackMs;
+  return Math.floor(value * 1000);
 }
 
 async function registerArenaMenuButton(bot: Bot<AppContext>, url: string): Promise<void> {
@@ -66,13 +74,24 @@ async function startup() {
   await botInstance.registerControllers();
 
   const webAppUrl = resolveWebAppUrl(process.env.WEBAPP_URL);
-  const webApp = webAppUrl
-    ? createWebApp({
-        deps: botInstance.deps,
-        botToken: apiKey,
-        maxAgeSeconds: readMaxAgeSeconds(process.env.WEBAPP_AUTH_MAX_AGE_SEC),
+  const arena = webAppUrl
+    ? new ArenaService({
+        battleService: botInstance.deps.battleService,
+        turnTimeoutMs: readSecondsAsMs(
+          process.env.ARENA_TURN_TIMEOUT_SEC,
+          ARENA_DEFAULT_TURN_TIMEOUT_MS,
+        ),
       })
-    : undefined;
+    : null;
+  const webApp =
+    webAppUrl && arena
+      ? createWebApp({
+          deps: botInstance.deps,
+          botToken: apiKey,
+          maxAgeSeconds: readMaxAgeSeconds(process.env.WEBAPP_AUTH_MAX_AGE_SEC),
+          arena,
+        })
+      : undefined;
 
   const server = new Server({
     port,
@@ -103,6 +122,7 @@ async function startup() {
       if (mode === "polling") {
         await botInstance.bot.stop();
       }
+      arena?.destroy();
       await server.close();
       await prisma.$disconnect();
       console.log("Cleanup complete. Process exiting.");

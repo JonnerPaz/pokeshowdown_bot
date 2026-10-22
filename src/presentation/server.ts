@@ -89,15 +89,17 @@ export class Server {
   }
 
   public async close(): Promise<void> {
+    const server = this.httpServer;
+    if (!server) return;
+
     return new Promise((resolve, reject) => {
-      if (!this.httpServer) {
-        resolve();
-        return;
-      }
-      this.httpServer.close((err) => {
+      server.close((err) => {
         if (err) reject(err);
         else resolve();
       });
+      // SSE streams stay open forever; without this, close() waits for clients
+      // that will never disconnect on their own.
+      server.closeAllConnections?.();
     });
   }
 }
