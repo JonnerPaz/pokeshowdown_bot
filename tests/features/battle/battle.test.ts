@@ -255,7 +255,10 @@ describe("Turn-Based Battle Integration (/battle)", () => {
 
     const { dispatchCommand, dispatchCallback, client, userDataSource } = await createTestBot({
       pokeApiService: {
-        getPokemonBaseStats: async () => endlessStats,
+        // Give the challenger a faster Pokemon so the first turn is deterministic
+        // (a speed tie is now broken randomly by the engine).
+        getPokemonBaseStats: async (name) =>
+          name === "snorlax" ? endlessStats : { ...endlessStats, speed: 1 },
       },
     });
 
@@ -277,7 +280,7 @@ describe("Turn-Based Battle Integration (/battle)", () => {
         username: "tank_b",
         createdAt: new Date(),
         updatedAt: new Date(),
-        pokemons: [createMockPokemon("snorlax", "normal", { id: 52 })],
+        pokemons: [createMockPokemon("snorlax_b", "normal", { id: 52 })],
       }),
     );
 
