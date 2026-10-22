@@ -1,3 +1,5 @@
+import "./styles.css";
+
 import type { ArenaRoomDto } from "../../../features/arena/arena.serializer.js";
 import { ApiError, ArenaApi } from "./api.js";
 import { createTranslator, detectLanguage, translateError } from "./i18n.js";

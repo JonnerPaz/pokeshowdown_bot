@@ -32,7 +32,7 @@ export const TELEGRAM_FRAME_ANCESTORS =
 
 export function createWebApp(options: WebAppOptions): Router {
   const router = Router();
-  const staticDir = options.staticDir ?? DEFAULT_WEB_ROOT;
+  const staticDir = path.resolve(options.staticDir ?? DEFAULT_WEB_ROOT);
   const indexPath = path.join(staticDir, "index.html");
   const hasClient = existsSync(indexPath);
 

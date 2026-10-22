@@ -186,8 +186,8 @@ App, so no cookies or extra sessions are required.
 ### Local development
 
 ```bash
-pnpm dev        # builds the web client once, then watches the server
-pnpm dev:web    # optional: rebuild the client on change (second terminal)
+pnpm dev        # builds the Vite client once, then watches the server
+pnpm dev:web    # optional: rebuild the client with Vite on change (second terminal)
 ```
 
 To test the Mini App on your machine, expose port 5000 over HTTPS with
@@ -236,7 +236,7 @@ operation regardless of your hosting environment:
 
 ### Prerequisites
 
-- **Node.js**: 22+ (TypeScript ESM)
+- **Node.js**: 22.12+ (TypeScript ESM)
 - **pnpm**: 10.x (`corepack enable pnpm`)
 - **Docker & Docker Compose**: for PostgreSQL
 - **Telegram Bot Token**: from [@BotFather](https://t.me/botfather)
@@ -266,10 +266,10 @@ pnpm dev
 
 ### Option B: High-Speed Production Run
 
-The project includes an ultra-fast build pipeline powered by `esbuild`:
+The project uses `esbuild` for the server and `Vite` for the Mini App:
 
 ```bash
-# Compile TypeScript to an optimized ESM bundle in ~20ms
+# Compile the server to an ESM bundle and build the web client
 pnpm run build
 
 # Start production server (pure V8 execution, minimal RAM)
@@ -450,12 +450,13 @@ Integration tests utilize an in-memory repository harness and grammY's `ApiClien
 
 ## 🛠️ Tech Stack
 
-- **Runtime**: Node.js 22+ (Strict ESM, `moduleResolution: nodenext`)
+- **Runtime**: Node.js 22.12+ (Strict ESM, `moduleResolution: nodenext`)
 - **Bot Framework**: [grammY](https://grammy.dev/) (`@grammyjs/commands`, `@grammyjs/conversations`, `@grammyjs/auto-retry`)
 - **Database & ORM**: PostgreSQL with [Prisma ORM](https://www.prisma.io/)
-- **Build Engine**: [esbuild](https://esbuild.github.io/) (~20ms bundle times)
+- **Build Engine**: [esbuild](https://esbuild.github.io/) for the server bundle (~20ms)
+- **Mini App Build**: [Vite](https://vite.dev/) for the client bundle
 - **HTTP Server**: Express 5 (health checks, optional webhook adapter, Mini App API + static client)
-- **Mini App**: TypeScript client bundled by esbuild, REST + Server-Sent Events, Telegram `initData` auth
+- **Mini App**: TypeScript client built with Vite, REST + Server-Sent Events, Telegram `initData` auth
 - **External API**: [pokenode-ts](https://github.com/Gabb-c/pokenode-ts) with in-memory caching
 - **Testing**: [Vitest](https://vitest.dev/) with native ESM execution
 

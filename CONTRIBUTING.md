@@ -18,7 +18,7 @@ This project and everyone participating in it is governed by the [Code of Conduc
 
 Before setting up the project locally, ensure you have:
 
-- **Node.js**: 22+ (CI runs Node 26)
+- **Node.js**: 22.12+ (CI runs Node 26)
 - **pnpm**: 10.x (`corepack enable pnpm`)
 - **Docker & Docker Compose**: for local PostgreSQL
 - **Telegram Bot Token**: obtained from [@BotFather](https://t.me/botfather)

@@ -6,7 +6,7 @@
 
 ## 0. Quick Facts
 
-- Node 22+, TypeScript ESM (`"type": "module"`, `moduleResolution: nodenext`). CI pins Node 26; local runtime should match.
+- Node 22.12+, TypeScript ESM (`"type": "module"`, `moduleResolution: nodenext`). CI pins Node 26; local runtime should match.
 - `pnpm-workspace.yaml` holds pnpm settings (e.g. `onlyBuiltDependencies` for prisma/esbuild build scripts).
 - Package manager: pnpm 10.x (`corepack enable pnpm`).
 - Stack: grammy bot framework, @grammyjs commands/conversations, Prisma/Postgres, pokenode-ts, Express.
@@ -29,8 +29,8 @@
 
 ## 2. Build · Lint · Test
 
-- **Build**: `pnpm run build` (bundles the server to `dist/index.js` and the Mini App to `dist/web/` using `esbuild` with sourcemaps).
-- **Web client build**: `pnpm run build:web` compiles `src/presentation/web/client/main.ts` to `dist/web/app.js` and copies `index.html` + `styles.css`. `pnpm dev:web` rebuilds on change; `pnpm dev` runs `build:web` once via `predev`.
+- **Build**: `pnpm run build` (bundles the server to `dist/index.js` with `esbuild` and the Mini App to `dist/web/` with Vite, both with sourcemaps).
+- **Web client build**: `pnpm run build:web` runs `vite build` from `vite.config.ts`, emitting hashed JS/CSS assets plus `index.html` to `dist/web/`. `pnpm dev:web` runs `vite build --watch`; `pnpm dev` runs `build:web` once via `predev`.
 - **Production run**: `pnpm start` (executes pre-built `node dist/index.js` via `prestart` hook for minimal memory and zero JIT overhead).
 - **Dev watch**: `pnpm dev` (tsx watch `src/index.ts`, boots bot + Express shell with hot reloading; run `pnpm dev:web` in a second terminal for client changes).
 - **Static analysis**: `pnpm run typecheck` (tsc --noEmit, strict null checks on).
@@ -54,9 +54,9 @@
 - `Server` (`src/presentation/server.ts`) is a thin Express wrapper: mount JSON middleware, register the webhook with `secret_token` (fail-fast on error), mount `webhookCallback`, then listen. `index.ts` owns startup; avoid starting the bot anywhere else to prevent double polling.
 - **Mini App Web Layer** (`src/presentation/web/`): `createWebApp()` is mounted before the webhook when `WEBAPP_URL` is set. It serves `dist/web` statically, exposes `/api/me` and `/api/battles/*`, and authenticates every API call from the `X-Telegram-Init-Data` header (HMAC derived from `API_KEY`), never cookies. `ArenaService` (`src/features/arena/`) owns in-memory rooms and SSE listeners; `battle.service.ts` remains the only writer of wins/losses.
 - **Browser SSE**: `EventSource` cannot send the init-data header, so the client reads `/events` with `fetch` + `ReadableStream` (`client/sse.ts`). Reconnects use exponential backoff and the first frame is always a full snapshot.
-- **Client modules**: `client/main.ts` (state/actions), `client/render.ts` (pure templates with escaped user data), `client/api.ts`, `client/i18n.ts` (EN/ES), `client/dom.ts`, `client/types.ts`. No framework and no runtime dependency; the bundle is an IIFE built by `scripts/build-web.mjs`.
+- **Client modules**: `client/main.ts` (state/actions), `client/render.ts` (pure templates with escaped user data), `client/api.ts`, `client/i18n.ts` (EN/ES), `client/dom.ts`, `client/types.ts`. No framework and no runtime dependency; Vite emits an ES module bundle from `client/index.html`.
 - **Room lifecycle**: rooms are ephemeral and single-replica by design. They expire after 15 min in the lobby or 10 min after finishing; a deploy drops them. Do not add multi-replica claims without moving the store to Postgres/Redis.
-- **Static assets**: `createWebApp` accepts `staticDir` (tests use a temp folder). `dist/web` is gitignored and does not exist in CI until `pnpm build:web` runs, so unit tests must not depend on real assets.
+- **Static assets**: `createWebApp` accepts `staticDir` (tests use a temp folder). `dist/web` is gitignored; CI runs `pnpm run build:web` before tests, and unit tests must still use temporary fixtures rather than real assets.
 
 ---
 
@@ -234,7 +234,9 @@ Phase 23 (landed on `main`): Trade Flow Correctness & Conversation Isolation (`r
 
 Phase 24 (landed on `main`): Telegram Mini App Arena API (`src/presentation/web/` with signed `initData` validation, `X-Telegram-Init-Data` middleware, `/api/me`, in-memory `ArenaService` rooms, REST lobby/action endpoints, SSE snapshots with heartbeat and per-room stream caps, ranking writes on finish, public participant pick summaries, and `WEBAPP_URL`/`ARENA_TURN_TIMEOUT_SEC` wiring in `src/index.ts`).
 
-Phase 25 (landed on `main`): Mini App Arena Client & Static Hosting (`src/presentation/web/client/` TypeScript UI with Telegram theme/haptics, profile + lobby + party picker + live battle + result screens, EN/ES copy, fetch-based SSE with backoff, `dist/web` bundle via `scripts/build-web.mjs`, `express.static` + SPA fallback in `createWebApp`, `pnpm build:web`/`dev:web` scripts, compose env forwarding for `WEBAPP_URL`, and static/SSE/parser regression tests).
+Phase 25 (landed on `main`): Mini App Arena Client & Static Hosting (`src/presentation/web/client/` TypeScript UI with Telegram theme/haptics, profile + lobby + party picker + live battle + result screens, EN/ES copy, fetch-based SSE with backoff, `dist/web` bundle via Vite, `express.static` + SPA fallback in `createWebApp`, `pnpm build:web`/`dev:web` scripts, compose env forwarding for `WEBAPP_URL`, and static/SSE/parser regression tests).
+
+Phase 26 (landed on `main`): Vite Client Build Migration (replaced the ad-hoc `scripts/build-web.mjs` esbuild wrapper with `vite.config.ts`, `vite-env.d.ts`, CSS imported from `client/main.ts`, hashed `dist/web/assets` output with sourcemaps, `vite build --watch` for development, a CI Mini App build step, Node `>=22.12.0`, and the `web` commitlint scope).
 
 Conventions: each feature = one scoped commit set, verified with typecheck/lint/format + `pnpm test`, README/AGENTS updated. No new shared mutable state for encounters or battles (keep them conversation-local).
 

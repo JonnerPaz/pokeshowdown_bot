@@ -23,24 +23,4 @@ export default tseslint.config(
       "prettier/prettier": "error",
     },
   },
-  {
-    files: ["scripts/**/*.mjs"],
-    languageOptions: {
-      ecmaVersion: "latest",
-      sourceType: "module",
-      globals: {
-        clearTimeout: "readonly",
-        console: "readonly",
-        process: "readonly",
-        setTimeout: "readonly",
-      },
-    },
-    plugins: {
-      prettier,
-    },
-    rules: {
-      ...configPrettier.rules,
-      "prettier/prettier": "error",
-    },
-  },
 );

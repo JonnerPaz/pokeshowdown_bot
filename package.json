@@ -17,23 +17,23 @@
   "license": "MIT",
   "packageManager": "pnpm@10.16.0",
   "engines": {
-    "node": ">=22.0.0",
+    "node": ">=22.12.0",
     "pnpm": ">=10.0.0"
   },
   "scripts": {
     "dev": "tsx watch src/index.ts",
-    "dev:web": "node scripts/build-web.mjs --watch",
+    "dev:web": "vite build --watch",
     "predev": "pnpm run build:web",
     "build": "pnpm run build:server && pnpm run build:web",
     "build:server": "esbuild src/index.ts --bundle --platform=node --target=node22 --format=esm --outdir=dist --packages=external --sourcemap",
-    "build:web": "node scripts/build-web.mjs",
+    "build:web": "vite build",
     "prestart": "pnpm run build",
     "start": "node dist/index.js",
     "typecheck": "tsc --noEmit",
     "lint": "eslint .",
     "lint:fix": "eslint . --fix",
-    "format": "prettier --write \"src/**/*.{ts,html,css}\" \"tests/**/*.ts\" \"scripts/**/*.mjs\" \"*.{json,md}\" \"compose*.yaml\" prisma.config.ts tsconfig.json",
-    "format:check": "prettier --check \"src/**/*.{ts,html,css}\" \"tests/**/*.ts\" \"scripts/**/*.mjs\" \"*.{json,md}\" \"compose*.yaml\" prisma.config.ts tsconfig.json",
+    "format": "prettier --write \"src/**/*.{ts,html,css}\" \"tests/**/*.ts\" \"*.{json,md}\" \"compose*.yaml\" prisma.config.ts vite.config.ts tsconfig.json",
+    "format:check": "prettier --check \"src/**/*.{ts,html,css}\" \"tests/**/*.ts\" \"*.{json,md}\" \"compose*.yaml\" prisma.config.ts vite.config.ts tsconfig.json",
     "prisma:generate": "prisma generate",
     "prisma:migrate": "prisma migrate dev",
     "prisma:deploy": "prisma migrate deploy",
@@ -67,6 +67,7 @@
     "prettier": "^3.9.9",
     "prisma": "^7.9.1",
     "typescript-eslint": "^8.70.1",
+    "vite": "^8.3.5",
     "vitest": "^5.0.2"
   },
   "dependencies": {

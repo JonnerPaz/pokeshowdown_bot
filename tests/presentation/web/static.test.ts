@@ -37,7 +37,7 @@ describe("mini app static shell", () => {
     }
   });
 
-  async function startWebLayer(): Promise<void> {
+  async function startWebLayer(options: { relativeStaticDir?: boolean } = {}): Promise<void> {
     staticDir = await mkdtemp(path.join(tmpdir(), "pokebot-web-"));
     await writeFile(
       path.join(staticDir, "index.html"),
@@ -48,6 +48,9 @@ describe("mini app static shell", () => {
     const userDataSource = new InMemoryUserDataSource();
     const pokemonDataSource = new InMemoryPokemonDataSource(userDataSource);
     const deps = createAppDeps({ userDataSource, pokemonDataSource });
+    const staticDirOverride = options.relativeStaticDir
+      ? path.relative(process.cwd(), staticDir)
+      : staticDir;
 
     const app = express();
     app.use(
@@ -55,7 +58,7 @@ describe("mini app static shell", () => {
         deps,
         botToken: BOT_TOKEN,
         arena: createTestArena(),
-        staticDir,
+        staticDir: staticDirOverride,
       }),
     );
 
@@ -76,6 +79,14 @@ describe("mini app static shell", () => {
     const asset = await fetch(`${baseUrl}/app.js`);
     expect(asset.status).toBe(200);
     expect(await asset.text()).toContain("arena");
+  });
+
+  it("accepts a relative static directory override", async () => {
+    await startWebLayer({ relativeStaticDir: true });
+
+    const fallback = await fetch(`${baseUrl}/room/ABC123`);
+    expect(fallback.status).toBe(200);
+    expect(await fallback.text()).toContain("PokeBot Arena");
   });
 
   it("serves the SPA fallback without shadowing the API or missing assets", async () => {
