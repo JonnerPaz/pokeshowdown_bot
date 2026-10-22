@@ -74,6 +74,19 @@ services:
     networks:
       - pokebot-net
 
+  cloudflared:
+    image: cloudflare/cloudflared:latest
+    restart: unless-stopped
+    # The connector dials out to Cloudflare and delivers traffic straight to
+    # the bot over the private overlay network. No published ports, no proxy.
+    command: tunnel --no-autoupdate run
+    environment:
+      TUNNEL_TOKEN: ${TUNNEL_TOKEN}
+    depends_on:
+      - bot
+    networks:
+      - pokebot-net
+
 volumes:
   postgres_data:
     driver: local
