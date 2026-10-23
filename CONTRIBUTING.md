@@ -22,7 +22,7 @@ Before setting up the project locally, ensure you have:
 - **pnpm**: 10.x (`corepack enable pnpm`)
 - **Docker & Docker Compose**: for local PostgreSQL
 - **Telegram Bot Token**: obtained from [@BotFather](https://t.me/botfather)
-- **Cloudflare Tunnel (`cloudflared`)**: for local webhook development
+- **Optional:** an HTTPS tunnel or reverse proxy for testing the Mini App locally
 
 ### 2. Environment Bring-Up
 
@@ -41,23 +41,23 @@ Before setting up the project locally, ensure you have:
 
    _(This automatically installs and configures local Husky git hooks)._
 
-3. **Configure environment variables**:
+3. **Configure the environment and database**:
+
+   Follow [Local development](docs/local-development.md) for the full setup.
+   In short:
 
    ```bash
    cp env-sample.env .env
-   ```
-
-   Fill in your `API_KEY` (Telegram bot token), `DATABASE_URL`, `WEBHOOK_URL`, and `WEBHOOK_SECRET`.
-
-4. **Start PostgreSQL and generate Prisma client**:
-
-   ```bash
-   docker compose up -d db
+   # Set API_KEY and DATABASE_URL.
+   docker compose -f compose.dev.yaml up -d db
    pnpm run prisma:generate
-   pnpm run prisma:migrate
+   pnpm run prisma:deploy
    ```
 
-5. **Start local development**:
+   `WEBHOOK_URL` and `WEBHOOK_SECRET` are only required in webhook mode.
+
+4. **Start local development**:
+
    ```bash
    pnpm dev
    ```
@@ -98,7 +98,7 @@ This repository strictly enforces the [Conventional Commits specification](https
 
 #### Recognized Scopes:
 
-`auth`, `battle`, `ci`, `common`, `config`, `deps`, `docs`, `domain`, `hooks`, `inventory`, `pokedex`, `pokemon`, `profile`, `release`, `structure`, `system`, `test`, `webhook`.
+`auth`, `battle`, `ci`, `common`, `config`, `deps`, `docs`, `domain`, `hooks`, `inventory`, `pokedex`, `pokemon`, `profile`, `release`, `structure`, `system`, `test`, `web`, `webhook`.
 
 #### Examples:
 
@@ -113,9 +113,14 @@ test(battle): add test case for type effectiveness multipliers
 
 ## Architecture & Code Guidelines
 
-- **Vertical Slice Architecture**: Features live under `src/features/<feature>/` (`auth`, `battle`, `inventory`, `pokedex`, `pokemon`, `profile`, `system`). Each slice exports a composer factory `create<Feature>Feature(deps): Composer<AppContext>`.
+- **Architecture overview**: See [docs/architecture.md](docs/architecture.md) for
+  layers, runtime flows, persistence, and the Mini App API.
+- **Vertical Slice Architecture**: Features live under `src/features/<feature>/`
+  (`arena`, `auth`, `battle`, `inline`, `inventory`, `pokedex`, `pokemon`,
+  `profile`, `system`). Each slice exports a composer factory
+  `create<Feature>Feature(deps): Composer<AppContext>`.
 - **Pure Composable Functions**: Avoid classes or decorators for controllers and conversations. Conversations are standalone async functions mounted via `feature.use(createConversation(...))`.
-- **Concurrency & State**: No shared mutable maps for wild encounters or battles. Encounters are conversation-local or managed atomically via `GroupEncounterService` with double-checked mutex locking.
+- **Concurrency & State**: Solo encounters are conversation-local; group encounters use `GroupEncounterService` with atomic reservations. Arena rooms, timers, and SSE listeners are owned by `ArenaService` in process memory, so run one replica while the Arena is enabled.
 - **Strict Typing**: TypeScript ESM (`"moduleResolution": "nodenext"`). Always include the `.js` extension on local imports. Respect strict null checks and `exactOptionalPropertyTypes: true`.
 - **Persistence Invariants**: Wrap related database mutations (e.g. creating user-owned Pokémon and deducting items) in transactions to preserve consistency.
 

@@ -10,7 +10,7 @@
 - `pnpm-workspace.yaml` holds pnpm settings (e.g. `onlyBuiltDependencies` for prisma/esbuild build scripts).
 - Package manager: pnpm 10.x (`corepack enable pnpm`).
 - Stack: grammy bot framework, @grammyjs commands/conversations, Prisma/Postgres, pokenode-ts, Express.
-- Runs in **Dual-Mode** (`BOT_MODE=polling` or `BOT_MODE=webhook`): In polling mode (ideal for Dokploy, local homelabs, and dynamic IP), `bot.start()` runs with zero inbound ports or tunnels; in webhook mode, Express `Server` registers the webhook with a `secret_token`. Express serves `/health` in both modes.
+- Runs in **Dual-Mode** (`BOT_MODE=polling` or `BOT_MODE=webhook`): In polling mode (ideal for container platforms, local homelabs, and dynamic IP), `bot.start()` runs with zero inbound ports or tunnels; in webhook mode, Express `Server` registers the webhook with a `secret_token`. Express serves `/health` in both modes.
 - CI: `.github/workflows/ci.yml` runs install → `prisma:generate` → typecheck → lint → format check.
 - Layers: `domain` (entities/contracts/constants), `infrastructure` (datasources), `presentation` (controllers/services/bot/server), `generated/prisma` output.
 - Secrets: `.env` holds `API_KEY`, `DATABASE_URL`, `PORT`, `WEBHOOK_URL`, `WEBHOOK_SECRET`, etc. Never commit or echo secret values.
@@ -161,7 +161,7 @@
    - Edit schema, run migrate/generate, ensure `generated/prisma` compiles.
    - Adjust entities/DTOs and sample data accordingly.
 5. **Bot smoke test:**
-   - Ensure `.env` has valid token + DB URL + `WEBHOOK_URL`/`WEBHOOK_SECRET`.
+   - Ensure `.env` has a valid token and database URL; add `WEBHOOK_URL`/`WEBHOOK_SECRET` only in webhook mode, and `WEBAPP_URL` for the Arena.
    - Run `pnpm dev`, watch console for `Server running` + `COMMANDS REGISTERED` logs.
    - Interact with bot via Telegram; use test chat to verify new flows.
 
@@ -169,9 +169,15 @@
 
 ## 13. Documentation & Messaging
 
-- README currently lists commands and setup steps. Update it whenever env vars, flows, or tooling change.
-- Keep AGENTS.md around ~150 lines; append new knowledge instead of rewriting entire sections.
-- Mention manual steps or data migrations in PR descriptions so future agents know what to reproduce.
+- `README.md` is the short entry point. Human-facing detail lives in `docs/`:
+  architecture, local development, gameplay, commands, Mini App Arena, testing,
+  operations, and a sanitized deployment guide.
+- Keep `docs/architecture.md` and `docs/mini-app-arena.md` in sync with runtime
+  behavior, routes, and environment variables.
+- Keep AGENTS.md around ~150 lines; append new knowledge instead of rewriting
+  entire sections.
+- Mention manual steps or data migrations in PR descriptions so future agents
+  know what to reproduce.
 
 ---
 
@@ -240,8 +246,10 @@ Phase 26 (landed on `main`): Vite Client Build Migration (replaced the ad-hoc `s
 
 Phase 27 (landed on `main`): Battle Arena Unification & Architecture Simplification (made the Mini App Arena the sole battle system, replaced the legacy text-based battle conversation with a streamlined `/battle` command opening the Arena via `startapp` deep-links in groups or `web_app` buttons in private chats, automatic duel start upon both trainers picking a Pokémon, unified leave/forfeit action, native `EventSource` with stateless HMAC stream tickets, lazy static asset check in `createWebApp`, single-command development via `pnpm run --parallel "/^dev:/"`, and post-battle group chat result announcements).
 
+Phase 28 (landed on `main`): Documentation Restructure (short README, `docs/` guides for architecture, local development, gameplay, commands, Mini App Arena, testing, operations, and sanitized deployment; docs included in Prettier; contributor and agent links updated).
+
 Conventions: each feature = one scoped commit set, verified with typecheck/lint/format + `pnpm test`, README/AGENTS updated. No new shared mutable state for encounters or battles (keep them conversation-local).
 
-Deployment gotchas worth remembering: both `compose.yaml` and `compose.dokploy.yaml` are production-ready for Dokploy deployment (run `docker compose -f compose.dev.yaml up` for local live-reload development). Mini App traffic needs a public HTTPS hostname: set `WEBAPP_URL` to the Cloudflare Tunnel hostname and route it to `http://bot:5000`; leaving it empty disables the web layer and menu button. Compose only forwards the variables it references, so keep `WEBAPP_URL`, `WEBAPP_AUTH_MAX_AGE_SEC`, and `ARENA_TURN_TIMEOUT_SEC` in both compose files. Arena rooms are in memory: use one replica and expect a deploy to drop active rooms. On Fedora/RHEL servers running `firewalld` with `br_netfilter`, Linux `bridge` networks reject container-to-container packets with `EHOSTUNREACH` unless interfaces are trusted; using `driver: overlay` with `attachable: true` in `compose.yaml`/`compose.dokploy.yaml` avoids this entirely because Dokploy always runs Docker Swarm. Never assign `PORT=...` inside `docker-entrypoint.sh` because `PORT` is already exported in the container environment for Express (`5000`), and mutating it in `/bin/sh` breaks the `/health` check. Dokploy only injects environment variables through `${VAR}` references or `env_file`, never implicitly. Keep the storage layout in sync with the Postgres major version (`/var/lib/postgresql` for 18+, `/var/lib/postgresql/data` for 16 and older) and never reuse a volume across majors. Remember that port 2300 is only for host-to-container connections; internal container-to-container traffic targets PostgreSQL's internal port 5432.
+Deployment gotchas worth remembering: the bundled production Compose stack and `compose.dev.yaml` serve different purposes; do not run host and container dev servers on the same port. Mini App traffic needs a public HTTPS origin: set `WEBAPP_URL` and route it to the bot's HTTP port; leaving it empty disables the web layer and menu button. Compose only forwards the variables it references, so keep `WEBAPP_URL`, `WEBAPP_AUTH_MAX_AGE_SEC`, and `ARENA_TURN_TIMEOUT_SEC` in every production compose file. Arena rooms are in memory: use one replica and expect a deploy to drop active rooms. Never overwrite `PORT` inside `docker-entrypoint.sh` because it is already provided for Express (`5000`) and the `/health` check. Keep the PostgreSQL storage layout in sync with the major version (`/var/lib/postgresql` for 18+, `/var/lib/postgresql/data` for 16 and older) and never reuse a volume across majors. Remember that port 2300 is only for host-to-container connections; container-to-container traffic targets PostgreSQL's internal port 5432. On hosts with restrictive firewall/bridge filtering, container-to-container traffic may be blocked; an attachable overlay network is the portable fix. Platforms typically inject environment variables only through `${VAR}` references or `env_file`, never implicitly.
 
 Stay disciplined, document discoveries, and keep this guide trustworthy for the next agent.
