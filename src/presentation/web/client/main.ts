@@ -4,7 +4,7 @@ import type { ArenaRoomDto } from "../../../features/arena/arena.serializer.js";
 import { ApiError, ArenaApi } from "./api.js";
 import { createTranslator, detectLanguage, translateError } from "./i18n.js";
 import { renderLoading, renderScreen } from "./render.js";
-import { SseHttpError, subscribeToRoom } from "./sse.js";
+import { subscribeToRoom } from "./sse.js";
 import { getTelegramWebApp } from "./telegram.js";
 import type { TelegramThemeParams } from "./telegram.js";
 import type { AppState } from "./types.js";
@@ -45,8 +45,6 @@ const state: AppState = {
   busy: false,
   streamStatus: "off",
   confirmLeave: false,
-  confirmForfeit: false,
-  copied: false,
 };
 
 let stopStream: (() => void) | null = null;
@@ -94,8 +92,15 @@ function showFatal(message: string, retryable: boolean): void {
 
 function messageFor(error: unknown): string {
   if (error instanceof ApiError) return translateError(t, error.code);
-  if (error instanceof SseHttpError) return translateError(t, error.code);
   return t("noticeError");
+}
+
+function resolveStartRoomCode(): string | null {
+  const fromStartParam = telegram?.initDataUnsafe.start_param?.trim().toUpperCase();
+  if (fromStartParam) return fromStartParam;
+
+  const fromQuery = new URLSearchParams(window.location.search).get("room")?.trim().toUpperCase();
+  return fromQuery || null;
 }
 
 async function boot(): Promise<void> {
@@ -110,24 +115,31 @@ async function boot(): Promise<void> {
   showLoading();
 
   try {
-    const [profile, room] = await Promise.all([api.getProfile(), api.getCurrentRoom()]);
+    const [profile, currentRoom] = await Promise.all([api.getProfile(), api.getCurrentRoom()]);
     state.profile = profile;
     state.error = null;
     state.retryable = false;
     state.notice = null;
 
-    if (room) {
-      state.room = room;
-      state.view = "room";
-      updateClosingConfirmation(room);
-      attachStream(room.code);
+    const startCode = resolveStartRoomCode();
+    let activeRoom = currentRoom;
+
+    if (!activeRoom && startCode) {
+      try {
+        activeRoom = await api.joinRoom(startCode);
+      } catch (error) {
+        state.notice = messageFor(error);
+      }
+    }
+
+    if (activeRoom) {
+      enterRoom(activeRoom);
     } else {
       state.room = null;
       state.view = "home";
       telegram.disableClosingConfirmation?.();
+      render();
     }
-
-    render();
   } catch (error) {
     showFatal(messageFor(error), true);
   }
@@ -136,11 +148,9 @@ async function boot(): Promise<void> {
 async function withBusy<T>(operation: () => Promise<T>): Promise<T | null> {
   if (state.busy) return null;
 
-  lastErrorCode = null;
   state.busy = true;
   state.notice = null;
-  state.confirmLeave = false;
-  state.confirmForfeit = false;
+  lastErrorCode = null;
   render();
 
   try {
@@ -158,7 +168,7 @@ async function withBusy<T>(operation: () => Promise<T>): Promise<T | null> {
 function enterRoom(room: ArenaRoomDto): void {
   state.room = room;
   state.view = "room";
-  state.notice = null;
+  state.confirmLeave = false;
   updateClosingConfirmation(room);
   attachStream(room.code);
   render();
@@ -167,34 +177,32 @@ function enterRoom(room: ArenaRoomDto): void {
 function applyRoom(room: ArenaRoomDto): void {
   if (state.room && state.room.code === room.code && room.revision < state.room.revision) return;
 
+  const previousStatus = state.room?.status;
   state.room = room;
   state.view = "room";
-  state.notice = null;
+  updateClosingConfirmation(room);
+
+  if (room.status === "battle" && previousStatus === "open") {
+    haptic("success");
+  }
 
   if (room.status === "finished") {
-    state.confirmForfeit = false;
-    state.confirmLeave = false;
     state.streamStatus = "off";
-    stopStream?.();
-    stopStream = null;
-
     if (!refreshedRooms.has(room.code)) {
       refreshedRooms.add(room.code);
       void refreshProfile();
     }
   }
 
-  updateClosingConfirmation(room);
   render();
 }
 
 async function refreshProfile(): Promise<void> {
   try {
-    const profile = await api.getProfile();
-    state.profile = profile;
+    state.profile = await api.getProfile();
     render();
   } catch {
-    // The battle result is already final; a stale profile card is harmless.
+    // Non-critical: the finished card already has everything it needs.
   }
 }
 
@@ -207,48 +215,26 @@ function attachStream(code: string): void {
   stopStream?.();
   stopStream = subscribeToRoom({
     code,
-    initData,
-    handlers: {
-      onStatus(status) {
-        if (state.streamStatus === status) return;
-        state.streamStatus = status;
-        render();
-      },
-      onEvent(message) {
-        handleStreamMessage(message.event, message.data);
-      },
-      onFatal(error) {
-        state.streamStatus = "off";
-        state.notice = messageFor(error);
-        render();
-      },
+    api,
+    onStatus(status) {
+      if (state.streamStatus === status) return;
+      state.streamStatus = status;
+      render();
+    },
+    onRoom(room) {
+      applyRoom(room);
+    },
+    onFatal(error) {
+      state.streamStatus = "off";
+      state.notice = messageFor(error);
+      render();
     },
   });
 }
 
-function handleStreamMessage(event: string, data: string): void {
-  let payload: unknown;
-  try {
-    payload = JSON.parse(data);
-  } catch {
-    return;
-  }
-
-  if (event === "turn") {
-    const room = (payload as { room?: ArenaRoomDto }).room;
-    if (room && typeof room.code === "string") applyRoom(room);
-    return;
-  }
-
-  if (event === "snapshot" || event === "room" || event === "finished") {
-    const room = payload as ArenaRoomDto;
-    if (room && typeof room === "object" && typeof room.code === "string") applyRoom(room);
-  }
-}
-
 async function createRoom(): Promise<void> {
   refreshedRooms.clear();
-  const room = await withBusy(() => api.createRoom(telegram?.initDataUnsafe.chat?.id ?? null));
+  const room = await withBusy(() => api.createRoom());
   if (!room) return;
   enterRoom(room);
 }
@@ -288,13 +274,6 @@ async function pickPokemon(pokemonId: number): Promise<void> {
   if (room) applyRoom(room);
 }
 
-async function startBattle(): Promise<void> {
-  const code = state.room?.code;
-  if (!code) return;
-  const room = await withBusy(() => api.startBattle(code));
-  if (room) applyRoom(room);
-}
-
 async function submitAction(action: BattleAction): Promise<void> {
   const code = state.room?.code;
   if (!code) return;
@@ -306,22 +285,19 @@ async function submitAction(action: BattleAction): Promise<void> {
   applyRoom(response.room);
 }
 
-async function forfeit(): Promise<void> {
-  const code = state.room?.code;
-  if (!code) return;
-
-  const room = await withBusy(() => api.forfeit(code));
-  if (room) {
-    haptic("warning");
-    applyRoom(room);
-  }
-}
-
 async function leaveRoom(): Promise<void> {
   const code = state.room?.code;
   if (!code) return;
 
-  await withBusy(() => api.leaveRoom(code));
+  const room = await withBusy(() => api.leaveRoom(code));
+  state.confirmLeave = false;
+
+  if (room && room.status === "finished") {
+    haptic("warning");
+    applyRoom(room);
+    return;
+  }
+
   haptic("selection");
   goHome();
 }
@@ -334,49 +310,8 @@ function goHome(): void {
   state.streamStatus = "off";
   state.notice = null;
   state.confirmLeave = false;
-  state.confirmForfeit = false;
   telegram?.disableClosingConfirmation?.();
   render();
-}
-
-async function copyCode(): Promise<void> {
-  const code = state.room?.code;
-  if (!code) return;
-
-  if (navigator.clipboard?.writeText) {
-    try {
-      await navigator.clipboard.writeText(code);
-    } catch {
-      fallbackCopy(code);
-    }
-  } else {
-    fallbackCopy(code);
-  }
-
-  haptic("selection");
-  state.copied = true;
-  render();
-  setTimeout(() => {
-    state.copied = false;
-    render();
-  }, 1_500);
-}
-
-function fallbackCopy(value: string): void {
-  const area = document.createElement("textarea");
-  area.value = value;
-  area.style.position = "fixed";
-  area.style.opacity = "0";
-  document.body.appendChild(area);
-  area.select();
-
-  try {
-    document.execCommand("copy");
-  } catch {
-    // Clipboard access is best-effort inside the Telegram iframe.
-  } finally {
-    area.remove();
-  }
 }
 
 function shareCode(): void {
@@ -384,7 +319,10 @@ function shareCode(): void {
   if (!code) return;
 
   const text = t("shareText", { code });
-  const url = window.location.origin;
+  const botUsername = state.profile?.botUsername;
+  const url = botUsername
+    ? `https://t.me/${encodeURIComponent(botUsername)}?startapp=${encodeURIComponent(code)}`
+    : `${window.location.origin}?room=${encodeURIComponent(code)}`;
 
   if (telegram?.openTelegramLink) {
     const shareUrl = `https://t.me/share/url?url=${encodeURIComponent(url)}&text=${encodeURIComponent(text)}`;
@@ -394,10 +332,7 @@ function shareCode(): void {
 
   if (navigator.share) {
     void navigator.share({ text, url }).catch(() => undefined);
-    return;
   }
-
-  void copyCode();
 }
 
 function haptic(kind: "impact" | "success" | "selection" | "warning"): void {
@@ -448,9 +383,6 @@ function handleCommand(command: string, element: HTMLElement): void {
     case "play-again":
       void createRoom();
       break;
-    case "copy":
-      void copyCode();
-      break;
     case "share":
       shareCode();
       break;
@@ -460,12 +392,8 @@ function handleCommand(command: string, element: HTMLElement): void {
       if (Number.isInteger(pokemonId)) void pickPokemon(pokemonId);
       break;
     }
-    case "start":
-      void startBattle();
-      break;
     case "leave":
       state.confirmLeave = true;
-      state.confirmForfeit = false;
       render();
       break;
     case "leave-cancel":
@@ -474,18 +402,6 @@ function handleCommand(command: string, element: HTMLElement): void {
       break;
     case "leave-confirm":
       void leaveRoom();
-      break;
-    case "forfeit":
-      state.confirmForfeit = true;
-      state.confirmLeave = false;
-      render();
-      break;
-    case "forfeit-cancel":
-      state.confirmForfeit = false;
-      render();
-      break;
-    case "forfeit-confirm":
-      void forfeit();
       break;
     case "home":
       goHome();

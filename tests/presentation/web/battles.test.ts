@@ -146,6 +146,13 @@ describe("battles api", () => {
     return body.room.code;
   }
 
+  async function getTicket(code: string, telegramId: number): Promise<string> {
+    const res = await call(`/api/battles/${code}/ticket`, { method: "POST", telegramId });
+    expect(res.status).toBe(200);
+    const body = (await res.json()) as { ticket: string };
+    return body.ticket;
+  }
+
   it("requires telegram auth and an existing room", async () => {
     await startWebLayer();
     seedTrainer(userDataSource, 1, "ash", 11, "pikachu");
@@ -160,7 +167,7 @@ describe("battles api", () => {
     );
   });
 
-  it("walks a duel from lobby to forfeit", async () => {
+  it("walks a duel from lobby to auto-start and leave-forfeit", async () => {
     await startWebLayer();
     seedTrainer(userDataSource, 1, "ash", 11, "pikachu");
     seedTrainer(userDataSource, 2, "gary", 22, "eevee");
@@ -192,6 +199,7 @@ describe("battles api", () => {
     });
     expect(pickA.status).toBe(200);
     const pickedA = (await pickA.json()) as { room: ArenaRoomDto };
+    expect(pickedA.room.status).toBe("open");
     expect(pickedA.room.participants[0]?.pokemon).toEqual({
       name: "pikachu",
       spriteUrl: "https://example.com/pikachu.png",
@@ -205,12 +213,21 @@ describe("battles api", () => {
       body: { pokemonId: 22 },
     });
     expect(pickB.status).toBe(200);
-
-    const started = await call(`/api/battles/${code}/start`, { method: "POST", telegramId: 1 });
-    expect(started.status).toBe(200);
-    const startedRoom = ((await started.json()) as { room: ArenaRoomDto }).room;
+    const startedRoom = ((await pickB.json()) as { room: ArenaRoomDto }).room;
     expect(startedRoom.status).toBe("battle");
     expect(startedRoom.turn?.currentTelegramId).toBe("1");
+
+    // Removed legacy routes return 404
+    const removedStart = await call(`/api/battles/${code}/start`, {
+      method: "POST",
+      telegramId: 1,
+    });
+    expect(removedStart.status).toBe(404);
+    const removedForfeit = await call(`/api/battles/${code}/forfeit`, {
+      method: "POST",
+      telegramId: 2,
+    });
+    expect(removedForfeit.status).toBe(404);
 
     const offTurn = await call(`/api/battles/${code}/action`, {
       method: "POST",
@@ -238,7 +255,7 @@ describe("battles api", () => {
     const current = await call("/api/battles/current", { telegramId: 2 });
     expect(((await current.json()) as { room: ArenaRoomDto }).room.code).toBe(code);
 
-    const forfeited = await call(`/api/battles/${code}/forfeit`, {
+    const forfeited = await call(`/api/battles/${code}/leave`, {
       method: "POST",
       telegramId: 2,
     });
@@ -276,7 +293,6 @@ describe("battles api", () => {
       telegramId: 2,
       body: { pokemonId: 22 },
     });
-    await call(`/api/battles/${code}/start`, { method: "POST", telegramId: 1 });
 
     const badAction = await call(`/api/battles/${code}/action`, {
       method: "POST",
@@ -314,7 +330,7 @@ describe("battles api", () => {
     expect(gone.status).toBe(404);
   });
 
-  it("streams the snapshot, each turn and the final result", async () => {
+  it("streams the snapshot, each turn and the final result with a valid ticket", async () => {
     await startWebLayer();
     seedTrainer(userDataSource, 1, "ash", 11, "pikachu");
     seedTrainer(userDataSource, 2, "gary", 22, "eevee");
@@ -330,13 +346,14 @@ describe("battles api", () => {
       telegramId: 2,
       body: { pokemonId: 22 },
     });
-    await call(`/api/battles/${code}/start`, { method: "POST", telegramId: 1 });
 
-    const stream = await fetch(`${baseUrl}/api/battles/${code}/events`, {
-      headers: headers(1),
-    });
+    const ticket = await getTicket(code, 1);
+    const stream = await fetch(
+      `${baseUrl}/api/battles/${code}/events?ticket=${encodeURIComponent(ticket)}`,
+    );
     expect(stream.status).toBe(200);
     expect(stream.headers.get("content-type")).toContain("text/event-stream");
+    expect(stream.headers.get("referrer-policy")).toBe("no-referrer");
 
     const reader = new SseReader(stream);
     const snapshot = await reader.next();
@@ -354,7 +371,7 @@ describe("battles api", () => {
       (JSON.parse(turn.data) as { result: { damageDealt: number } }).result.damageDealt,
     ).toBeGreaterThan(0);
 
-    await call(`/api/battles/${code}/forfeit`, { method: "POST", telegramId: 2 });
+    await call(`/api/battles/${code}/leave`, { method: "POST", telegramId: 2 });
     const finished = await reader.next();
     expect(finished.event).toBe("finished");
     expect((JSON.parse(finished.data) as ArenaRoomDto).result?.reason).toBe("forfeit");
@@ -362,18 +379,48 @@ describe("battles api", () => {
     expect(await reader.done()).toBe(true);
   });
 
-  it("refuses the events stream to non participants", async () => {
+  it("refuses stream tickets and events to non-participants, mismatched rooms, and ex-participants", async () => {
     await startWebLayer();
     seedTrainer(userDataSource, 1, "ash", 11, "pikachu");
     seedTrainer(userDataSource, 2, "gary", 22, "eevee");
     seedTrainer(userDataSource, 3, "brock", 33, "onix");
-    const code = await openRoom();
+    const codeA = await openRoom();
+    await call(`/api/battles/${codeA}/join`, { method: "POST", telegramId: 2 });
 
-    const stream = await fetch(`${baseUrl}/api/battles/${code}/events`, {
-      headers: headers(3),
+    // Missing ticket on /events -> 401
+    const noTicket = await fetch(`${baseUrl}/api/battles/${codeA}/events`);
+    expect(noTicket.status).toBe(401);
+    expect(((await noTicket.json()) as { error: { code: string } }).error.code).toBe(
+      "missing_ticket",
+    );
+
+    // Non-participant requesting a ticket -> 403
+    const outsiderTicket = await call(`/api/battles/${codeA}/ticket`, {
+      method: "POST",
+      telegramId: 3,
     });
-    expect(stream.status).toBe(403);
-    expect(((await stream.json()) as { error: { code: string } }).error.code).toBe(
+    expect(outsiderTicket.status).toBe(403);
+    expect(((await outsiderTicket.json()) as { error: { code: string } }).error.code).toBe(
+      "not_participant",
+    );
+
+    // Ticket for room A presented on room B -> 403
+    const ticketGary = await getTicket(codeA, 2);
+    const wrongRoom = await fetch(
+      `${baseUrl}/api/battles/ZZZZZZ/events?ticket=${encodeURIComponent(ticketGary)}`,
+    );
+    expect(wrongRoom.status).toBe(403);
+    expect(((await wrongRoom.json()) as { error: { code: string } }).error.code).toBe(
+      "ticket_room_mismatch",
+    );
+
+    // Guest leaves room A, then tries to use their previously issued ticket -> 403
+    await call(`/api/battles/${codeA}/leave`, { method: "POST", telegramId: 2 });
+    const afterLeave = await fetch(
+      `${baseUrl}/api/battles/${codeA}/events?ticket=${encodeURIComponent(ticketGary)}`,
+    );
+    expect(afterLeave.status).toBe(403);
+    expect(((await afterLeave.json()) as { error: { code: string } }).error.code).toBe(
       "not_participant",
     );
   });

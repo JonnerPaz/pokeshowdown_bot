@@ -59,6 +59,7 @@ interface SetupOptions {
   sweepIntervalMs?: number;
   stats?: Partial<BattlePokemonStats>;
   logger?: Pick<Console, "error" | "warn">;
+  onFinished?: (room: ArenaRoom) => Promise<void> | void;
 }
 
 function setup(options: SetupOptions = {}) {
@@ -68,6 +69,7 @@ function setup(options: SetupOptions = {}) {
     rng: options.rng ?? (() => 0.5),
     sweepIntervalMs: options.sweepIntervalMs ?? 0,
     logger: options.logger,
+    onFinished: options.onFinished,
   });
   return { service, battleService };
 }
@@ -110,8 +112,7 @@ async function createDuel(
   const room = service.createRoom(challenger);
   service.joinRoom(room.code, opponent);
   await service.pickPokemon(room.code, challenger, challenger.pokemons[0]!.id!);
-  await service.pickPokemon(room.code, opponent, opponent.pokemons[0]!.id!);
-  return service.startBattle(room.code, challenger);
+  return service.pickPokemon(room.code, opponent, opponent.pokemons[0]!.id!);
 }
 
 describe("ArenaService lobby", () => {
@@ -235,13 +236,13 @@ describe("ArenaService lobby", () => {
     });
 
     const picking = service.pickPokemon(room.code, ash, 11);
-    service.leaveRoom(room.code, ash);
+    await service.leaveRoom(room.code, ash);
     release();
 
     await expectArenaErrorAsync(picking, "invalid_state");
   });
 
-  it("only lets the creator start, and only when both trainers picked", async () => {
+  it("automatically starts the battle as soon as both trainers have picked a Pokemon", async () => {
     const { service } = setup();
     track(service);
     const ash = makeAsh();
@@ -249,15 +250,10 @@ describe("ArenaService lobby", () => {
     const room = service.createRoom(ash);
     service.joinRoom(room.code, gary);
 
-    expectArenaError(() => service.startBattle(room.code, gary), "not_creator");
-    expectArenaError(() => service.startBattle(room.code, ash), "not_ready");
-
     await service.pickPokemon(room.code, ash, 11);
-    expectArenaError(() => service.startBattle(room.code, ash), "not_ready");
+    expect(room.status).toBe("open");
 
-    await service.pickPokemon(room.code, gary, 22);
-    const started = service.startBattle(room.code, ash);
-
+    const started = await service.pickPokemon(room.code, gary, 22);
     expect(started.status).toBe("battle");
     expect(started.state?.trainerA.telegramId).toBe(1);
     expect(started.state?.trainerB.telegramId).toBe(2);
@@ -277,8 +273,7 @@ describe("ArenaService lobby", () => {
     });
 
     await service.pickPokemon(room.code, ash, 11);
-    await service.pickPokemon(room.code, gary, 22);
-    const started = service.startBattle(room.code, ash);
+    const started = await service.pickPokemon(room.code, gary, 22);
 
     expect(started.state?.currentTurnTrainerId).toBe(1);
   });
@@ -439,10 +434,12 @@ describe("ArenaService turns and absences", () => {
     expect(battleService.recordBattleOutcome).not.toHaveBeenCalled();
   });
 
-  it("records the ranking once on a knockout", async () => {
+  it("records the ranking and invokes onFinished once on a knockout", async () => {
+    const onFinished = vi.fn();
     const { service, battleService } = setup({
       rng: () => 0.1,
       stats: { maxHp: 1, attack: 999, defense: 1 },
+      onFinished,
     });
     track(service);
     const ash = makeAsh();
@@ -456,19 +453,22 @@ describe("ArenaService turns and absences", () => {
     expect(room.winnerTelegramId).toBe(1);
     expect(battleService.recordBattleOutcome).toHaveBeenCalledTimes(1);
     expect(battleService.recordBattleOutcome).toHaveBeenCalledWith(1, 2, 11);
+    expect(onFinished).toHaveBeenCalledTimes(1);
+    expect(onFinished).toHaveBeenCalledWith(room);
 
     await expectArenaErrorAsync(service.submitAction(room.code, gary, "attack"), "invalid_state");
     expect(battleService.recordBattleOutcome).toHaveBeenCalledTimes(1);
+    expect(onFinished).toHaveBeenCalledTimes(1);
   });
 
-  it("hands the win to the rival on forfeit", async () => {
+  it("hands the win to the rival when a trainer leaves a running battle", async () => {
     const { service, battleService } = setup({ rng: () => 0.1 });
     track(service);
     const ash = makeAsh();
     const gary = makeGary();
     const room = await createDuel(service, ash, gary);
 
-    await service.forfeit(room.code, gary);
+    await service.leaveRoom(room.code, gary);
 
     expect(room.status).toBe("finished");
     expect(room.finishReason).toBe("forfeit");
@@ -502,20 +502,20 @@ describe("ArenaService turns and absences", () => {
     );
   });
 
-  it("closes the room when the creator leaves the lobby", () => {
+  it("closes the room when the creator leaves the lobby", async () => {
     const { service } = setup();
     track(service);
     const ash = makeAsh();
     const room = service.createRoom(ash);
 
-    const result = service.leaveRoom(room.code, ash);
+    const result = await service.leaveRoom(room.code, ash);
 
     expect(result).toBeNull();
     expect(service.getCurrentRoom(1)).toBeNull();
     expectArenaError(() => service.getRoomFor(room.code, 1), "room_not_found");
   });
 
-  it("keeps the lobby open when the guest leaves", () => {
+  it("keeps the lobby open when the guest leaves", async () => {
     const { service } = setup();
     track(service);
     const ash = makeAsh();
@@ -523,7 +523,7 @@ describe("ArenaService turns and absences", () => {
     const room = service.createRoom(ash);
     service.joinRoom(room.code, gary);
 
-    const result = service.leaveRoom(room.code, gary);
+    const result = await service.leaveRoom(room.code, gary);
 
     expect(result?.participants).toHaveLength(1);
     expect(service.getCurrentRoom(2)).toBeNull();
@@ -542,12 +542,11 @@ describe("ArenaService turns and absences", () => {
     service.joinRoom(room.code, gary);
     await service.pickPokemon(room.code, ash, 11);
     await service.pickPokemon(room.code, gary, 22);
-    service.startBattle(room.code, ash);
     await service.submitAction(room.code, ash, "attack");
-    await service.forfeit(room.code, gary);
+    await service.leaveRoom(room.code, gary);
     unsubscribe();
 
-    expect(events).toEqual(["room", "room", "room", "room", "turn", "finished"]);
+    expect(events).toEqual(["room", "room", "room", "turn", "finished"]);
   });
 
   it("purges expired lobbies and finished rooms", async () => {
@@ -563,7 +562,7 @@ describe("ArenaService turns and absences", () => {
     const gary = makeGary();
     const duelAsh = makeAsh();
     const duel = await createDuel(service, duelAsh, gary);
-    await service.forfeit(duel.code, gary);
+    await service.leaveRoom(duel.code, gary);
 
     await vi.advanceTimersByTimeAsync(ARENA_FINISHED_TTL_MS + 60_000);
     expectArenaError(() => service.getRoomFor(duel.code, 1), "room_not_found");
@@ -575,7 +574,7 @@ describe("ArenaService turns and absences", () => {
     const ash = makeAsh();
     const gary = makeGary();
     const room = await createDuel(service, ash, gary);
-    await service.forfeit(room.code, gary);
+    await service.leaveRoom(room.code, gary);
 
     const dto = serializeRoom(room);
 
@@ -584,6 +583,5 @@ describe("ArenaService turns and absences", () => {
     expect(dto.battle?.trainerA.telegramId).toBe("1");
     expect(dto.result).toEqual({ winnerTelegramId: "1", reason: "forfeit" });
     expect(dto).not.toHaveProperty("turnTimer");
-    expect(dto).not.toHaveProperty("starting");
   });
 });

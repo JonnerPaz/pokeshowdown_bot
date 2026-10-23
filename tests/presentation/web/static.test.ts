@@ -37,13 +37,17 @@ describe("mini app static shell", () => {
     }
   });
 
-  async function startWebLayer(options: { relativeStaticDir?: boolean } = {}): Promise<void> {
+  async function startWebLayer(
+    options: { relativeStaticDir?: boolean; skipInitialFiles?: boolean } = {},
+  ): Promise<void> {
     staticDir = await mkdtemp(path.join(tmpdir(), "pokebot-web-"));
-    await writeFile(
-      path.join(staticDir, "index.html"),
-      "<!doctype html><title>PokeBot Arena</title>",
-    );
-    await writeFile(path.join(staticDir, "app.js"), "console.log('arena');");
+    if (!options.skipInitialFiles) {
+      await writeFile(
+        path.join(staticDir, "index.html"),
+        "<!doctype html><title>PokeBot Arena</title>",
+      );
+      await writeFile(path.join(staticDir, "app.js"), "console.log('arena');");
+    }
 
     const userDataSource = new InMemoryUserDataSource();
     const pokemonDataSource = new InMemoryPokemonDataSource(userDataSource);
@@ -102,5 +106,26 @@ describe("mini app static shell", () => {
 
     const missingAsset = await fetch(`${baseUrl}/missing.js`);
     expect(missingAsset.status).toBe(404);
+  });
+
+  it("serves static files and SPA fallback when assets appear after server startup", async () => {
+    await startWebLayer({ skipInitialFiles: true });
+
+    const beforeBuild = await fetch(`${baseUrl}/room/ABC123`);
+    expect(beforeBuild.status).toBe(404);
+
+    await writeFile(
+      path.join(staticDir!, "index.html"),
+      "<!doctype html><title>PokeBot Arena Late</title>",
+    );
+    await writeFile(path.join(staticDir!, "app.js"), "console.log('late');");
+
+    const shell = await fetch(`${baseUrl}/`);
+    expect(shell.status).toBe(200);
+    expect(await shell.text()).toContain("PokeBot Arena Late");
+
+    const fallback = await fetch(`${baseUrl}/room/ABC123`);
+    expect(fallback.status).toBe(200);
+    expect(await fallback.text()).toContain("PokeBot Arena Late");
   });
 });

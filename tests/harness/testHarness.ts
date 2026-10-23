@@ -62,10 +62,13 @@ export interface TestBotContext {
 }
 
 import type { GroupEncounterService } from "../../src/features/pokemon/groupEncounter.service.js";
+import type { ArenaService } from "../../src/features/arena/arena.service.js";
 
 export async function createTestBot(options?: {
   pokeApiService?: Partial<PokeApiService>;
   groupEncounterService?: GroupEncounterService;
+  arena?: ArenaService | null;
+  webAppUrl?: string;
 }): Promise<TestBotContext> {
   const client = new MockTelegramClient();
   const userDataSource = new InMemoryUserDataSource();
@@ -162,6 +165,8 @@ export async function createTestBot(options?: {
     rateLimiter,
     battleService,
     groupEncounterService: options?.groupEncounterService,
+    arena: options?.arena,
+    webAppUrl: options?.webAppUrl,
   });
 
   await mainBot.registerControllers();

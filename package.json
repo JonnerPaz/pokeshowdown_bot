@@ -21,9 +21,9 @@
     "pnpm": ">=10.0.0"
   },
   "scripts": {
-    "dev": "tsx watch src/index.ts",
+    "dev": "pnpm run --parallel \"/^dev:/\"",
+    "dev:bot": "tsx watch src/index.ts",
     "dev:web": "vite build --watch",
-    "predev": "pnpm run build:web",
     "build": "pnpm run build:server && pnpm run build:web",
     "build:server": "esbuild src/index.ts --bundle --platform=node --target=node22 --format=esm --outdir=dist --packages=external --sourcemap",
     "build:web": "vite build",

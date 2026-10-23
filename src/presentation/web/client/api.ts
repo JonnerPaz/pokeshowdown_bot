@@ -1,7 +1,7 @@
 /// <reference lib="dom" />
 
-import type { ArenaRoomDto } from "../../../features/arena/arena.serializer.js";
 import type { BattleActionType } from "../../../domain/battle/types.js";
+import type { ArenaRoomDto } from "../../../features/arena/arena.serializer.js";
 import type { SerializedProfile } from "../serialize.js";
 
 export interface ApiErrorBody {
@@ -45,6 +45,10 @@ interface ActionEnvelope {
   result: TurnResultDto;
 }
 
+interface TicketEnvelope {
+  ticket: string;
+}
+
 export class ArenaApi {
   private readonly initData: string;
 
@@ -61,10 +65,9 @@ export class ArenaApi {
     return body.room;
   }
 
-  public async createRoom(chatId: number | null = null): Promise<ArenaRoomDto> {
+  public async createRoom(): Promise<ArenaRoomDto> {
     const body = await this.request<RoomEnvelope>("/battles", {
       method: "POST",
-      body: JSON.stringify({ chatId }),
     });
     return body.room;
   }
@@ -84,25 +87,11 @@ export class ArenaApi {
     return body.room;
   }
 
-  public async startBattle(code: string): Promise<ArenaRoomDto> {
-    const body = await this.request<RoomEnvelope>(`/battles/${encodeURIComponent(code)}/start`, {
-      method: "POST",
-    });
-    return body.room;
-  }
-
   public submitAction(code: string, action: BattleActionType): Promise<ActionEnvelope> {
     return this.request<ActionEnvelope>(`/battles/${encodeURIComponent(code)}/action`, {
       method: "POST",
       body: JSON.stringify({ action }),
     });
-  }
-
-  public async forfeit(code: string): Promise<ArenaRoomDto> {
-    const body = await this.request<RoomEnvelope>(`/battles/${encodeURIComponent(code)}/forfeit`, {
-      method: "POST",
-    });
-    return body.room;
   }
 
   public async leaveRoom(code: string): Promise<ArenaRoomDto | null> {
@@ -111,6 +100,12 @@ export class ArenaApi {
       { method: "POST" },
     );
     return body.room;
+  }
+
+  public getStreamTicket(code: string): Promise<TicketEnvelope> {
+    return this.request<TicketEnvelope>(`/battles/${encodeURIComponent(code)}/ticket`, {
+      method: "POST",
+    });
   }
 
   public async getRoom(code: string): Promise<ArenaRoomDto> {

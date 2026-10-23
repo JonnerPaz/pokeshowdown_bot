@@ -115,11 +115,11 @@ export const commands = {
   BATTLE: {
     [LanguageCodes.English]: {
       command: "battle",
-      description: "Challenge another trainer to a pokemon battle!",
+      description: "Open a battle room in the Arena",
     },
     [LanguageCodes.Spanish]: {
       command: "batalla",
-      description: "¡Desafía a otro entrenador a una batalla pokemon!",
+      description: "Abre una sala de combate en la Arena",
     },
   },
   POKEDEX: {

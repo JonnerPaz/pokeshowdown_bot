@@ -1,11 +1,11 @@
 import "dotenv/config";
 import type { Bot } from "grammy";
-import { Server } from "./presentation/server.js";
-import { MainBot } from "./presentation/mainbot.js";
-import type { AppContext } from "./presentation/data/types.js";
-import { createWebApp } from "./presentation/web/app.js";
-import { ARENA_DEFAULT_TURN_TIMEOUT_MS, ArenaService } from "./features/arena/arena.service.js";
 import { prisma } from "./data/postgres/index.js";
+import { ARENA_DEFAULT_TURN_TIMEOUT_MS } from "./features/arena/arena.service.js";
+import type { AppContext } from "./presentation/data/types.js";
+import { MainBot } from "./presentation/mainbot.js";
+import { Server } from "./presentation/server.js";
+import { createWebApp } from "./presentation/web/app.js";
 
 const WEBAPP_MENU_TEXT = "Open Arena";
 
@@ -70,24 +70,22 @@ async function startup() {
     if (!webhookSecret) throw new Error("WEBHOOK_SECRET is not defined");
   }
 
-  const botInstance = new MainBot(apiKey);
+  const webAppUrl = resolveWebAppUrl(process.env.WEBAPP_URL);
+  const turnTimeoutMs = readSecondsAsMs(
+    process.env.ARENA_TURN_TIMEOUT_SEC,
+    ARENA_DEFAULT_TURN_TIMEOUT_MS,
+  );
+
+  const botInstance = new MainBot(apiKey, { webAppUrl, turnTimeoutMs });
   await botInstance.registerControllers();
 
-  const webAppUrl = resolveWebAppUrl(process.env.WEBAPP_URL);
-  const arena = webAppUrl
-    ? new ArenaService({
-        battleService: botInstance.deps.battleService,
-        turnTimeoutMs: readSecondsAsMs(
-          process.env.ARENA_TURN_TIMEOUT_SEC,
-          ARENA_DEFAULT_TURN_TIMEOUT_MS,
-        ),
-      })
-    : null;
+  const arena = botInstance.deps.arena;
   const webApp =
     webAppUrl && arena
       ? createWebApp({
           deps: botInstance.deps,
           botToken: apiKey,
+          botUsername: botInstance.bot.botInfo.username,
           maxAgeSeconds: readMaxAgeSeconds(process.env.WEBAPP_AUTH_MAX_AGE_SEC),
           arena,
         })

@@ -1,24 +1,26 @@
-import type { AppContext } from "./data/types.js";
-import { Bot, type BotConfig } from "grammy";
+import { autoRetry } from "@grammyjs/auto-retry";
 import { commands, LanguageCodes } from "@grammyjs/commands";
 import { conversations } from "@grammyjs/conversations";
-import type { PokeApiService } from "./services/pokeapi.service.js";
-import type { UserDataSource } from "../domain/datasource/user.datasource.js";
+import { Bot, type BotConfig } from "grammy";
+
 import type { PokemonDataSource } from "../domain/datasource/pokemon.datasource.js";
-import { getCommandRegistrations } from "./controllers/commands.js";
-import { createSystemFeature } from "../features/system/system.feature.js";
+import type { UserDataSource } from "../domain/datasource/user.datasource.js";
+import type { ArenaService } from "../features/arena/arena.service.js";
 import { createAuthFeature } from "../features/auth/auth.feature.js";
-import { createBattleFeature } from "../features/battle/battle.feature.js";
-import { createPokemonFeature } from "../features/pokemon/pokemon.feature.js";
-import { createPokedexFeature } from "../features/pokedex/pokedex.feature.js";
-import { createInventoryFeature } from "../features/inventory/inventory.feature.js";
-import { createProfileFeature } from "../features/profile/profile.feature.js";
-import { createInlineFeature } from "../features/inline/inline.feature.js";
-import { autoRetry } from "@grammyjs/auto-retry";
+import { createBattleFeature, formatArenaBattleResult } from "../features/battle/battle.feature.js";
 import type { BattleService } from "../features/battle/battle.service.js";
-import type { RateLimiterService } from "./services/rateLimiter.service.js";
+import { createInlineFeature } from "../features/inline/inline.feature.js";
+import { createInventoryFeature } from "../features/inventory/inventory.feature.js";
+import { createPokedexFeature } from "../features/pokedex/pokedex.feature.js";
 import type { GroupEncounterService } from "../features/pokemon/groupEncounter.service.js";
+import { createPokemonFeature } from "../features/pokemon/pokemon.feature.js";
+import { createProfileFeature } from "../features/profile/profile.feature.js";
+import { createSystemFeature } from "../features/system/system.feature.js";
+import { getCommandRegistrations } from "./controllers/commands.js";
+import type { AppContext } from "./data/types.js";
 import { createAppDeps, type AppDeps } from "./deps.js";
+import type { PokeApiService } from "./services/pokeapi.service.js";
+import type { RateLimiterService } from "./services/rateLimiter.service.js";
 
 export interface MainBotOptions {
   botConfig?: BotConfig<AppContext> | undefined;
@@ -28,6 +30,9 @@ export interface MainBotOptions {
   rateLimiter?: RateLimiterService | undefined;
   battleService?: BattleService | undefined;
   groupEncounterService?: GroupEncounterService | undefined;
+  arena?: ArenaService | null | undefined;
+  webAppUrl?: string | undefined;
+  turnTimeoutMs?: number | undefined;
 }
 
 export class MainBot {
@@ -56,6 +61,15 @@ export class MainBot {
       rateLimiter: options.rateLimiter,
       battleService: options.battleService,
       groupEncounterService: options.groupEncounterService,
+      arena: options.arena,
+      webAppUrl: options.webAppUrl,
+      turnTimeoutMs: options.turnTimeoutMs,
+      onBattleFinished: async (room) => {
+        if (room.chatId === null) return;
+        const text = formatArenaBattleResult(room);
+        if (!text) return;
+        await this.bot.api.sendMessage(room.chatId, text, { parse_mode: "Markdown" });
+      },
     });
     this.deps = deps;
 
@@ -65,7 +79,8 @@ export class MainBot {
     this.bot.use(
       createBattleFeature({
         userDataSource: deps.userDataSource,
-        battleService: deps.battleService,
+        arena: deps.arena,
+        webAppUrl: deps.webAppUrl,
       }),
     );
     this.bot.use(

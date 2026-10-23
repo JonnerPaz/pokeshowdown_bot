@@ -34,9 +34,21 @@ and bustling Telegram groups.
 - **Interactive Battlefield**: Dynamic Telegram inline keyboards with live HP
   bars, active turn prompts, and surrender options.
 
-- **Fair Play & Draw Resolution**: 10-turn strategic cap with tie-break draw
-  handling to prevent stalling, plus automatic battle records (wins/losses)
-  logged to user profiles.
+### ⚔️ Battle Arena (Telegram Mini App)
+
+- **Interactive Visual Combat**: `/battle` opens a Battle Arena room with full
+  sprite rendering, animated action feedback, live HP tracks, and turn deadlines.
+
+- **Frictionless Group & Private Duels**: In group chats, `/battle` generates an
+  instant `startapp` deep-link button so rival trainers join in one tap; in private
+  chats, it launches the Mini App directly.
+
+- **Automated Duel Flow**: Battles start automatically as soon as both trainers pick
+  their Pokémon—no manual host steps required. Leaving an active match cleanly forfeits.
+
+- **Fair Play & Automated Rankings**: Strategic turn limits with draw resolution,
+  absence auto-defense, and automatic wins/losses recording logged to user profiles
+  and announced to the group chat upon match conclusion.
 
 ### Spontaneous Group Chat Encounters
 
@@ -127,12 +139,11 @@ Query the bot from **any** chat, private conversation, or channel without adding
 
 ### 🎮 Telegram Mini App Arena
 
-- **Private Web Duels**: Open the arena from the bot's menu button, create a
-  room, share the six-character code, and battle another trainer from any
-  Telegram client.
+- **Private Web Duels**: Open the arena from `/battle` or the bot's menu button,
+  join via deep link or room code, and battle another trainer from any Telegram client.
 
-- **Live Turn-by-Turn Combat**: REST actions plus Server-Sent Events stream HP,
-  turn deadlines, critical hits, and the battle log without polling.
+- **Live Turn-by-Turn Combat**: REST actions plus native Server-Sent Events stream HP,
+  turn deadlines, critical hits, and the battle log with zero polling and zero DB overhead.
 
 - **Party Picker & Rankings**: Choose any Pokémon from your active party, watch
   the rival's pick in the lobby, and have the result recorded in your trainer
@@ -186,8 +197,7 @@ App, so no cookies or extra sessions are required.
 ### Local development
 
 ```bash
-pnpm dev        # builds the Vite client once, then watches the server
-pnpm dev:web    # optional: rebuild the client with Vite on change (second terminal)
+pnpm dev        # starts the bot (tsx watch) and web client (vite build --watch) in parallel
 ```
 
 To test the Mini App on your machine, expose port 5000 over HTTPS with
@@ -380,9 +390,9 @@ All commands are case sensitive and must start with `/`.
 
 ### ⚔️ Battle & PvP
 
-| Command   | Spanish Alias | Description                                          |
-| :-------- | :------------ | :--------------------------------------------------- |
-| `/battle` | `/batalla`    | Challenge another trainer to a turn-based PvP battle |
+| Command   | Spanish Alias | Description                     |
+| :-------- | :------------ | :------------------------------ |
+| `/battle` | `/batalla`    | Open a battle room in the Arena |
 
 ### 🌲 Wild Encounters & Catching
 

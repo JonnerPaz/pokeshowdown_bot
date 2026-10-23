@@ -15,6 +15,4 @@ export interface AppState {
   busy: boolean;
   streamStatus: StreamState;
   confirmLeave: boolean;
-  confirmForfeit: boolean;
-  copied: boolean;
 }

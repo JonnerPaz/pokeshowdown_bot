@@ -49,6 +49,8 @@ export interface ArenaServiceOptions {
   /** Set to 0 to disable the background sweeper (tests). */
   sweepIntervalMs?: number | undefined;
   logger?: Pick<Console, "error" | "warn"> | undefined;
+  /** Invoked once after a running battle transitions to finished. */
+  onFinished?: ((room: ArenaRoom) => Promise<void> | void) | undefined;
 }
 
 export function isBattleAction(value: unknown): value is BattleActionType {
@@ -63,6 +65,7 @@ export class ArenaService {
   private readonly now: () => number;
   private readonly turnTimeoutMs: number;
   private readonly logger: Pick<Console, "error" | "warn">;
+  private readonly onFinished?: ((room: ArenaRoom) => Promise<void> | void) | undefined;
   private sweepTimer: NodeJS.Timeout | null = null;
 
   constructor(options: ArenaServiceOptions) {
@@ -71,6 +74,7 @@ export class ArenaService {
     this.now = options.now ?? Date.now;
     this.turnTimeoutMs = options.turnTimeoutMs ?? ARENA_DEFAULT_TURN_TIMEOUT_MS;
     this.logger = options.logger ?? console;
+    this.onFinished = options.onFinished;
 
     const sweepIntervalMs = options.sweepIntervalMs ?? ARENA_SWEEP_INTERVAL_MS;
     if (sweepIntervalMs > 0) {
@@ -108,7 +112,6 @@ export class ArenaService {
       finishReason: null,
       winnerTelegramId: null,
       rankingRecorded: false,
-      starting: false,
       turnTimer: null,
     };
 
@@ -176,61 +179,27 @@ export class ArenaService {
     // resolveBattlePokemon escapes the name for Markdown; the web API wants it raw.
     participant.pokemon = { ...stats, name: pokemon.nickname ?? pokemon.name };
     this.touch(room);
+    if (
+      room.participants.length === 2 &&
+      room.participants.every((candidate) => candidate.pokemon !== null)
+    ) {
+      this.beginBattle(room);
+    }
     this.emit({ type: "room", room });
     return room;
   }
 
-  public startBattle(code: string, user: UserEntity): ArenaRoom {
-    const room = this.findRoom(code);
-    const telegramId = this.requireTelegramId(user);
-
-    if (room.creatorTelegramId !== telegramId) {
-      throw new ArenaError("not_creator", 403, "Only the room creator can start the battle");
-    }
-    if (room.status !== "open" || room.starting) {
-      throw new ArenaError("invalid_state", 409, "This room is not waiting for a battle");
-    }
-    if (room.participants.length !== 2) {
-      throw new ArenaError("not_ready", 409, "Two trainers are required");
-    }
-    if (room.participants.some((participant) => participant.pokemon === null)) {
-      throw new ArenaError("not_ready", 409, "Both trainers must pick a Pokemon");
-    }
-
-    const [first, second] = room.participants;
-    if (!first || !second) {
-      throw new ArenaError("not_ready", 409, "Two trainers are required");
-    }
-
-    room.starting = true;
-    try {
-      room.state = BattleEngine.initBattle(
-        room.code,
-        this.toBattleProfile(first),
-        this.toBattleProfile(second),
-        this.rng,
-      );
-      room.status = "battle";
-      this.touch(room);
-      this.appendSystemLog(
-        room,
-        `Battle started: ${first.username} (${first.pokemon?.name}) vs ${second.username} (${second.pokemon?.name}).`,
-      );
-      this.armTurnTimer(room);
-      this.emit({ type: "room", room });
-      return room;
-    } finally {
-      room.starting = false;
-    }
-  }
-
-  public leaveRoom(code: string, user: UserEntity): ArenaRoom | null {
+  public async leaveRoom(code: string, user: UserEntity): Promise<ArenaRoom | null> {
     const room = this.findRoom(code);
     const telegramId = this.requireTelegramId(user);
     const participant = this.requireParticipant(room, telegramId);
 
+    if (room.status === "battle") {
+      return this.forfeit(room, participant);
+    }
+
     if (room.status !== "open") {
-      throw new ArenaError("invalid_state", 409, "Forfeit a running battle instead");
+      throw new ArenaError("invalid_state", 409, "This room is already finished");
     }
 
     if (room.creatorTelegramId === telegramId) {
@@ -250,6 +219,24 @@ export class ArenaService {
   // ---------------------------------------------------------------------------
   // Battle
   // ---------------------------------------------------------------------------
+
+  private beginBattle(room: ArenaRoom): void {
+    const [first, second] = room.participants;
+    if (!first || !second) return;
+
+    room.state = BattleEngine.initBattle(
+      room.code,
+      this.toBattleProfile(first),
+      this.toBattleProfile(second),
+      this.rng,
+    );
+    room.status = "battle";
+    this.appendSystemLog(
+      room,
+      `Battle started: ${first.username} (${first.pokemon?.name}) vs ${second.username} (${second.pokemon?.name}).`,
+    );
+    this.armTurnTimer(room);
+  }
 
   public async submitAction(
     code: string,
@@ -285,14 +272,7 @@ export class ArenaService {
     return { room, result };
   }
 
-  public async forfeit(code: string, user: UserEntity): Promise<ArenaRoom> {
-    const room = this.findRoom(code);
-    const participant = this.requireParticipant(room, this.requireTelegramId(user));
-
-    if (room.status !== "battle") {
-      throw new ArenaError("invalid_state", 409, "Only a running battle can be forfeited");
-    }
-
+  private async forfeit(room: ArenaRoom, participant: ArenaParticipant): Promise<ArenaRoom> {
     const opponent = this.opponentOf(room, participant.telegramId);
     await this.finishBattle(room, "forfeit", opponent?.telegramId ?? null, true);
     return room;
@@ -432,6 +412,14 @@ export class ArenaService {
     }
 
     this.emit({ type: "finished", room });
+
+    if (this.onFinished) {
+      try {
+        await this.onFinished(room);
+      } catch (error) {
+        this.logger.error("arena onFinished hook failed", { error, code: room.code });
+      }
+    }
   }
 
   private transitionToFinished(

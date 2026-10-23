@@ -51,7 +51,6 @@ export interface ArenaRoom {
   finishReason: ArenaFinishReason | null;
   winnerTelegramId: number | null;
   rankingRecorded: boolean;
-  starting: boolean;
   turnTimer: NodeJS.Timeout | null;
 }
 
@@ -64,7 +63,6 @@ export type ArenaErrorCode =
   | "already_in_room"
   | "not_participant"
   | "invalid_state"
-  | "not_creator"
   | "not_ready"
   | "not_your_turn"
   | "invalid_action"

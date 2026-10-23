@@ -36,6 +36,7 @@ export interface SerializedUser {
 export interface SerializedProfile {
   user: SerializedUser;
   party: SerializedPokemon[];
+  botUsername: string | null;
 }
 
 export function serializePokemon(pokemon: PokemonEntity): SerializedPokemon {
@@ -70,9 +71,13 @@ export function serializeUser(user: UserEntity): SerializedUser {
   };
 }
 
-export function serializeProfile(user: UserEntity): SerializedProfile {
+export function serializeProfile(
+  user: UserEntity,
+  botUsername: string | null = null,
+): SerializedProfile {
   return {
     user: serializeUser(user),
     party: user.party.map(serializePokemon),
+    botUsername,
   };
 }

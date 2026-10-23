@@ -7,6 +7,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed
+
+- **Battle Arena Unification**:
+  - Replaced legacy text-based battle conversations with the Telegram Mini App Arena as the sole combat interface.
+  - `/battle` command now opens Arena rooms directly (via `startapp` deep-links in groups or `web_app` buttons in private chats).
+  - Battles start automatically as soon as both trainers pick their Pokémon without requiring manual host actions.
+  - Unified `leave` and `forfeit` into a single intuitive exit action.
+  - Transitioned the web stream to native browser `EventSource` authenticated via short-lived HMAC tickets, eliminating manual stream parsing and database hits on reconnect.
+  - Added post-battle announcements directly into group chats when duels finish.
+  - Single-command dev workflow via `pnpm run --parallel "/^dev:/"`.
+
 ## [1.1.0] - 2026-09-29
 
 ### Added

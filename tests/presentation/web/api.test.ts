@@ -87,7 +87,7 @@ describe("web api", () => {
   async function startWebLayer() {
     const { deps, userDataSource, arena } = buildDeps();
     const app = express();
-    app.use(createWebApp({ deps, botToken: BOT_TOKEN, arena }));
+    app.use(createWebApp({ deps, botToken: BOT_TOKEN, botUsername: "testpokesbot", arena }));
 
     httpServer = app.listen(0);
     const address = httpServer.address() as AddressInfo;
@@ -104,6 +104,7 @@ describe("web api", () => {
     expect(await res.json()).toEqual({ status: "ok" });
     expect(res.headers.get("cache-control")).toBe("no-store");
     expect(res.headers.get("x-content-type-options")).toBe("nosniff");
+    expect(res.headers.get("referrer-policy")).toBe("no-referrer");
     expect(res.headers.get("content-security-policy")).toContain("frame-ancestors");
     expect(res.headers.get("x-frame-options")).toBeNull();
   });
@@ -168,12 +169,14 @@ describe("web api", () => {
     const body = (await res.json()) as {
       user: { telegramId: string; username: string; wins: number; losses: number };
       party: Array<{ name: string; isInParty: boolean; sprites: { frontDefault: string } }>;
+      botUsername: string | null;
     };
 
     expect(body.user.telegramId).toBe("42");
     expect(body.user.username).toBe("ash_ketchum");
     expect(body.user.wins).toBe(3);
     expect(body.user.losses).toBe(1);
+    expect(body.botUsername).toBe("testpokesbot");
     expect(body.party).toHaveLength(1);
     expect(body.party[0]).toMatchObject({ name: "pikachu", isInParty: true });
     expect(body.party[0]?.sprites.frontDefault).toContain("pikachu");

@@ -171,26 +171,12 @@ function renderLobby(state: AppState, room: ArenaRoomDto, t: Translator): string
   const myId = myTelegramId(state);
   const me = room.participants.find((participant) => participant.telegramId === myId) ?? null;
   const rival = room.participants.find((participant) => participant.telegramId !== myId) ?? null;
-  const isCreator = room.creatorTelegramId === myId;
-  const bothPicked =
-    room.participants.length === 2 &&
-    room.participants.every((participant) => participant.hasPicked);
-  const canStart = isCreator && bothPicked && !state.busy;
-
-  const hint =
-    room.participants.length < 2
-      ? t("waitingRival")
-      : bothPicked
-        ? isCreator
-          ? ""
-          : t("waitingHost")
-        : t("waitingPicks");
+  const hint = room.participants.length < 2 ? t("waitingRival") : t("waitingPicks");
 
   return `<section class="card code-card">
       <span class="eyebrow">${escapeHtml(t("roomCode"))}</span>
       <div class="room-code">${escapeHtml(room.code)}</div>
       <div class="code-actions">
-        <button type="button" class="btn btn-small" data-command="copy">${escapeHtml(state.copied ? t("copied") : t("copyCode"))}</button>
         <button type="button" class="btn btn-small btn-primary" data-command="share">${escapeHtml(t("shareInvite"))}</button>
       </div>
     </section>
@@ -207,12 +193,7 @@ function renderLobby(state: AppState, room: ArenaRoomDto, t: Translator): string
 
     ${state.profile ? renderPartyPicker(state, room, state.profile, t) : ""}
 
-    ${hint ? `<p class="muted center">${escapeHtml(hint)}</p>` : ""}
-    ${
-      isCreator
-        ? `<button type="button" class="btn btn-primary btn-block" data-command="start" ${canStart ? "" : "disabled"}>${escapeHtml(t("startBattle"))}</button>`
-        : ""
-    }
+    <p class="muted center">${escapeHtml(hint)}</p>
 
     <div class="footer-actions">
       <button type="button" class="btn btn-ghost" data-command="leave" ${state.busy ? "disabled" : ""}>${escapeHtml(t("leaveRoom"))}</button>
@@ -337,9 +318,9 @@ function renderBattle(state: AppState, room: ArenaRoomDto, t: Translator): strin
     </section>
 
     <div class="footer-actions">
-      <button type="button" class="btn btn-danger btn-block" data-command="forfeit" ${state.busy ? "disabled" : ""}>${escapeHtml(t("forfeit"))}</button>
+      <button type="button" class="btn btn-danger btn-block" data-command="leave" ${state.busy ? "disabled" : ""}>${escapeHtml(t("forfeit"))}</button>
     </div>
-    ${state.confirmForfeit ? renderConfirm(t("forfeitConfirm"), "forfeit-confirm", "forfeit-cancel", t("forfeit"), t("cancel"), state.busy) : ""}
+    ${state.confirmLeave ? renderConfirm(t("forfeitConfirm"), "leave-confirm", "leave-cancel", t("forfeit"), t("cancel"), state.busy) : ""}
 
     <section class="card log-card">
       <h2>${escapeHtml(t("battleLog"))}</h2>

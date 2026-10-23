@@ -7,8 +7,9 @@ import type { ArenaService } from "../../features/arena/arena.service.js";
 import type { AppDeps } from "../deps.js";
 import { sendApiError } from "./errors.js";
 import { requireTelegramUser } from "./middleware/auth.js";
-import { createBattlesRouter } from "./routes/battles.js";
+import { createBattleEventsHandler, createBattlesRouter } from "./routes/battles.js";
 import { createMeRouter } from "./routes/me.js";
+import { deriveStreamTicketKey } from "./streamTicket.js";
 
 /** Built by `pnpm run build:web`; also present in the production image. */
 export const DEFAULT_WEB_ROOT = path.resolve(process.cwd(), "dist", "web");
@@ -16,6 +17,7 @@ export const DEFAULT_WEB_ROOT = path.resolve(process.cwd(), "dist", "web");
 export interface WebAppOptions {
   deps: AppDeps;
   botToken: string;
+  botUsername?: string | undefined;
   maxAgeSeconds?: number | undefined;
   arena: ArenaService;
   sseHeartbeatMs?: number | undefined;
@@ -34,12 +36,13 @@ export function createWebApp(options: WebAppOptions): Router {
   const router = Router();
   const staticDir = path.resolve(options.staticDir ?? DEFAULT_WEB_ROOT);
   const indexPath = path.join(staticDir, "index.html");
-  const hasClient = existsSync(indexPath);
+  const ticketKey = deriveStreamTicketKey(options.botToken);
 
   router.use((_req, res, next) => {
     // Everything here is per-user and authenticated: never cache at the edge.
     res.setHeader("Cache-Control", "no-store");
     res.setHeader("X-Content-Type-Options", "nosniff");
+    res.setHeader("Referrer-Policy", "no-referrer");
     res.setHeader("Content-Security-Policy", TELEGRAM_FRAME_ANCESTORS);
     next();
   });
@@ -48,18 +51,27 @@ export function createWebApp(options: WebAppOptions): Router {
     res.status(200).json({ status: "ok" });
   });
 
-  if (hasClient) {
-    // Public shell and assets: the app authenticates every API call with the
-    // signed init data header, so static files never need credentials.
-    router.use(
-      express.static(staticDir, {
-        index: "index.html",
-        cacheControl: false,
-        dotfiles: "ignore",
-        etag: true,
-      }),
-    );
-  }
+  // Public shell and assets: the app authenticates every API call with the
+  // signed init data header, so static files never need credentials.
+  router.use(
+    express.static(staticDir, {
+      index: "index.html",
+      cacheControl: false,
+      dotfiles: "ignore",
+      etag: true,
+    }),
+  );
+
+  // Native EventSource cannot attach custom headers; the stream authenticates
+  // with a short-lived HMAC ticket in the query string instead of hitting DB.
+  router.get(
+    "/api/battles/:code/events",
+    createBattleEventsHandler({
+      arena: options.arena,
+      ticketKey,
+      heartbeatMs: options.sseHeartbeatMs,
+    }),
+  );
 
   router.use(
     "/api",
@@ -70,30 +82,26 @@ export function createWebApp(options: WebAppOptions): Router {
     }),
   );
 
-  router.use("/api", createMeRouter());
+  router.use("/api", createMeRouter({ botUsername: options.botUsername }));
 
-  router.use(
-    "/api/battles",
-    createBattlesRouter({ arena: options.arena, heartbeatMs: options.sseHeartbeatMs }),
-  );
+  router.use("/api/battles", createBattlesRouter({ arena: options.arena, ticketKey }));
 
   router.use("/api", (_req, res) => {
     sendApiError(res, 404, "not_found", "Unknown API route");
   });
 
-  if (hasClient) {
-    // Single-page app fallback. Skip paths with an extension so a missing
-    // asset still returns 404 instead of an HTML page with a 200 status.
-    router.get(/.*/, (req, res, next) => {
-      if (path.extname(req.path)) {
-        next();
-        return;
-      }
-      res.sendFile(indexPath, { cacheControl: false }, (error) => {
-        if (error) next(error);
-      });
+  // Single-page app fallback. Check `existsSync(indexPath)` per request so that
+  // assets built after server startup (e.g. `vite build --watch` in dev) are
+  // served immediately without restarting the bot.
+  router.get(/.*/, (req, res, next) => {
+    if (path.extname(req.path) || !existsSync(indexPath)) {
+      next();
+      return;
+    }
+    res.sendFile(indexPath, { cacheControl: false }, (error) => {
+      if (error) next(error);
     });
-  }
+  });
 
   const errorHandler: ErrorRequestHandler = (error, _req, res, next) => {
     if (res.headersSent) {
